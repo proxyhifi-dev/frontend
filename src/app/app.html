@@ -1,0 +1,97 @@
+<div class="app-shell">
+  <div class="toast-container">
+    <div *ngFor="let toast of notify.toasts$ | async"
+         class="toast" [ngClass]="toast.type">
+      {{ toast.message }}
+      <span class="close" (click)="notify.remove(toast.id)">×</span>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="logo">APEX TRADING <span>PRO</span></div>
+    <div class="status-bar">
+      <div class="status-indicator" [class.online]="apiStatus === 'Connected'"></div>
+      <span>{{ apiStatus }}</span>
+      <span class="muted">Updated: {{ lastSyncTime }}</span>
+    </div>
+
+    <div class="controls">
+      <div class="toggle-group">
+        <button [class.active]="isPaperMode" (click)="!isPaperMode && toggleMode()">PAPER</button>
+        <button [class.active]="!isPaperMode" (click)="isPaperMode && toggleMode()" class="danger-btn">LIVE</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section *ngIf="currentView === 'dashboard'" class="dashboard">
+
+      <div class="metrics-grid">
+        <div class="card metric">
+          <label>Equity ({{ isPaperMode ? 'Paper' : 'Real' }})</label>
+          <div class="value">{{ (isPaperMode ? user?.availablePaperFunds : user?.availableRealFunds) | currency:'INR' }}</div>
+        </div>
+        <div class="card metric">
+          <label>Daily P&L</label>
+          <div class="value" [class.profit]="user?.todaysPnl >= 0" [class.loss]="user?.todaysPnl < 0">
+            {{ user?.todaysPnl | currency:'INR' }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card full-width">
+        <h3>⚡ Active Signals</h3>
+
+        <div *ngIf="pendingSignals.length === 0" class="empty-state">
+          <div class="spinner"></div>
+          <p>Scanning market for high-probability setups...</p>
+        </div>
+
+        <table *ngIf="pendingSignals.length > 0">
+          <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Score</th>
+            <th>Grade</th>
+            <th>Price</th>
+            <th>Action</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let s of pendingSignals">
+            <td>{{ s.symbol }}</td>
+            <td>
+              <div class="score-pill" [class.high]="s.signalScore > 80">{{ s.signalScore }}</div>
+            </td>
+            <td>{{ s.grade }}</td>
+            <td>{{ s.entryPrice | number:'1.2-2' }}</td>
+            <td>
+              <button class="btn-primary" (click)="onApprove(s)">Execute</button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+  </main>
+
+  <div class="modal-backdrop" *ngIf="showConfirmation">
+    <div class="modal">
+      <div class="modal-header warning">
+        <h3>⚠️ Live Trade Confirmation</h3>
+      </div>
+      <div class="modal-body">
+        <p>You are about to place a <strong>REAL MONEY</strong> trade.</p>
+        <div class="trade-details">
+          <div>Symbol: <strong>{{ activeSignal?.symbol }}</strong></div>
+          <div>Price: <strong>{{ activeSignal?.entryPrice }}</strong></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button (click)="cancelConfirmation()">Cancel</button>
+        <button class="btn-danger" (click)="confirmLiveTrade()">CONFIRM EXECUTION</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,535 @@
+:host {
+  display: block;
+  height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+/* THEME VARIABLES */
+:host-context(.live-mode) {
+  --bg-main: #020617;
+  --bg-header: #020617;
+  /* ✅ FIXED: Lighter card background so cards are visible in Dark Mode */
+  --bg-card: #0f172a;
+  --bg-nav: #020617;
+  --border-subtle: #1f2937;
+  --border-strong: #111827;
+  --text-main: #e5e7eb;
+  --text-muted: #9ca3af;
+  --accent: #1d4ed8;
+  --accent-border: #2563eb;
+  --profit: #22c55e;
+  --loss: #f97373;
+  --table-row-even: #020617;
+  --table-row-odd: #030712;
+  --modal-backdrop: rgba(15, 23, 42, 0.8);
+}
+
+:host-context(.paper-mode),
+:host {
+  --bg-main: #f3f4f6;
+  --bg-header: #ffffff;
+  --bg-card: #ffffff;
+  --bg-nav: #f9fafb;
+  --border-subtle: #e5e7eb;
+  --border-strong: #d1d5db;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --accent: #2563eb;
+  --accent-border: #2563eb;
+  --profit: #16a34a;
+  --loss: #dc2626;
+  --table-row-even: #ffffff;
+  --table-row-odd: #f9fafb;
+  --modal-backdrop: rgba(15, 23, 42, 0.35);
+}
+
+:host {
+  background: var(--bg-main);
+  color: var(--text-main);
+}
+
+/* Shell */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.logo {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Status */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.status span {
+  white-space: nowrap;
+}
+
+.status .sync-time {
+  color: var(--text-muted);
+}
+
+.status .ok {
+  color: var(--profit);
+}
+
+.status .bad {
+  color: var(--loss);
+}
+
+/* Mode toggle area */
+.mode-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 16px;
+}
+
+.mode-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mode-label.active {
+  color: var(--profit);
+  font-weight: 600;
+}
+
+.mode-chip {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  background: #e0edff;
+  color: #1d4ed8;
+}
+
+:host-context(.live-mode) .mode-chip {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.risk-chip {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  background: #fff7d6;
+  color: #854d0e;
+}
+
+/* Toggle */
+.toggle {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.toggle-checkbox {
+  display: none;
+}
+
+.toggle-switch {
+  width: 50px;
+  height: 25px;
+  background: #d1d5db;
+  border-radius: 25px;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.toggle-switch::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  transition: transform 0.3s;
+}
+
+.toggle-checkbox:checked + .toggle-switch {
+  background: #22c55e;
+}
+
+.toggle-checkbox:checked + .toggle-switch::before {
+  transform: translateX(25px);
+}
+
+/* Nav */
+.main-nav {
+  display: flex;
+  gap: 8px;
+  padding: 8px 24px 12px;
+  background: var(--bg-nav);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.main-nav button {
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-main);
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.main-nav button:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.main-nav button.active {
+  background: var(--accent);
+  border-color: var(--accent-border);
+  color: #f9fafb;
+}
+
+/* Main */
+.app-main {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 24px 24px;
+}
+
+.app-main::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ✅ FIXED: Use CSS variable for scrollbar thumb to adapt to Dark Mode */
+.app-main::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr);
+  grid-auto-rows: auto;
+  gap: 16px;
+}
+
+.profile-card {
+  grid-column: 1 / 2;
+}
+
+.stats-card {
+  grid-column: 2 / 3;
+}
+
+.signals-card {
+  grid-column: 1 / 3;
+}
+
+.trades-card {
+  grid-column: 1 / 3;
+}
+
+.full-width {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Metrics */
+.profile-card .name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.profile-card label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin-top: 8px;
+}
+
+.metrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metrics label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.metrics div div {
+  font-size: 14px;
+}
+
+/* Profit & loss */
+.profit {
+  color: var(--profit);
+}
+
+.loss {
+  color: var(--loss);
+}
+
+/* Tables */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+thead {
+  background: var(--bg-nav);
+}
+
+thead th {
+  text-align: left;
+  padding: 8px 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+tbody tr:nth-child(even) {
+  background: var(--table-row-even);
+}
+
+tbody tr:nth-child(odd) {
+  background: var(--table-row-odd);
+}
+
+tbody td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+tbody tr:hover {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+/* ✅ FIXED: Table Alignment Logic */
+
+/* 1. Default text alignment is Left */
+th, td { text-align: left; }
+
+/* 2. Numeric Columns (2, 3) are almost always right-aligned (Qty, Price, Score) */
+th:nth-child(2), td:nth-child(2),
+th:nth-child(3), td:nth-child(3) {
+  text-align: right;
+}
+
+/* 3. Signal Card Specifics (Col 4 = Date, Col 5 = Action) */
+.signals-card th:nth-child(4), .signals-card td:nth-child(4) {
+  text-align: right; /* Date aligned right for jaggedness fix */
+}
+.signals-card th:nth-child(5), .signals-card td:nth-child(5) {
+  text-align: center; /* Actions centered */
+}
+
+/* 4. Trades Specifics (Col 4, 5, 6 are numbers) */
+.trades-card th:nth-child(4), .trades-card td:nth-child(4),
+.trades-card th:nth-child(5), .trades-card td:nth-child(5),
+.trades-card th:nth-child(6), .trades-card td:nth-child(6) {
+  text-align: right;
+}
+
+/* Buttons */
+table button {
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-main);
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 4px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+table button:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+table button:first-child {
+  border-color: var(--profit);
+}
+
+/* Empty text */
+.card p {
+  margin: 4px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  padding: 18px 20px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+
+.modal h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modal p {
+  margin: 0 0 14px;
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-actions button {
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.modal-actions button:first-child {
+  border-color: var(--profit);
+}
+
+.modal-actions button:first-child:hover {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.modal-actions button:last-child:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-card,
+  .stats-card,
+  .signals-card,
+  .trades-card {
+    grid-column: 1 / 2;
+  }
+
+  .app-main {
+    padding: 12px 12px 16px;
+  }
+
+  .app-header,
+  .main-nav {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .status {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .mode-toggle-wrapper {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  thead th,
+  tbody td {
+    padding: 6px 6px;
+  }
+}
