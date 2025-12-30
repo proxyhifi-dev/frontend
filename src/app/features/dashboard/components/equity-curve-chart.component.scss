@@ -1,0 +1,38 @@
+.chart-container {
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+  h3 {
+
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+}
+
+.time-filters {
+  display: flex;
+  gap: 8px;
+
+  button {
+    background: var(--bg-primary);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-secondary);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+
+    &.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+  }
+}

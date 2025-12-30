@@ -1,0 +1,26 @@
+<table class="live-table compact">
+  <thead>
+  <tr>
+    <th>Signal Date</th>
+    <th>Entry</th>
+    <th>Exit</th>
+    <th>Points</th>
+    <th>Result</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr *ngFor="let trade of results.trades">
+    <td>{{ trade.date | date:'dd/MM HH:mm' }}</td>
+    <td>{{ trade.entryPrice }}</td>
+    <td>{{ trade.exitPrice }}</td>
+    <td [class]="trade.points > 0 ? 'positive' : 'negative'">
+      {{ trade.points > 0 ? '+' : '' }}{{ trade.points }}
+    </td>
+    <td>
+        <span class="res-badge" [class.win]="trade.win">
+          {{ trade.win ? 'WIN' : 'LOSS' }}
+        </span>
+    </td>
+  </tr>
+  </tbody>
+</table>

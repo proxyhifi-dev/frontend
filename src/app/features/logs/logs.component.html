@@ -1,0 +1,32 @@
+<div class="logs-container fade-in">
+  <div class="header-row">
+    <h2>ACTIVITY LOGS</h2>
+    <div class="controls">
+      <div class="toggle-live">
+        <input type="checkbox" [(ngModel)]="liveTail" id="live">
+        <label for="live"><span class="dot" [class.pulsing]="liveTail"></span> Live Tail</label>
+      </div>
+      <button class="btn-outline">Export Logs</button>
+    </div>
+  </div>
+
+  <div class="filters-bar glass-card">
+    <select [(ngModel)]="filterLevel" class="dark-input">
+      <option value="All">All Levels</option>
+      <option value="INFO">INFO</option>
+      <option value="WARN">WARN</option>
+      <option value="ERROR">ERROR</option>
+    </select>
+    <input type="text" placeholder="Search logs..." class="dark-input search">
+  </div>
+
+  <div class="logs-stream glass-card">
+    <div class="log-row" *ngFor="let log of logs">
+      <span class="time">{{ log.time | date:'mediumTime' }}</span>
+      <span class="level badge" [ngClass]="getLevelClass(log.level)">{{ log.level }}</span>
+      <span class="comp">{{ log.component }}</span>
+      <span class="msg">{{ log.message }}</span>
+      <button class="btn-context">View</button>
+    </div>
+  </div>
+</div>

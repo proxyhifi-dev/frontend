@@ -1,0 +1,47 @@
+<app-welcome-wizard *ngIf="(onboarding.isNewUser$ | async)"></app-welcome-wizard>
+
+<div class="dashboard-grid fade-in" *ngIf="!isLoading; else loadingTpl">
+
+  <div class="kpi-row">
+    <app-kpi-card title="TODAY P&L" [value]="stats.todayPnL" [percentChange]="0"></app-kpi-card>
+    <app-kpi-card title="TOTAL P&L" [value]="stats.totalPnL" [percentChange]="0"></app-kpi-card>
+    <app-kpi-card title="WIN RATE" [value]="stats.winRate" suffix="%"></app-kpi-card>
+    <app-kpi-card title="ACTIVE TRADES" [value]="stats.activePositionsCount" prefix=""></app-kpi-card>
+  </div>
+
+  <div class="split-row">
+    <div class="widget-col main">
+      <app-positions-widget [positions]="activePositions"></app-positions-widget>
+    </div>
+
+    <div class="widget-col side glass-card status-widget">
+      <div class="widget-header">
+        <h3>BOT STATUS</h3>
+        <span class="status-badge active">⚫ ACTIVE</span>
+      </div>
+      <div class="status-grid">
+        <div class="stat"><label>Mode</label><span>{{ (store.state$ | async)?.isLiveMode ? 'LIVE' : 'PAPER' }}</span></div>
+        <div class="stat"><label>Signals</label><span>{{ newSignals.length }} New</span></div>
+      </div>
+      <div class="action-buttons">
+        <button class="btn-pause">⏸ Pause</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="full-row">
+    <app-equity-curve-chart [data]="equityData"></app-equity-curve-chart>
+  </div>
+
+  <div class="split-row">
+    <app-recent-signals-widget [signals]="newSignals"></app-recent-signals-widget>
+  </div>
+
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loading-container">
+    <div class="spinner"></div>
+    <p>Connecting to Market Data Feed...</p>
+  </div>
+</ng-template>

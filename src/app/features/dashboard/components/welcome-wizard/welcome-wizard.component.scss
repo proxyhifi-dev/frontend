@@ -1,0 +1,48 @@
+.wizard-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(10, 14, 39, 0.95); z-index: 9999;
+  display: grid; place-items: center;
+}
+
+.wizard-content {
+  width: 500px; padding: 40px; background: var(--bg-secondary);
+  border: 1px solid var(--accent); border-radius: 12px;
+  box-shadow: 0 0 50px rgba(0,0,0,0.5);
+}
+
+.step-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;
+  h3 { font-size: 20px; }
+  .step-indicator { font-size: 12px; color: var(--text-secondary); }
+}
+
+.step-body { min-height: 200px; }
+
+.options-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  .option-card {
+    padding: 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;
+    text-align: center; transition: all 0.2s;
+    &:hover, &.active { border-color: var(--accent); background: rgba(33,150,243,0.1); }
+    .icon { font-size: 32px; display: block; margin-bottom: 10px; }
+    h4 { font-size: 14px; margin-bottom: 6px; }
+    small { font-size: 11px; color: var(--text-secondary); }
+  }
+}
+
+.input-lg-group {
+  display: flex; align-items: center; background: #0a0e27; padding: 10px; border-radius: 8px;
+  input { background: transparent; border: none; color: white; font-size: 24px; width: 100%; outline: none; }
+  .prefix { font-size: 24px; margin-right: 8px; color: var(--text-secondary); }
+}
+
+.presets {
+  display: flex; gap: 10px; margin-top: 16px;
+  button { flex: 1; padding: 8px; background: rgba(255,255,255,0.05); border: none; color: var(--text-secondary); border-radius: 4px; cursor: pointer; &:hover { background: rgba(255,255,255,0.1); } }
+}
+
+.wizard-footer {
+  display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05);
+  .btn-text { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; }
+  .btn-primary { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+}

@@ -1,0 +1,11 @@
+<div class="glass-card kpi-container" [class.up]="value >= 0" [class.down]="value < 0">
+  <div class="label">{{ title }}</div>
+  <div class="main-val">
+    <span class="prefix">{{ prefix }}</span>
+    {{ value | number:'1.0-2' }}
+  </div>
+  <div class="footer" *ngIf="percentChange !== undefined">
+    <span class="trend-icon">{{ value >= 0 ? '▲' : '▼' }}</span>
+    {{ percentChange }}%
+  </div>
+</div>

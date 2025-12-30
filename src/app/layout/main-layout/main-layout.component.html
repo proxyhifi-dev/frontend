@@ -1,0 +1,37 @@
+<div class="app-container" [class.live-mode]="(store.state$ | async)?.isLiveMode">
+
+  <app-command-palette></app-command-palette>
+
+  <header class="top-bar glass-card">
+    <div class="left-section">
+      <div class="logo-text">APEX <span class="bolt">⚡</span></div>
+    </div>
+
+    <div class="mode-toggle" (click)="store.toggleMode()">
+      <div class="toggle-pill">
+        <span class="label paper">PAPER</span>
+        <span class="label live">LIVE</span>
+        <div class="slider"></div>
+      </div>
+    </div>
+
+    <div class="right-section desktop-only">
+      <div class="icon-btn notification">🔔</div>
+      <div class="profile-pill">T</div>
+    </div>
+  </header>
+
+  <app-sidebar class="sidebar-area desktop-only"
+               [class.collapsed]="(store.state$ | async)?.isSidebarCollapsed">
+  </app-sidebar>
+
+  <main class="content-area">
+    <div *ngIf="!((store.state$ | async)?.isLiveMode)" class="paper-banner fade-in">
+      ⚠️ PAPER TRADING MODE
+    </div>
+    <router-outlet></router-outlet>
+  </main>
+
+  <app-mobile-nav class="mobile-nav-area mobile-only"></app-mobile-nav>
+
+</div>

@@ -1,0 +1,45 @@
+<div class="analytics-container fade-in">
+  <div class="header-row">
+    <h2>PERFORMANCE ANALYTICS</h2>
+    <div class="time-range">
+      <button class="active">Last 30 Days</button>
+      <button>90 Days</button>
+      <button>All Time</button>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <app-kpi-card title="TOTAL TRADES" [value]="stats.totalTrades" prefix=""></app-kpi-card>
+    <app-kpi-card title="WIN RATE" [value]="stats.winRate" prefix="" suffix="%"></app-kpi-card>
+    <app-kpi-card title="PROFIT FACTOR" [value]="stats.profitFactor" prefix=""></app-kpi-card>
+    <app-kpi-card title="AVG R-MULTIPLE" [value]="stats.avgR" prefix="+"></app-kpi-card>
+  </div>
+
+  <div class="chart-main-grid mt-24">
+    <div class="glass-card chart-box">
+      <h3>WIN / LOSS RATIO</h3>
+      <apx-chart [series]="pieOptions.series" [chart]="pieOptions.chart" [labels]="pieOptions.labels" [colors]="pieOptions.colors" [plotOptions]="pieOptions.plotOptions" [legend]="pieOptions.legend"></apx-chart>
+      <div class="chart-summary">27 Winners / 15 Losers</div>
+    </div>
+
+    <div class="glass-card chart-box">
+      <h3>P&L DISTRIBUTION</h3>
+      <apx-chart [series]="histOptions.series" [chart]="histOptions.chart" [xaxis]="histOptions.xaxis" [colors]="histOptions.colors"></apx-chart>
+      <p class="analysis-tag">✅ Right-skewed distribution detected (Positive Expectancy)</p>
+    </div>
+  </div>
+
+  <div class="split-grid mt-24">
+    <div class="glass-card table-box">
+      <h3>PERFORMANCE BY GRADE</h3>
+      <table class="simple-table">
+        <thead><tr><th>Grade</th><th>Trades</th><th>Win Rate</th><th>Net P&L</th></tr></thead>
+        <tbody>
+        <tr><td>A+++</td><td>12</td><td class="text-green">75%</td><td class="text-green">+₹18,200</td></tr>
+        <tr><td>A++</td><td>18</td><td class="text-green">67%</td><td class="text-green">+₹10,500</td></tr>
+        <tr><td>A</td><td>12</td><td class="text-yellow">50%</td><td class="text-yellow">+₹3,700</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

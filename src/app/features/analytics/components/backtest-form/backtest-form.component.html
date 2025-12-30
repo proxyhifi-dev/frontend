@@ -1,0 +1,43 @@
+<div class="glass-card backtest-panel">
+  <div class="panel-header">
+    <h3>Strategy Backtester</h3>
+    <span class="beta-tag">PRO</span>
+  </div>
+
+  <div class="form-grid">
+    <div class="input-field">
+      <label>Instrument</label>
+      <input type="text" [(ngModel)]="params.symbol" placeholder="e.g., RELIANCE">
+    </div>
+
+    <div class="input-field">
+      <label>Timeframe</label>
+      <select [(ngModel)]="params.interval">
+        <option value="5m">5 Minute</option>
+        <option value="15m">15 Minute</option>
+        <option value="1h">1 Hour</option>
+      </select>
+    </div>
+
+    <div class="input-field">
+      <label>Date Range</label>
+      <div class="date-picker-group">
+        <input type="date" [(ngModel)]="params.from">
+        <input type="date" [(ngModel)]="params.to">
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-toggles">
+    <label class="checkbox-container">
+      <input type="checkbox" [(ngModel)]="params.useSqueeze"> Squeeze Pro Layer
+    </label>
+    <label class="checkbox-container">
+      <input type="checkbox" [(ngModel)]="params.useVwap"> VWAP Pullback Layer
+    </label>
+  </div>
+
+  <button class="btn-run" (click)="runBacktest()" [disabled]="loading">
+    {{ loading ? 'Processing Data...' : 'Run Simulation' }}
+  </button>
+</div>

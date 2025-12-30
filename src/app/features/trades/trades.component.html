@@ -1,0 +1,63 @@
+<div class="trades-container fade-in">
+  <div class="header-row">
+    <h2>TRADE HISTORY</h2>
+    <button class="btn-outline">📥 Export CSV</button>
+  </div>
+
+  <div class="filters-bar glass-card">
+    <div class="filter-group">
+      <label>Date Range</label>
+      <input type="date" class="dark-input">
+    </div>
+    <div class="filter-group">
+      <label>Symbol</label>
+      <input type="text" placeholder="Search..." class="dark-input">
+    </div>
+    <div class="filter-group">
+      <label>Grade</label>
+      <select class="dark-input"><option>All Grades</option><option>A+++</option></select>
+    </div>
+    <button class="btn-primary">Apply Filters</button>
+  </div>
+
+  <div class="table-wrapper glass-card mt-24">
+    <table class="audit-table">
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Symbol</th>
+        <th>Entry/Exit</th>
+        <th>P&L</th>
+        <th>R-Multiple</th>
+        <th>Reason</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let t of tradeHistory">
+        <td>#{{ t.id }}</td>
+        <td>
+          <div class="symbol-col">
+            <span class="symbol">{{ t.symbol }}</span>
+            <span class="grade-badge">{{ t.grade }}</span>
+          </div>
+        </td>
+        <td>
+          <div class="price-col">
+            <span>{{ t.entryPrice | currencyInr }}</span>
+            <span class="text-secondary">→ {{ t.exitPrice | currencyInr }}</span>
+          </div>
+        </td>
+        <td [class.positive]="t.realizedPnl >= 0" [class.negative]="t.realizedPnl < 0">
+          {{ t.realizedPnl | currencyInr }}
+        </td>
+        <td class="bold">{{ t.rMultiple > 0 ? '+' : '' }}{{ t.rMultiple }}R</td>
+        <td>
+            <span class="reason-badge" [ngClass]="getExitClass(t.exitReason)">
+              {{ t.exitReason }}
+            </span>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

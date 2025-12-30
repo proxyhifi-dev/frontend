@@ -1,0 +1,82 @@
+<div class="positions-page fade-in">
+  <div class="header-row">
+    <h2>POSITIONS</h2>
+    <div class="tabs">
+      <button [class.active]="activeTab === 'open'" (click)="activeTab = 'open'">
+        🔴 OPEN ({{ openPositions.length }})
+      </button>
+      <button [class.active]="activeTab === 'closed'" (click)="activeTab = 'closed'">
+        🟢 CLOSED ({{ closedPositions.length }})
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-bar glass-card">
+    <input type="text" placeholder="🔍 Search symbol..." class="dark-input">
+    <button class="btn-outline">Export CSV</button>
+  </div>
+
+  <div class="table-wrapper glass-card" *ngIf="activeTab === 'open'">
+    <table class="data-table">
+      <thead>
+      <tr>
+        <th>Symbol</th>
+        <th>Entry</th>
+        <th>LTP</th>
+        <th>P&L</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let pos of openPositions">
+        <td>
+          <div class="symbol-col">
+            <span class="symbol-text">{{ pos.symbol }}</span>
+            <span class="badge">{{ pos.sector }}</span>
+          </div>
+        </td>
+        <td>{{ pos.entryPrice | currencyInr }}</td>
+        <td class="live-val">{{ pos.currentPrice | currencyInr }}</td>
+        <td [class.positive]="pos.pnl >= 0" [class.negative]="pos.pnl < 0">
+          {{ pos.pnl | currencyInr }}
+        </td>
+        <td>
+          <button class="btn-danger btn-sm" (click)="closePosition(pos)">Close</button>
+        </td>
+      </tr>
+      <tr *ngIf="openPositions.length === 0">
+        <td colspan="5" class="empty-state">No open positions</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-wrapper glass-card" *ngIf="activeTab === 'closed'">
+    <table class="data-table">
+      <thead>
+      <tr>
+        <th>Symbol</th>
+        <th>Entry</th>
+        <th>Exit</th>
+        <th>Realized P&L</th>
+        <th>Reason</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let pos of closedPositions">
+        <td><span class="symbol-text">{{ pos.symbol }}</span></td>
+        <td>{{ pos.entryPrice | currencyInr }}</td>
+
+        <td>{{ pos.exitPrice || 0 | currencyInr }}</td>
+
+        <td [class.positive]="(pos.realizedPnl || 0) >= 0" [class.negative]="(pos.realizedPnl || 0) < 0">
+          {{ pos.realizedPnl | currencyInr }}
+        </td>
+        <td>
+          <span class="badge">{{ pos.exitReason }}</span>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

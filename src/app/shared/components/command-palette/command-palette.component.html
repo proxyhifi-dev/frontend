@@ -1,0 +1,28 @@
+<div class="palette-overlay" *ngIf="commandSvc.isOpen$ | async" (click)="commandSvc.close()">
+  <div class="palette-box" (click)="$event.stopPropagation()">
+    <div class="search-row">
+      <span class="icon">🔍</span>
+      <input id="cmd-input" type="text" placeholder="Type a command..."
+             [(ngModel)]="searchQuery" (input)="filter()" autocomplete="off">
+      <span class="badge">ESC</span>
+    </div>
+
+    <div class="results-list">
+      <div class="result-item" *ngFor="let cmd of filteredCommands; let i = index"
+           [class.selected]="i === selectedIndex"
+           (click)="execute(cmd)">
+        <span class="cmd-icon">{{ cmd.icon }}</span>
+        <span class="cmd-title">{{ cmd.title }}</span>
+        <span class="cmd-cat">{{ cmd.category }}</span>
+      </div>
+      <div class="empty-state" *ngIf="filteredCommands.length === 0">
+        No commands found.
+      </div>
+    </div>
+
+    <div class="palette-footer">
+      <span><strong>↑↓</strong> to navigate</span>
+      <span><strong>↵</strong> to select</span>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,36 @@
+<div class="glass-card widget">
+  <div class="widget-header">
+    <h3>Active Positions ({{ positions.length }})</h3>
+    <a routerLink="/positions" class="view-all">View All</a>
+  </div>
+
+  <table class="live-table">
+    <thead>
+    <tr>
+      <th>Symbol</th>
+      <th>Size</th>
+      <th>Entry</th>
+      <th>LTP</th>
+      <th>P&L</th>
+      <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr *ngFor="let pos of positions">
+      <td class="bold">{{ pos.symbol }} <span class="badge">{{ pos.grade }}</span></td>
+      <td>{{ pos.quantity }}</td>
+      <td>{{ pos.entryPrice | currencyInr }}</td>
+      <td [class.flash-green]="true">{{ pos.currentPrice | currencyInr }}</td>
+      <td [ngClass]="getPnLClass(pos)">
+        {{ calculatePnL(pos) | currencyInr }}
+      </td>
+      <td>
+        <button class="btn-sm exit">Exit</button>
+      </td>
+    </tr>
+    <tr *ngIf="positions.length === 0">
+      <td colspan="6" class="empty">No active trades</td>
+    </tr>
+    </tbody>
+  </table>
+</div>

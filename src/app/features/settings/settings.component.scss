@@ -1,0 +1,43 @@
+.settings-layout {
+  display: grid; grid-template-columns: 240px 1fr; gap: 24px;
+}
+
+.settings-nav {
+  padding: 20px; height: fit-content;
+  h3 { font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; letter-spacing: 1px; }
+  ul { list-style: none; padding: 0; }
+  li {
+    padding: 12px; border-radius: 6px; cursor: pointer; color: var(--text-secondary); margin-bottom: 4px;
+    &:hover { background: rgba(255,255,255,0.03); color: var(--text-primary); }
+    &.active { background: rgba(33,150,243,0.1); color: var(--accent); font-weight: bold; }
+    &.text-red { color: #FF1744; }
+  }
+}
+
+.settings-content { padding: 32px; min-height: 500px; position: relative; }
+
+.setting-group {
+  margin-bottom: 24px;
+  label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+  input { width: 100%; padding: 10px; background: #0a0e27; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; outline: none; }
+  small { display: block; margin-top: 6px; font-size: 11px; color: var(--text-secondary); }
+}
+
+.toggle-row {
+  display: flex; gap: 10px;
+  button {
+    flex: 1; padding: 10px; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); border-radius: 6px; cursor: pointer;
+    &.active { border-color: var(--accent); background: rgba(33,150,243,0.1); color: var(--accent); }
+  }
+}
+
+.danger-row {
+  display: flex; justify-content: space-between; align-items: center; padding: 20px; border: 1px solid rgba(255,23,68,0.2); border-radius: 8px; margin-bottom: 16px; background: rgba(255,23,68,0.05);
+  h4 { color: #FF1744; margin-bottom: 4px; }
+  .btn-danger { background: #FF1744; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+}
+
+.panel-footer {
+  margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); text-align: right;
+  .btn-save { background: var(--accent); color: white; border: none; padding: 12px 32px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+}

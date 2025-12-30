@@ -1,0 +1,56 @@
+<div class="account-container fade-in">
+  <div class="grid-split">
+    <div class="left-col">
+      <div class="glass-card profile-card">
+        <div class="avatar-lg">T</div>
+        <div class="info">
+          <h3>{{ profile.name }}</h3>
+          <p>{{ profile.email }}</p>
+          <span class="badge paper">PAPER TRADING ACCOUNT</span>
+        </div>
+      </div>
+
+      <div class="glass-card capital-card mt-24">
+        <h3>CAPITAL BREAKDOWN</h3>
+        <div class="cap-row">
+          <span>Total Equity</span>
+          <span class="val">{{ capital.total | currencyInr }}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="fill" [style.width.%]="(capital.used/capital.total)*100"></div>
+        </div>
+        <div class="legend">
+          <span>🔵 Used: {{ capital.used | currencyInr }}</span>
+          <span>⚪ Free: {{ capital.free | currencyInr }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="glass-card broker-card">
+        <div class="card-header">
+          <h3>BROKER INTEGRATION</h3>
+          <span class="status-dot red"></span>
+        </div>
+        <div class="broker-details">
+          <div class="row">
+            <label>Connection</label>
+            <span class="text-red">🔴 {{ broker.status }}</span>
+          </div>
+          <div class="row">
+            <label>API Key</label>
+            <span>••••••••••</span>
+          </div>
+          <button class="btn-primary mt-16">Connect Fyers API</button>
+        </div>
+      </div>
+
+      <div class="glass-card actions-card mt-24">
+        <h3>ACCOUNT ACTIONS</h3>
+        <button class="btn-row">📥 Export Trading Report</button>
+        <button class="btn-row">🔄 Reset Paper Account</button>
+        <button class="btn-row danger">🔥 Delete All Data</button>
+      </div>
+    </div>
+  </div>
+</div>

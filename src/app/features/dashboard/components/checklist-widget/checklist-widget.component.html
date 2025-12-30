@@ -1,0 +1,20 @@
+<div class="glass-card checklist-widget">
+  <div class="widget-header">
+    <h3>🎯 GETTING STARTED</h3>
+    <div class="progress-pct">{{ progress }}%</div>
+  </div>
+
+  <div class="checklist-items">
+    <div class="item" *ngFor="let item of items$ | async" [class.done]="item.isCompleted">
+      <div class="status-icon">{{ item.isCompleted ? '✅' : '⏳' }}</div>
+      <div class="item-text">
+        <strong>{{ item.label }}</strong>
+        <p>{{ item.description }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="fill" [style.width.%]="progress"></div>
+  </div>
+</div>

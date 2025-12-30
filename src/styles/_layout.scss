@@ -1,0 +1,26 @@
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 1fr 350px; // Standard Desktop
+  gap: 24px;
+  padding: 24px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr; // Tablet & Mobile stack
+  }
+}
+
+.sidebar {
+  transition: transform 0.3s ease;
+  @media (max-width: 768px) {
+    position: fixed;
+    z-index: 1000;
+    transform: translateX(-100%);
+    &.open { transform: translateX(0); }
+  }
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}

@@ -1,0 +1,31 @@
+<div class="results-grid" *ngIf="results">
+  <div class="stats-summary">
+    <div class="stat-box">
+      <label>Net Profit</label>
+      <span [class]="results.profit >= 0 ? 'positive' : 'negative'">
+        {{ results.profit | currencyInr }}
+      </span>
+    </div>
+    <div class="stat-box">
+      <label>Profit Factor</label>
+      <span class="bold">{{ results.profitFactor }}</span>
+    </div>
+    <div class="stat-box">
+      <label>Max Drawdown</label>
+      <span class="negative">{{ results.maxDrawdown }}%</span>
+    </div>
+  </div>
+
+  <div class="glass-card chart-full">
+    <apx-chart
+      [series]="backtestChartData.series"
+      [chart]="backtestChartData.chart"
+      [xaxis]="backtestChartData.xaxis"
+      [colors]="['#00C853', '#8F92A1']">
+    </apx-chart>
+    <div class="chart-legend">
+      <span><i class="dot green"></i> Strategy</span>
+      <span><i class="dot gray"></i> Buy & Hold</span>
+    </div>
+  </div>
+</div>

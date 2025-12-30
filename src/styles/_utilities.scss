@@ -1,0 +1,60 @@
+.live-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+
+  th {
+    text-align: left;
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  td {
+    padding: 12px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+}
+
+.badge {
+  background: var(--accent);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 5px;
+}
+
+.btn-approve {
+  background: var(--green);
+  color: white;
+  border: none;
+  padding: 8px;.badge-target { background: rgba(0, 200, 83, 0.15); color: #00C853; border: 1px solid #00C853; }
+               .badge-sl { background: rgba(255, 23, 68, 0.15); color: #FF1744; border: 1px solid #FF1744; }
+               .badge-time { background: rgba(255, 152, 0, 0.15); color: #FF9800; border: 1px solid #FF9800; }
+
+               .audit-table {
+                 width: 100%; border-collapse: collapse;
+                 th { text-align: left; padding: 16px; color: var(--text-secondary); font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+                 td { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+                 .symbol { font-weight: 700; }
+                 .grade-badge { font-size: 10px; padding: 2px 6px; background: var(--accent); border-radius: 4px; margin-left: 8px; }
+               }
+  border-radius: 4px;
+  flex: 1;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-reject {
+  background: transparent;
+  border: 1px solid var(--red);
+  color: var(--red);
+  padding: 8px;
+  border-radius: 4px;
+  flex: 1;
+  cursor: pointer;
+}
+
+[data-grade="A+++"] { color: #FFD700; font-weight: bold; }

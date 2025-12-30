@@ -1,0 +1,6 @@
+.trades-container { padding: 20px; }
+.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.filters-bar { display: flex; gap: 16px; padding: 16px; margin-bottom: 24px; }
+.filter-group { display: flex; flex-direction: column; gap: 8px; }
+.audit-table { width: 100%; border-collapse: collapse; }
+.audit-table th, .audit-table td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }

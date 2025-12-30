@@ -1,0 +1,74 @@
+<div class="wizard-overlay glass-card">
+  <div class="wizard-content">
+
+    <div class="step-header">
+      <h3>🎉 Welcome to APEX</h3>
+      <div class="step-indicator">Step {{step}} of 5</div>
+    </div>
+
+    <div *ngIf="step === 1" class="step-body fade-in">
+      <p class="subtitle">Choose your starting environment:</p>
+      <div class="options-grid">
+        <div class="option-card" [class.active]="config.mode==='paper'" (click)="selectMode('paper')">
+          <span class="icon">📄</span>
+          <h4>PAPER TRADING</h4>
+          <small>Risk-free simulation with virtual money.</small>
+        </div>
+        <div class="option-card" [class.active]="config.mode==='live'" (click)="selectMode('live')">
+          <span class="icon">💰</span>
+          <h4>LIVE TRADING</h4>
+          <small>Real capital at risk. Requires broker API.</small>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="step === 2" class="step-body fade-in">
+      <p class="subtitle">Set your virtual capital:</p>
+      <div class="input-lg-group">
+        <span class="prefix">₹</span>
+        <input type="number" [(ngModel)]="config.capital">
+      </div>
+      <div class="presets">
+        <button (click)="config.capital=50000">₹50K</button>
+        <button (click)="config.capital=100000">₹1L</button>
+        <button (click)="config.capital=500000">₹5L</button>
+      </div>
+    </div>
+
+    <div *ngIf="step === 3" class="step-body fade-in">
+      <p class="subtitle">Risk per Trade (%):</p>
+      <div class="risk-slider">
+        <input type="range" min="0.5" max="3" step="0.5" [(ngModel)]="config.riskPct">
+        <div class="val-display">{{ config.riskPct }}%</div>
+      </div>
+      <p class="hint">On ₹{{config.capital}}, you risk ₹{{ (config.capital * config.riskPct / 100) }} per trade.</p>
+    </div>
+
+    <div *ngIf="step === 4" class="step-body fade-in">
+      <p class="subtitle">Select Stock Universe:</p>
+      <div class="radio-list">
+        <label [class.selected]="config.universe==='nifty50'">
+          <input type="radio" name="uni" [(ngModel)]="config.universe" value="nifty50"> Nifty 50
+        </label>
+        <label [class.selected]="config.universe==='nifty100'">
+          <input type="radio" name="uni" [(ngModel)]="config.universe" value="nifty100"> Nifty 100
+        </label>
+      </div>
+    </div>
+
+    <div *ngIf="step === 5" class="step-body fade-in">
+      <p class="subtitle">Review Configuration:</p>
+      <ul class="summary-list">
+        <li><span>Mode:</span> <strong>{{ config.mode | uppercase }}</strong></li>
+        <li><span>Capital:</span> <strong>₹{{ config.capital }}</strong></li>
+        <li><span>Risk:</span> <strong>{{ config.riskPct }}%</strong></li>
+      </ul>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn-text" (click)="prev()" [disabled]="step===1">Back</button>
+      <button class="btn-primary" (click)="next()">{{ step === 5 ? 'Start Trading' : 'Next ▶' }}</button>
+    </div>
+
+  </div>
+</div>
