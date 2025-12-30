@@ -17,6 +17,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   stats: any = { winRate: 0, profitFactor: 0, totalTrades: 0, avgR: 0 };
   isLoading = true;
 
+  // Chart configs required by template
   public pieOptions: any = {
     series: [0, 0],
     chart: { type: 'donut', height: 300 },
@@ -47,6 +48,10 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       ).subscribe(data => {
         this.stats = data || this.stats;
         this.isLoading = false;
+        // Update charts if data exists
+        if(this.stats.wins !== undefined) {
+             this.pieOptions.series = [this.stats.wins, this.stats.losses];
+        }
       })
     );
   }

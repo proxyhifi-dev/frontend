@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription, switchMap, catchError, of, finalize, forkJoin } from 'rxjs'; // ✅ Added forkJoin
+import { Subscription, switchMap, catchError, of, finalize, forkJoin } from 'rxjs';
 
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PositionService } from '../../core/services/position.service';
@@ -32,6 +32,8 @@ import { DashboardStats, Position, Signal } from '../../core/models/domain.model
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   isLoading = true;
+
+  // Default safe values
   stats: DashboardStats = {
     todayPnL: 0, weeklyPnL: 0, monthlyPnL: 0, totalPnL: 0,
     unrealizedPnL: 0, winRate: 0, profitFactor: 0, activePositionsCount: 0,
@@ -58,33 +60,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.store.state$.pipe(
         switchMap(() => {
           this.isLoading = true;
-          // Fail-safe: If summary fails, return default stats so the app continues
+          // 1. Get Summary First (Fail-safe)
           return this.dashboardSvc.getSummary().pipe(
             catchError(err => {
-              console.error('Summary API Error:', err);
+              console.warn('Dashboard summary failed, using defaults', err);
               return of(this.stats);
             })
           );
         })
       ).subscribe(data => {
         this.stats = data;
-        this.loadWidgets();
+        this.loadWidgets(); // 2. Then load widgets
       })
     );
     this.setupWebSockets();
   }
 
   loadWidgets() {
-    // ✅ ROBUST FIX: Use forkJoin to load all widgets in parallel
-    // If any single API fails, catchError returns empty data so the page still loads.
+    // ✅ ROBUST LOADING: forkJoin ensures we wait for all, but finalize runs ALWAYS
+    const requests = {
+      positions: this.positionSvc.getOpenPositions().pipe(catchError(() => of([]))),
+      signals: this.signalSvc.getLatestSignals().pipe(catchError(() => of([]))),
+      equity: this.dashboardSvc.getEquityCurve().pipe(catchError(() => of([])))
+    };
+
     this.sub.add(
-      forkJoin({
-        positions: this.positionSvc.getOpenPositions().pipe(catchError(() => of([]))),
-        signals: this.signalSvc.getLatestSignals().pipe(catchError(() => of([]))),
-        equity: this.dashboardSvc.getEquityCurve().pipe(catchError(() => of([])))
-      }).pipe(
+      forkJoin(requests).pipe(
         finalize(() => {
-          this.isLoading = false; // ✅ This GUARANTEES the loading spinner disappears
+          this.isLoading = false; // ✅ This guarantees the spinner disappears
         })
       ).subscribe(results => {
         this.activePositions = results.positions;
@@ -95,10 +98,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   setupWebSockets() {
-    // Connection might take time, so we don't block the UI here
-    this.sub.add(this.wsService.subscribe('/topic/summary').subscribe(update => this.stats = { ...this.stats, ...update }));
-    this.sub.add(this.wsService.subscribe('/topic/signals').subscribe(sig => this.newSignals = [sig, ...this.newSignals].slice(0, 5)));
+    this.sub.add(this.wsService.subscribe('/topic/summary').subscribe(update => {
+      if (update) this.stats = { ...this.stats, ...update };
+    }));
+
+    this.sub.add(this.wsService.subscribe('/topic/signals').subscribe(sig => {
+      if (sig) this.newSignals = [sig, ...this.newSignals].slice(0, 5);
+    }));
   }
 
-  ngOnDestroy() { this.sub.unsubscribe(); }
+  ngOnDestroy() {
+    this.sub.unsubscribe();
+  }
 }

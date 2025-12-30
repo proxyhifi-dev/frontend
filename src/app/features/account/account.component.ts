@@ -13,9 +13,11 @@ import { Subscription, switchMap } from 'rxjs';
   styleUrls: ['./account.component.scss']
 })
 export class AccountComponent implements OnInit, OnDestroy {
+  // Properties required by template
   profile = { name: 'Trader', email: 'user@apex.bot' };
   capital = { total: 0, used: 0, free: 0 };
   broker = { status: 'DISCONNECTED' };
+
   private sub = new Subscription();
 
   constructor(private http: HttpClient, private store: StoreService) {}

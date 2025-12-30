@@ -33,6 +33,7 @@ export interface Signal {
   adx_score?: number;
 }
 
+// ✅ Ensuring these are exported to fix TS2305 errors
 export interface RiskStatus {
   dailyLoss: number;
   dailyLimit: number;
