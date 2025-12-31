@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';, NgZone
 import { CommonModule } from '@angular/common';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PositionService } from '../../core/services/position.service';
@@ -53,7 +53,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private dashboardService: DashboardService,
     private positionService: PositionService,
     private wsService: WebSocketService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
   
   ngOnInit(): void {
@@ -62,9 +63,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     // ✅ CRITICAL: Hard timeout after 3 seconds - force show content regardless
     // ✅ Show dashboard after short delay to ensure rendering
-    setTimeout(() => {
-      this.isLoading = false;
-    }, 500);
+this.ngZone.run(() => {
+      setTimeout(() => {
+        this.isLoading = false;
+      }, 500);
+    });
+    
     
     
     // Load initial data
