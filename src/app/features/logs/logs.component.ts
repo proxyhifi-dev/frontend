@@ -1,30 +1,57 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // ✅ Required for [(ngModel)]
-import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms'; // ✅ Fix: Required for [(ngModel)]
+import { WebSocketService } from '../../core/services/websocket.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-logs',
   standalone: true,
-  imports: [CommonModule, FormsModule], // ✅ Added
+  imports: [CommonModule, FormsModule], // ✅ Fix: Added FormsModule
   templateUrl: './logs.component.html',
   styleUrls: ['./logs.component.scss']
 })
-export class LogsComponent implements OnInit {
+export class LogsComponent implements OnInit, OnDestroy {
   logs: any[] = [];
 
-  // ✅ Properties expected by template
+  // ✅ Fix: Define variables used in HTML
   liveTail = true;
   filterLevel = 'All';
 
-  constructor(private http: HttpClient) {}
+  private sub = new Subscription();
+
+  constructor(private ws: WebSocketService) {}
 
   ngOnInit() {
-    this.http.get<any[]>('/api/logs/latest').subscribe(data => this.logs = data);
+    this.sub.add(
+      this.ws.subscribe('/topic/logs').subscribe((log: any) => {
+        if (log) {
+          // Filter logic
+          if (this.filterLevel !== 'All' && log.level !== this.filterLevel) {
+            return;
+          }
+          // Live tail logic
+          if (this.liveTail) {
+            this.logs.unshift(log);
+            if (this.logs.length > 200) this.logs.pop();
+          }
+        }
+      })
+    );
   }
 
-  getLevelClass(level: string) {
-    const classes: any = { 'INFO': 'text-blue', 'WARN': 'text-yellow', 'ERROR': 'text-red' };
-    return classes[level] || '';
+  // ✅ Fix: Define the helper function used in HTML
+  getLevelClass(level: string): string {
+    switch (level) {
+      case 'INFO': return 'text-blue-400';
+      case 'WARN': return 'text-yellow-400';
+      case 'ERROR': return 'text-red-500';
+      case 'TRADE': return 'text-green-400 font-bold';
+      default: return 'text-gray-300';
+    }
+  }
+
+  ngOnDestroy() {
+    this.sub.unsubscribe();
   }
 }

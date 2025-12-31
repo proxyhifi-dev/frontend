@@ -32,8 +32,6 @@ import { DashboardStats, Position, Signal } from '../../core/models/domain.model
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   isLoading = true;
-
-  // Default safe values
   stats: DashboardStats = {
     todayPnL: 0, weeklyPnL: 0, monthlyPnL: 0, totalPnL: 0,
     unrealizedPnL: 0, winRate: 0, profitFactor: 0, activePositionsCount: 0,
@@ -56,28 +54,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    // ✅ Fix: Safety Timer - Forces dashboard to open after 2s even if backend fails
+    setTimeout(() => {
+        if (this.isLoading) {
+            console.warn("⚠️ Backend slow/unreachable. Force loading dashboard.");
+            this.isLoading = false;
+        }
+    }, 2000);
+
     this.sub.add(
       this.store.state$.pipe(
         switchMap(() => {
           this.isLoading = true;
-          // 1. Get Summary First (Fail-safe)
           return this.dashboardSvc.getSummary().pipe(
             catchError(err => {
-              console.warn('Dashboard summary failed, using defaults', err);
+              console.error('Summary API Error:', err);
               return of(this.stats);
             })
           );
         })
       ).subscribe(data => {
-        this.stats = data;
-        this.loadWidgets(); // 2. Then load widgets
+        this.stats = data || this.stats;
+        this.loadWidgets();
       })
     );
     this.setupWebSockets();
   }
 
   loadWidgets() {
-    // ✅ ROBUST LOADING: forkJoin ensures we wait for all, but finalize runs ALWAYS
     const requests = {
       positions: this.positionSvc.getOpenPositions().pipe(catchError(() => of([]))),
       signals: this.signalSvc.getLatestSignals().pipe(catchError(() => of([]))),
@@ -86,9 +90,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.sub.add(
       forkJoin(requests).pipe(
-        finalize(() => {
-          this.isLoading = false; // ✅ This guarantees the spinner disappears
-        })
+        finalize(() => this.isLoading = false) // ✅ Fix: Ensures loading spinner stops
       ).subscribe(results => {
         this.activePositions = results.positions;
         this.newSignals = results.signals;
@@ -98,16 +100,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   setupWebSockets() {
-    this.sub.add(this.wsService.subscribe('/topic/summary').subscribe(update => {
-      if (update) this.stats = { ...this.stats, ...update };
-    }));
-
-    this.sub.add(this.wsService.subscribe('/topic/signals').subscribe(sig => {
-      if (sig) this.newSignals = [sig, ...this.newSignals].slice(0, 5);
-    }));
+    this.sub.add(this.wsService.subscribe('/topic/summary').subscribe(u => { if(u) this.stats = {...this.stats, ...u}; }));
+    this.sub.add(this.wsService.subscribe('/topic/signals').subscribe(s => { if(s) this.newSignals = [s, ...this.newSignals].slice(0, 5); }));
   }
 
-  ngOnDestroy() {
-    this.sub.unsubscribe();
-  }
+  ngOnDestroy() { this.sub.unsubscribe(); }
 }
