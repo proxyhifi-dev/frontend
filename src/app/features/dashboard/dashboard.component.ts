@@ -25,10 +25,10 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-
-  // ✅ Loading state
+  // ✅ Loading state with hard timeout
   isLoading: boolean = true;
-
+  loadingMessage: string = 'Connecting to Market Data Feed...';
+  
   // ✅ Data properties
   stats: any = {
     todayPnL: 0,
@@ -39,39 +39,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
     totalTrades: 0,
     winningTrades: 0
   };
-
+  
   equityData: any[] = [];
   activePositions: any[] = [];
   newSignals: any[] = [];
-
+  
   private subscriptions: Subscription = new Subscription();
   private loadingTimeout: any;
-
+  private initializationAttempts: number = 0;
+  private maxInitializationAttempts: number = 3;
+  
   constructor(
     private dashboardService: DashboardService,
     private positionService: PositionService,
     private wsService: WebSocketService
   ) {}
-
+  
   ngOnInit(): void {
     console.log('🎬 Dashboard component initializing...');
-
-    // ✅ SAFETY: Force hide loading after 2 seconds regardless
+    console.log('Backend: http://127.0.0.1:8080');
+    
+    // ✅ CRITICAL: Hard timeout after 3 seconds - force show content regardless
     this.loadingTimeout = setTimeout(() => {
-      console.warn('⚠️ Loading timeout reached - hiding loading screen');
+      console.warn('⚠️ Loading timeout (3s) reached - forcing content display');
       this.isLoading = false;
-    }, 2000);
-
+      this.loadingMessage = 'Dashboard Ready';
+    }, 3000);
+    
     // Load initial data
     this.loadInitialData();
-
+    
     // Setup WebSocket listeners
     this.setupWebSockets();
   }
-
+  
   private loadInitialData(): void {
     console.log('📡 Loading initial data from backend...');
-
+    this.initializationAttempts++;
+    
     // Load dashboard summary
     this.subscriptions.add(
       this.dashboardService.getSummary().subscribe({
@@ -83,13 +88,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           console.error('❌ Error loading stats:', err);
+          console.warn('Using fallback stats');
           // Don't block loading if stats fail
           this.isLoading = false;
           clearTimeout(this.loadingTimeout);
         }
       })
     );
-
+    
     // Load equity curve
     this.subscriptions.add(
       this.dashboardService.getEquityCurve().subscribe({
@@ -98,12 +104,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.equityData = data || [];
         },
         error: (err) => {
-          console.error('❌ Error loading equity curve:', err);
+          console.warn('⚠️ Error loading equity curve:', err);
           this.equityData = [];
         }
       })
     );
-
+    
     // Load positions
     this.subscriptions.add(
       this.positionService.getOpenPositions().subscribe({
@@ -112,12 +118,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.activePositions = data || [];
         },
         error: (err) => {
-          console.error('❌ Error loading positions:', err);
+          console.warn('⚠️ Error loading positions:', err);
           this.activePositions = [];
         }
       })
     );
-
+    
     // Load signals
     this.subscriptions.add(
       this.dashboardService.getSignals().subscribe({
@@ -126,16 +132,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.newSignals = data || [];
         },
         error: (err) => {
-          console.error('❌ Error loading signals:', err);
+          console.warn('⚠️ Error loading signals:', err);
           this.newSignals = [];
         }
       })
     );
   }
-
+  
   private setupWebSockets(): void {
     console.log('📡 Setting up WebSocket listeners...');
-
+    
     // Subscribe to summary updates
     this.subscriptions.add(
       this.wsService.subscribe('/topic/summary').subscribe({
@@ -146,7 +152,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         error: (err) => console.warn('⚠️ WebSocket summary error:', err)
       })
     );
-
+    
     // Subscribe to position updates
     this.subscriptions.add(
       this.wsService.subscribe('/topic/positions').subscribe({
@@ -157,7 +163,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         error: (err) => console.warn('⚠️ WebSocket positions error:', err)
       })
     );
-
+    
     // Subscribe to signal updates
     this.subscriptions.add(
       this.wsService.subscribe('/topic/signals').subscribe({
@@ -169,7 +175,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     );
   }
-
+  
   ngOnDestroy(): void {
     if (this.loadingTimeout) {
       clearTimeout(this.loadingTimeout);
