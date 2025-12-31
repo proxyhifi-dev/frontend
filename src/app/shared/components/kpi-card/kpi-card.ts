@@ -13,4 +13,5 @@ export class KpiCardComponent {
   @Input() percentChange: number = 0;
   @Input() prefix: string = '₹';
   @Input() suffix: string = '';
+    @Input() isPositive: boolean = true;
 }
