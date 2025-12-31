@@ -1,12 +1,13 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PositionService } from '../../core/services/position.service';
 import { WebSocketService } from '../../core/services/websocket.service';
-import { Subscription, forkJoin, interval, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subscription, forkJoin, takeUntil } from 'rxjs/operators';
+import { BotService } from '../../core/services/bot.service';
+import { Subject } from 'rxjs';
 
-interface DashboardStats {
+export interface DashboardStats {
   todayPnL: number;
   unrealizedPnL: number;
   winRate: number;
@@ -15,13 +16,23 @@ interface DashboardStats {
   accountBalance: number;
   equityUsed: number;
   equityAvailable: number;
-}
-
-interface RiskMetrics {
-  riskExposure: number;
+  isLiveMode: boolean;
+  botStatus: string;
+  activePositions: number;
+  circuitBreakerStatus: string;
+  lastScan: string;
+  nextScan: string;
+  scannedStocks: number;
+  totalStocks: number;
+  signalsFound: number;
+  roi: number;
+  totalCapital: number;
+  dailyLossLimit: number;
+  dailyLossUsed: number;
+  dailyBuffer: number;
+  consecutiveLosses: number;
   maxDrawdown: number;
-  sharpeRatio: number;
-  portfolioHeat: number;
+  isPaused: boolean;
 }
 
 @Component({
@@ -29,12 +40,9 @@ interface RiskMetrics {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss'],
+  styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  isLoading: boolean = true;
-  loadingMessage: string = 'Loading real-time data...';
-
   stats: DashboardStats = {
     todayPnL: 0,
     unrealizedPnL: 0,
@@ -44,235 +52,146 @@ export class DashboardComponent implements OnInit, OnDestroy {
     accountBalance: 0,
     equityUsed: 0,
     equityAvailable: 0,
-  };
-
-  riskMetrics: RiskMetrics = {
-    riskExposure: 0,
+    isLiveMode: false,
+    botStatus: 'IDLE',
+    activePositions: 0,
+    circuitBreakerStatus: 'SAFE',
+    lastScan: 'N/A',
+    nextScan: 'N/A',
+    scannedStocks: 0,
+    totalStocks: 0,
+    signalsFound: 0,
+    roi: 0,
+    totalCapital: 0,
+    dailyLossLimit: 5000,
+    dailyLossUsed: 0,
+    dailyBuffer: 5000,
+    consecutiveLosses: 0,
     maxDrawdown: 0,
-    sharpeRatio: 0,
-    portfolioHeat: 0,
+    isPaused: false
   };
 
-  tradingActive: boolean = true;
-  strategyStatus: string = 'Running';
-  lastSignalTime: Date = new Date();
-  activePositions: number = 0;
-  totalSignals: number = 0;
-
+  activePositions: any[] = [];
+  newSignals: any[] = [];
+  notifications: any[] = [];
   equityData: any[] = [];
-  drawdownData: any[] = [];
-  performanceData: any[] = [];
+  timeRanges: string[] = ['1D', '5D', '1M', '3M', '6M', '1Y'];
+  selectedTimeRange: string = '1D';
+  isLoading: boolean = true;
 
-  recentTrades: any[] = [];
-  openPositions: any[] = [];
-  recentSignals: any[] = [];
-
-  circuitBreakerTriggered: boolean = false;
-  circuitBreakerMessage: string = '';
-
-  private subscriptions: Subscription[] = [];
   private destroy$ = new Subject<void>();
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private dashboardService: DashboardService,
     private positionService: PositionService,
     private wsService: WebSocketService,
-    private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private botService: BotService
   ) {}
 
   ngOnInit(): void {
-    this.initializeDashboard();
-    this.setupRealTimeUpdates();
+    this.loadDashboardData();
+    this.setupWebSocketSubscriptions();
   }
 
-  private initializeDashboard(): void {
+  loadDashboardData(): void {
     this.isLoading = true;
-    const statsObs = this.dashboardService.getDashboardStats();
-    const positionsObs = this.positionService.getOpenPositions();
-    const equityObs = this.dashboardService.getEquityCurve();
-
-    forkJoin([statsObs, positionsObs, equityObs])
+    const sub = this.dashboardService.getDashboardStats()
       .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: ([stats, positions, equityData]: [any, any, any]) => {
-          this.stats = stats;
-          this.openPositions = positions || [];
-          this.equityData = equityData || [];
-          this.activePositions = (positions || []).length;
-          this.calculateRiskMetrics();
+      .subscribe(
+        (data: any) => {
+          this.stats = { ...this.stats, ...data };
           this.isLoading = false;
-          this.cdr.markForCheck();
         },
-        error: (err: any) => {
-          console.error('Dashboard initialization failed:', err);
+        (error: any) => {
+          console.error('Failed to load dashboard stats', error);
           this.isLoading = false;
-          this.cdr.markForCheck();
-        },
-      });
+        }
+      );
+    this.subscriptions.push(sub);
   }
 
-  private setupRealTimeUpdates(): void {
-    interval(5000)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.updateStats();
-      });
-
-    this.wsService
-      .connect()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (data: any) => {
-          this.handleWebSocketMessage(data);
-        },
-        error: (err: any) => {
-          console.error('WebSocket error:', err);
-        },
-      });
-  }
-
-  private updateStats(): void {
-    this.dashboardService
-      .getDashboardStats()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (stats: any) => {
-          this.stats = stats;
-          this.calculateRiskMetrics();
-          this.cdr.markForCheck();
-        },
-      });
-  }
-
-  private handleWebSocketMessage(data: any): void {
-    if (data.type === 'TRADE_SIGNAL') {
-      this.addRecentSignal(data.payload);
-    } else if (data.type === 'POSITION_CLOSED') {
-      this.removeOpenPosition(data.payload.positionId);
-    } else if (data.type === 'CIRCUIT_BREAKER') {
-      this.handleCircuitBreaker(data.payload);
-    } else if (data.type === 'EQUITY_UPDATE') {
-      this.stats.portfolioValue = data.payload.portfolioValue;
-      this.stats.accountBalance = data.payload.accountBalance;
-    }
-    this.cdr.markForCheck();
-  }
-
-  private calculateRiskMetrics(): void {
-    this.riskMetrics = {
-      riskExposure: this.calculateRiskExposure(),
-      maxDrawdown: this.calculateMaxDrawdown(),
-      sharpeRatio: this.calculateSharpeRatio(),
-      portfolioHeat: this.calculatePortfolioHeat(),
-    };
-  }
-
-  private calculateRiskExposure(): number {
-    if (this.openPositions.length === 0) return 0;
-    const totalRisk = this.openPositions.reduce((sum, pos) => sum + (pos.riskAmount || 0), 0);
-    return (totalRisk / this.stats.accountBalance) * 100;
-  }
-
-  private calculateMaxDrawdown(): number {
-    if (this.equityData.length === 0) return 0;
-    let maxEquity = 0;
-    let maxDrawdown = 0;
-    for (const point of this.equityData) {
-      if (point.value > maxEquity) {
-        maxEquity = point.value;
-      }
-      const drawdown = ((maxEquity - point.value) / maxEquity) * 100;
-      if (drawdown > maxDrawdown) {
-        maxDrawdown = drawdown;
-      }
-    }
-    return maxDrawdown;
-  }
-
-  private calculateSharpeRatio(): number {
-    return 1.5;
-  }
-
-  private calculatePortfolioHeat(): number {
-    const positionCount = this.openPositions.length;
-    const concentration = positionCount > 0 ? 100 / positionCount : 0;
-    const riskExposure = this.calculateRiskExposure();
-    return (riskExposure + concentration) / 2;
-  }
-
-  private addRecentSignal(signal: any): void {
-    this.recentSignals.unshift(signal);
-    this.recentSignals = this.recentSignals.slice(0, 10);
-    this.totalSignals++;
-  }
-
-  private removeOpenPosition(positionId: string): void {
-    this.openPositions = this.openPositions.filter((p) => p.id !== positionId);
-    this.activePositions = this.openPositions.length;
-  }
-
-  private handleCircuitBreaker(payload: any): void {
-    this.circuitBreakerTriggered = true;
-    this.circuitBreakerMessage = payload.message || 'Circuit breaker activated';
-    this.tradingActive = false;
-  }
-
-  pauseTrading(): void {
-    this.dashboardService
-      .pauseTrading()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.tradingActive = false;
-          this.strategyStatus = 'Paused';
-          this.cdr.markForCheck();
-        },
-      });
-  }
-
-  resumeTrading(): void {
-    this.dashboardService
-      .resumeTrading()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.tradingActive = true;
-          this.strategyStatus = 'Running';
-          this.cdr.markForCheck();
-        },
-      });
-  }
-
-  liquidateAll(): void {
-    if (confirm('Liquidate all positions? This cannot be undone.')) {
-      this.dashboardService
-        .liquidateAllPositions()
+  setupWebSocketSubscriptions(): void {
+    if (this.wsService.connect) {
+      const sub = this.wsService.connect()
         .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.openPositions = [];
-            this.activePositions = 0;
-            this.cdr.markForCheck();
-          },
-        });
+        .subscribe();
+      this.subscriptions.push(sub);
     }
   }
 
-  formatCurrency(value: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
+  toggleMode(): void {
+    this.stats.isLiveMode = !this.stats.isLiveMode;
+    if (this.dashboardService.toggleMode) {
+      this.dashboardService.toggleMode(this.stats.isLiveMode).subscribe();
+    }
   }
 
-  formatPercentage(value: number, decimals: number = 2): string {
-    return `${(value * 100).toFixed(decimals)}%`;
+  toggleNotifications(): void {
+    // Toggle notifications visibility
+  }
+
+  toggleProfile(): void {
+    // Toggle profile menu
+  }
+
+  pauseBot(): void {
+    this.stats.isPaused = !this.stats.isPaused;
+    if (this.dashboardService.pauseTrading && !this.stats.isPaused) {
+      this.dashboardService.pauseTrading().subscribe();
+    } else if (this.dashboardService.resumeTrading && this.stats.isPaused) {
+      this.dashboardService.resumeTrading().subscribe();
+    }
+  }
+
+  scanNow(): void {
+    // Trigger immediate scan
+    if (this.botService.scanNow) {
+      this.botService.scanNow().subscribe();
+    }
+  }
+
+  setTimeRange(range: string): void {
+    this.selectedTimeRange = range;
+  }
+
+  expandPositions(): void {
+    // Open full positions view
+  }
+
+  closePosition(position: any): void {
+    if (this.positionService.closePosition) {
+      this.positionService.closePosition(position.id).subscribe();
+    }
+  }
+
+  modifySL(position: any): void {
+    // Open modify stop loss dialog
+  }
+
+  approveSignal(signal: any): void {
+    // Approve trading signal
+  }
+
+  rejectSignal(signal: any): void {
+    // Reject trading signal
+  }
+
+  viewAllSignals(): void {
+    // Navigate to full signals view
+  }
+
+  viewFullRisk(): void {
+    // Navigate to risk page
+  }
+
+  navigateToDashboard(): void {
+    // Navigate back to dashboard (for logo click)
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    this.subscriptions.forEach((sub) => sub.unsubscribe());
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 }
