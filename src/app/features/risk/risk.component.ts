@@ -10,9 +10,8 @@ import { RiskStatus } from '../../core/models/domain.model';
 @Component({
   selector: 'app-risk',
   standalone: true,
- imports: [CommonModule, CurrencyInrPipe, CorrelationHeatmapComponent],
-   templateUrl: './risk.component.html',
- styleUrls: ['./risk.component.scss']
+ imports: [CommonModule, CurrencyInrPipe],
+ styleUrls: ['./risk.component.scss']']
 })
 export class RiskComponent implements OnInit {
   riskStatus: RiskStatus = {
