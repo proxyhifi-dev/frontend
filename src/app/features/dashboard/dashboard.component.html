@@ -1,67 +1,69 @@
+<!-- ✅ Loading Overlay -->
 <div *ngIf="isLoading" class="loading-overlay">
-  <div class="spinner-container">
+  <div class="loading-spinner">
     <div class="spinner"></div>
-    <p>Connecting to Market Data Feed...</p>
+    <p class="loading-text">Connecting to Market Data Feed...</p>
+    <p class="loading-subtext">Backend: http://127.0.0.1:8080</p>
   </div>
 </div>
 
+<!-- ✅ Dashboard Content (Hidden while loading) -->
 <div *ngIf="!isLoading" class="dashboard-container">
 
+  <!-- KPI Cards Row -->
   <div class="kpi-row">
     <app-kpi-card
-      title="TODAY P&L"
+      title="Today P&L"
       [value]="stats.todayPnL"
       prefix="₹"
-      [percentChange]="0">
+      [isPositive]="stats.todayPnL >= 0">
     </app-kpi-card>
 
     <app-kpi-card
-      title="WEEKLY P&L"
-      [value]="stats.weeklyPnL"
+      title="Unrealized P&L"
+      [value]="stats.unrealizedPnL"
       prefix="₹"
-      [percentChange]="0">
+      [isPositive]="stats.unrealizedPnL >= 0">
     </app-kpi-card>
 
     <app-kpi-card
-      title="MONTHLY P&L"
-      [value]="stats.monthlyPnL"
-      prefix="₹"
-      [percentChange]="0">
+      title="Win Rate"
+      [value]="stats.winRate"
+      prefix="%">
     </app-kpi-card>
 
     <app-kpi-card
-      title="TOTAL P&L"
-      [value]="stats.totalPnL"
-      prefix="₹"
-      [percentChange]="stats.roi">
+      title="ROI"
+      [value]="stats.roi"
+      prefix="%"
+      [isPositive]="stats.roi >= 0">
     </app-kpi-card>
   </div>
 
+  <!-- Dashboard Grid -->
   <div class="dashboard-grid">
+
+    <!-- Left Column -->
     <div class="left-column">
-      <app-equity-curve-chart [data]="equityData"></app-equity-curve-chart>
-      <app-positions-widget [positions]="activePositions"></app-positions-widget>
+      <app-equity-curve-chart
+        [data]="equityData"
+        title="Equity Curve">
+      </app-equity-curve-chart>
+
+      <app-positions-widget
+        [positions]="activePositions"
+        title="Open Positions">
+      </app-positions-widget>
     </div>
 
+    <!-- Right Column -->
     <div class="right-column">
-      <app-welcome-wizard *ngIf="(onboarding.isNewUser$ | async)"></app-welcome-wizard>
-      <div class="status-header glass-card">
-        <div class="status-item">
-          <label>BOT STATUS</label>
-          <span class="active-dot">⚫ ACTIVE</span>
-        </div>
-        <div class="status-item">
-          <label>Mode</label>
-          <span class="mode-badge">{{ (store.state$ | async)?.isLiveMode ? 'LIVE' : 'PAPER' }}</span>
-        </div>
-        <div class="status-item">
-          <label>Signals</label>
-          <span>{{ newSignals.length }} New</span>
-        </div>
-        <button class="btn-pause">⏸ Pause</button>
-      </div>
+      <app-circuit-breaker></app-circuit-breaker>
 
-      <app-recent-signals-widget [signals]="newSignals"></app-recent-signals-widget>
+      <app-recent-signals-widget
+        [signals]="newSignals"
+        title="Recent Signals">
+      </app-recent-signals-widget>
     </div>
   </div>
 </div>

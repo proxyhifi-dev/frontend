@@ -1,24 +1,23 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { StoreService } from './store.service';
-import { DashboardStats } from '../models/domain.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
-  private baseUrl = '/api';
+  private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient, private store: StoreService) {}
+  constructor(private http: HttpClient) {}
 
-  getSummary(): Observable<DashboardStats> {
-    const isLive = this.store.snapshot.isLiveMode;
-    const type = isLive ? 'LIVE' : 'PAPER';
-    return this.http.get<DashboardStats>(`${this.baseUrl}/account/summary?type=${type}`);
+  getSummary(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/account/summary?type=PAPER`);
   }
 
   getEquityCurve(): Observable<any[]> {
-    const isLive = this.store.snapshot.isLiveMode;
-    const type = isLive ? 'LIVE' : 'PAPER';
-    return this.http.get<any[]>(`${this.baseUrl}/performance/equity-curve?type=${type}`);
+    return this.http.get<any[]>(`${this.apiUrl}/performance/equity-curve?type=PAPER`);
+  }
+
+  getSignals(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/strategy/signals`);
   }
 }
