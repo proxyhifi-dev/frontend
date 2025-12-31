@@ -95,16 +95,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     forkJoin([statsObs, positionsObs, equityObs])
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ([stats, positions, equityData]) => {
+        next: ([stats, positions, equityData]: [any, any, any]) => {
           this.stats = stats;
-          this.openPositions = positions;
-          this.equityData = equityData;
-          this.activePositions = positions.length;
+          this.openPositions = positions || [];
+          this.equityData = equityData || [];
+          this.activePositions = (positions || []).length;
           this.calculateRiskMetrics();
           this.isLoading = false;
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: (err: any) => {
           console.error('Dashboard initialization failed:', err);
           this.isLoading = false;
           this.cdr.markForCheck();
@@ -123,10 +123,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .connect()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (data) => {
+        next: (data: any) => {
           this.handleWebSocketMessage(data);
         },
-        error: (err) => {
+        error: (err: any) => {
           console.error('WebSocket error:', err);
         },
       });
@@ -137,7 +137,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .getDashboardStats()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (stats) => {
+        next: (stats: any) => {
           this.stats = stats;
           this.calculateRiskMetrics();
           this.cdr.markForCheck();
