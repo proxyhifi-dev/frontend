@@ -1,69 +1,264 @@
-<!-- ✅ Loading Overlay -->
-<div *ngIf="isLoading" class="loading-overlay">
-  <div class="loading-spinner">
-    <div class="spinner"></div>
-    <p class="loading-text">Connecting to Market Data Feed...</p>
-    <p class="loading-subtext">Backend: http://127.0.0.1:8080</p>
+<!-- 🎯 APEX TRADING BOT - PROFESSIONAL UI -->
+
+<!-- ⬆️ TOP NAVIGATION BAR -->
+<nav class="navbar">
+  <!-- Logo -->
+  <div class="navbar-logo" (click)="navigateToDashboard()">
+    <span class="logo-icon">⚡</span>
+    <span class="logo-text">APEX</span>
+  </div>
+
+  <!-- Navigation Links -->
+  <div class="nav-links">
+    <a class="nav-link active" routerLink="/dashboard">Dashboard</a>
+    <a class="nav-link" routerLink="/positions">Positions</a>
+    <a class="nav-link" routerLink="/signals">Signals</a>
+    <a class="nav-link" routerLink="/risk">Risk</a>
+    <a class="nav-link" routerLink="/analytics">Analytics</a>
+  </div>
+
+  <!-- Right Section -->
+  <div class="navbar-right">
+    <!-- Mode Toggle -->
+    <div class="mode-toggle" [ngClass]="{ 'live-mode': stats.isLiveMode }">
+      <span class="mode-label">{{ stats.isLiveMode ? 'LIVE' : 'PAPER' }}</span>
+      <label class="switch">
+        <input type="checkbox" [checked]="stats.isLiveMode" (change)="toggleMode()">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Notifications -->
+    <div class="notifications" (click)="toggleNotifications()">
+      <span class="bell-icon">🔔</span>
+      <span class="notification-badge" *ngIf="notifications.length > 0">{{ notifications.length }}</span>
+    </div>
+
+    <!-- Profile -->
+    <div class="profile-menu" (click)="toggleProfile()">
+      <span class="profile-icon">👤</span>
+    </div>
+  </div>
+</nav>
+
+<!-- 📋 PAPER MODE BANNER -->
+<div class="paper-mode-banner" *ngIf="!stats.isLiveMode">
+  <div class="banner-content">
+    <div class="banner-status">🔷 PAPER TRADING MODE - No real money is being traded</div>
+    <div class="banner-metrics">
+      <div class="metric">Bot: <strong>{{ stats.botStatus }}</strong></div>
+      <div class="metric">Positions: <strong>{{ stats.activePositions }}</strong></div>
+      <div class="metric">Circuit Breaker: <strong>{{ stats.circuitBreakerStatus }}</strong></div>
+      <div class="metric">Last Scan: <strong>{{ stats.lastScan }}</strong></div>
+      <div class="metric">Capital: <strong>₹{{ stats.totalCapital | number }}</strong></div>
+    </div>
   </div>
 </div>
 
-<!-- ✅ Dashboard Content (Hidden while loading) -->
-<div *ngIf="!isLoading" class="dashboard-container">
+<!-- 📦 DASHBOARD CONTAINER -->
+<div class="dashboard-container" [ngIf="!isLoading">
 
-  <!-- KPI Cards Row -->
+  <!-- KPI CARDS ROW -->
   <div class="kpi-row">
-    <app-kpi-card
-      title="Today P&L"
-      [value]="stats.todayPnL"
-      prefix="₹"
-      [isPositive]="stats.todayPnL >= 0">
-    </app-kpi-card>
+    <!-- Today P&L -->
+    <div class="kpi-card" [ngClass]="{ 'positive': stats.todayPnL >= 0, 'negative': stats.todayPnL < 0 }">
+      <div class="kpi-title">TODAY P&L</div>
+      <div class="kpi-value">₹{{ stats.todayPnL | number }}</div>
+      <div class="kpi-change">{{ stats.todayPnL >= 0 ? '📈' : '📉' }} {{ (stats.todayPnL / stats.totalCapital * 100) | number:'1.2-2' }}%</div>
+    </div>
 
-    <app-kpi-card
-      title="Unrealized P&L"
-      [value]="stats.unrealizedPnL"
-      prefix="₹"
-      [isPositive]="stats.unrealizedPnL >= 0">
-    </app-kpi-card>
+    <!-- Unrealized P&L -->
+    <div class="kpi-card" [ngClass]="{ 'positive': stats.unrealizedPnL >= 0, 'negative': stats.unrealizedPnL < 0 }">
+      <div class="kpi-title">UNREALIZED P&L</div>
+      <div class="kpi-value">₹{{ stats.unrealizedPnL | number }}</div>
+      <div class="kpi-change">{{ stats.unrealizedPnL >= 0 ? '📈' : '📉' }} {{ (stats.unrealizedPnL / stats.totalCapital * 100) | number:'1.2-2' }}%</div>
+    </div>
 
-    <app-kpi-card
-      title="Win Rate"
-      [value]="stats.winRate"
-      prefix="%">
-    </app-kpi-card>
+    <!-- Win Rate -->
+    <div class="kpi-card">
+      <div class="kpi-title">WIN RATE</div>
+      <div class="kpi-value">{{ stats.winRate | number:'1.1-1' }}%</div>
+      <div class="kpi-change">Trades: {{ stats.totalTrades }}</div>
+    </div>
 
-    <app-kpi-card
-      title="ROI"
-      [value]="stats.roi"
-      prefix="%"
-      [isPositive]="stats.roi >= 0">
-    </app-kpi-card>
+    <!-- ROI -->
+    <div class="kpi-card" [ngClass]="{ 'positive': stats.roi >= 0, 'negative': stats.roi < 0 }">
+      <div class="kpi-title">ROI</div>
+      <div class="kpi-value">{{ stats.roi | number:'1.1-1' }}%</div>
+      <div class="kpi-change">Return on Investment</div>
+    </div>
   </div>
 
-  <!-- Dashboard Grid -->
-  <div class="dashboard-grid">
-
-    <!-- Left Column -->
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+    
+    <!-- LEFT COLUMN -->
     <div class="left-column">
-      <app-equity-curve-chart
-        [data]="equityData"
-        title="Equity Curve">
-      </app-equity-curve-chart>
+      
+      <!-- LIVE POSITIONS -->
+      <div class="widget positions-widget">
+        <div class="widget-header">
+          <h2>LIVE POSITIONS ({{ stats.activePositions }})</h2>
+          <button class="btn-small" (click)="expandPositions()">View All</button>
+        </div>
+        <div class="positions-list">
+          <div class="position-card" *ngFor="let pos of activePositions.slice(0, 2)">
+            <div class="position-header">
+              <h3>{{ pos.symbol }}</h3>
+              <span class="position-sector">{{ pos.sector }}</span>
+            </div>
+            <div class="position-grid">
+              <div class="pos-item">
+                <span class="label">Entry</span>
+                <span class="value">₹{{ pos.entryPrice | number }}</span>
+              </div>
+              <div class="pos-item">
+                <span class="label">Current</span>
+                <span class="value animated">₹{{ pos.currentPrice | number }}</span>
+              </div>
+              <div class="pos-item">
+                <span class="label">P&L</span>
+                <span class="value" [ngClass]="{ 'positive': pos.pnl >= 0, 'negative': pos.pnl < 0 }">
+                  ₹{{ pos.pnl | number }} {{ pos.pnlPercent | number:'1.1-1' }}%
+                </span>
+              </div>
+              <div class="pos-item">
+                <span class="label">Target</span>
+                <span class="value">{{ pos.targetDistance }} to go</span>
+              </div>
+            </div>
+            <div class="position-actions">
+              <button class="btn-secondary" (click)="closePosition(pos)">Close</button>
+              <button class="btn-secondary" (click)="modifySL(pos)">Edit SL</button>
+            </div>
+          </div>
+          
+          <!-- Empty Slot -->
+          <div class="empty-slot" *ngIf="stats.activePositions < 25">
+            <span>Available Slot {{ stats.activePositions + 1 }}</span>
+            <p>Waiting for new signal...</p>
+          </div>
+        </div>
+      </div>
 
-      <app-positions-widget
-        [positions]="activePositions"
-        title="Open Positions">
-      </app-positions-widget>
+      <!-- BOT STATUS -->
+      <div class="widget bot-status-widget">
+        <div class="widget-header">
+          <h2>BOT STATUS</h2>
+        </div>
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-dot" [ngClass]="stats.botStatus.toLowerCase()"></span>
+            <span>{{ stats.botStatus }}</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Last Scan</span>
+            <span class="value">{{ stats.lastScan }}</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Next Scan</span>
+            <span class="value countdown">{{ stats.nextScan }}s</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Scanned</span>
+            <span class="value">{{ stats.scannedStocks }}/{{ stats.totalStocks }}</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Signals</span>
+            <span class="value badge">{{ stats.signalsFound }}</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Circuit Breaker</span>
+            <span class="value" [ngClass]="stats.circuitBreakerStatus.toLowerCase()">{{ stats.circuitBreakerStatus }}</span>
+          </div>
+        </div>
+        <div class="status-actions">
+          <button class="btn-secondary" (click)="pauseBot()">{{ stats.isPaused ? 'Resume' : 'Pause' }}</button>
+          <button class="btn-primary" (click)="scanNow()">Scan Now</button>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Right Column -->
+    <!-- RIGHT COLUMN -->
     <div class="right-column">
-      <app-circuit-breaker></app-circuit-breaker>
+      
+      <!-- EQUITY CURVE -->
+      <div class="widget equity-curve-widget">
+        <div class="widget-header">
+          <h2>EQUITY CURVE</h2>
+          <div class="time-range-buttons">
+            <button class="time-btn" *ngFor="let range of timeRanges" (click)="setTimeRange(range)">{{ range }}</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <app-equity-curve-chart [data]="equityData" [timeRange]="selectedTimeRange"></app-equity-curve-chart>
+        </div>
+      </div>
 
-      <app-recent-signals-widget
-        [signals]="newSignals"
-        title="Recent Signals">
-      </app-recent-signals-widget>
+      <!-- RECENT SIGNALS -->
+      <div class="widget signals-widget">
+        <div class="widget-header">
+          <h2>RECENT SIGNALS</h2>
+          <button class="btn-small" (click)="viewAllSignals()">View All</button>
+        </div>
+        <div class="signals-list">
+          <div class="signal-item" *ngFor="let signal of newSignals.slice(0, 4)" [ngClass]="signal.status.toLowerCase()">
+            <div class="signal-header">
+              <h4>{{ signal.symbol }}</h4>
+              <span class="signal-score">{{ signal.score }}</span>
+              <span class="signal-grade" [ngClass]="'grade-' + signal.grade.toLowerCase()">{{ signal.grade }}</span>
+            </div>
+            <div class="signal-details">
+              <span class="signal-status">{{ signal.status }}</span>
+              <span class="signal-sector">{{ signal.sector }}</span>
+              <span class="signal-time">{{ signal.timestamp }}</span>
+            </div>
+            <div class="signal-actions" *ngIf="signal.status === 'PENDING'">
+              <button class="btn-approve" (click)="approveSignal(signal)">✓ Approve</button>
+              <button class="btn-reject" (click)="rejectSignal(signal)">✕ Reject</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RISK HEALTH -->
+      <div class="widget risk-health-widget">
+        <div class="widget-header">
+          <h2>RISK HEALTH</h2>
+          <button class="btn-small" (click)="viewFullRisk()">View Full</button>
+        </div>
+        <div class="risk-items">
+          <div class="risk-item">
+            <div class="risk-label">Daily Loss Limit</div>
+            <div class="risk-value">{{ stats.dailyLossLimit }}</div>
+            <div class="risk-progress">
+              <div class="progress-bar" [style.width.%]="stats.dailyLossUsed"></div>
+            </div>
+            <div class="risk-info">{{ stats.dailyLossUsed }}% used | Buffer: ₹{{ stats.dailyBuffer | number }}</div>
+          </div>
+          
+          <div class="risk-item">
+            <div class="risk-label">Consecutive Losses</div>
+            <div class="risk-value" [ngClass]="{ 'warning': stats.consecutiveLosses >= 3 }">{{ stats.consecutiveLosses }}/5</div>
+          </div>
+          
+          <div class="risk-item">
+            <div class="risk-label">Max Drawdown</div>
+            <div class="risk-value" [ngClass]="{ 'negative': stats.maxDrawdown < 0 }">{{ stats.maxDrawdown | number:'1.1-1' }}%</div>
+          </div>
+        </div>
+      </div>
+
     </div>
+
   </div>
+
+</div>
+
+<!-- 🔄 LOADING OVERLAY -->
+<div class="loading-overlay" *ngIf="isLoading">
+  <div class="loading-spinner"></div>
+  <p class="loading-text">{{ loadingMessage }}</p>
+  <p class="loading-subtext">Backend: http://127.0.0.1:8080</p>
 </div>
