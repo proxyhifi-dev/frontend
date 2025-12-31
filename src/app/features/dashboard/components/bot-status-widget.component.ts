@@ -8,11 +8,9 @@ import { Subject } from 'rxjs';
 interface BotStatus {
   isActive: boolean;
   status: 'Running' | 'Paused' | 'Stopped';
-  nextScanTime: Date;
-  scannedStocks: number;
+ nextScanTime: string;  scannedStocks: number;
   totalStocks: number;
-  lastScanTime: Date;
-  currentStrategy: string;
+ lastScanTime: string;  currentStrategy: string;
 }
 
 @Component({
@@ -203,7 +201,7 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
   
   ngOnInit(): void {
     this.startCountdownTimer();
-    this.subscribeToBot Status();
+    this.subscribeToBotStatus();
   }
   
   private startCountdownTimer(): void {
@@ -232,7 +230,7 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
     }
   }
   
-  private subscribeToBot Status(): void {
+  private subscribeToBotStatus(): void {
     this.botService.getBotStatus()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
