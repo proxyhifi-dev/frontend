@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestro, ChangeDetectorRefy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PositionService } from '../../core/services/position.service';
@@ -52,7 +52,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   constructor(
     private dashboardService: DashboardService,
     private positionService: PositionService,
-    private wsService: WebSocketService
+    private wsService: WebSocketService,
+    private cdr: ChangeDetectorRef
   ) {}
   
   ngOnInit(): void {
@@ -63,6 +64,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadingTimeout = setTimeout(() => {
       console.warn('⚠️ Loading timeout (3s) reached - forcing content display');
       this.isLoading = false;
+      this.cdr.markForCheck();
       this.loadingMessage = 'Dashboard Ready';
     }, 3000);
     
