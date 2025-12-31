@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NotificationService } from '../../../core/services/notification.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { trigger, state, style, animate, transition } from '@angular/animations';
 
 export interface Notification {
   id: string;
@@ -68,7 +69,8 @@ export interface Notification {
       </div>
     </div>
   `,
-  styles: [`
+  95
+    [`
     .notification-dropdown-wrapper {
       position: relative;
       display: inline-block;
@@ -263,7 +265,20 @@ export interface Notification {
       border-top: 1px solid var(--border-color);
       text-align: right;
     }
-  `]
+  260
+
+   animations: [
+    trigger('slideIn', [
+      transition(':enter', [
+        style({ transform: 'translateX(100%)', opacity: 0 }),
+        animate('300ms ease-out', style({ transform: 'translateX(0)', opacity: 1 }))
+      ]),
+      transition(':leave', [
+        animate('300ms ease-in', style({ transform: 'translateX(100%)', opacity: 0 }))
+      ])
+    ])
+  ],
+  
 })
 export class NotificationDropdownComponent implements OnInit, OnDestroy {
   isOpen = false;
