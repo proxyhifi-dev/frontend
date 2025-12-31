@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PositionService } from '../../core/services/position.service';
 import { WebSocketService } from '../../core/services/websocket.service';
-import { Subscription, forkJoin, takeUntil } from 'rxjs/operators';
-import { BotService } from '../../core/services/bot.service';
+import { Subscription, forkJoin } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';import { BotService } from '../../core/services/bot.service';
 import { Subject } from 'rxjs';
 
 export interface DashboardStats {
