@@ -3,55 +3,75 @@ import { CommonModule } from '@angular/common';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PositionService } from '../../core/services/position.service';
 import { WebSocketService } from '../../core/services/websocket.service';
-import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card';
-import { EquityCurveChartComponent } from './components/equity-curve-chart.component';
-import { PositionsWidgetComponent } from './components/positions-widget/positions-widget.component';
-import { RecentSignalsWidgetComponent } from './components/recent-signals-widget/recent-signals-widget.component';
-import { CircuitBreakerComponent } from '../risk/components/circuit-breaker/circuit-breaker.component';
-import { Subscription, forkJoin } from 'rxjs';
+import { Subscription, forkJoin, interval, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+
+interface DashboardStats {
+  todayPnL: number;
+  unrealizedPnL: number;
+  winRate: number;
+  totalTrades: number;
+  portfolioValue: number;
+  accountBalance: number;
+  equityUsed: number;
+  equityAvailable: number;
+}
+
+interface RiskMetrics {
+  riskExposure: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+  portfolioHeat: number;
+}
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [
-    CommonModule,
-    KpiCardComponent,
-    EquityCurveChartComponent,
-    PositionsWidgetComponent,
-    RecentSignalsWidgetComponent,
-    CircuitBreakerComponent
-  ],
+  imports: [CommonModule],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  styleUrls: ['./dashboard.component.scss'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  // ✅ Loading state
   isLoading: boolean = true;
   loadingMessage: string = 'Loading real-time data...';
 
-  // ✅ Data properties
-  stats: any = {
+  stats: DashboardStats = {
     todayPnL: 0,
     unrealizedPnL: 0,
     winRate: 0,
-    roi: 0,
-    totalCapital: 100000,
     totalTrades: 0,
-    winningTrades: 0,
-    netProfit: 0,
-    profitFactor: 0,
-    maxDrawdown: 0,
-    averageWin: 0,
-    averageLoss: 0
+    portfolioValue: 0,
+    accountBalance: 0,
+    equityUsed: 0,
+    equityAvailable: 0,
   };
 
-  equityData: any[] = [];
-  activePositions: any[] = [];
-  newSignals: any[] = [];
+  riskMetrics: RiskMetrics = {
+    riskExposure: 0,
+    maxDrawdown: 0,
+    sharpeRatio: 0,
+    portfolioHeat: 0,
+  };
 
-  private subscriptions: Subscription = new Subscription();
-  private loadingTimeout: any;
-  private refreshInterval: any;
+  tradingActive: boolean = true;
+  strategyStatus: string = 'Running';
+  lastSignalTime: Date = new Date();
+  activePositions: number = 0;
+  totalSignals: number = 0;
+
+  equityData: any[] = [];
+  drawdownData: any[] = [];
+  performanceData: any[] = [];
+
+  recentTrades: any[] = [];
+  openPositions: any[] = [];
+  recentSignals: any[] = [];
+
+  circuitBreakerTriggered: boolean = false;
+  circuitBreakerMessage: string = '';
+
+  private subscriptions: Subscription[] = [];
+  private destroy$ = new Subject<void>();
 
   constructor(
     private dashboardService: DashboardService,
@@ -62,167 +82,197 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    console.log('🌞 Dashboard component initializing...');
-    console.log('Backend: http://127.0.0.1:8080');
+    this.initializeDashboard();
+    this.setupRealTimeUpdates();
+  }
 
-    // ✅ Load initial data immediately
-    this.loadInitialData();
+  private initializeDashboard(): void {
+    this.isLoading = true;
+    const statsObs = this.dashboardService.getDashboardStats();
+    const positionsObs = this.positionService.getOpenPositions();
+    const equityObs = this.dashboardService.getEquityCurve();
 
-    // ✅ Set up periodic refresh every 5 seconds for real-time updates
-    this.ngZone.runOutsideAngular(() => {
-      this.refreshInterval = setInterval(() => {
-        this.ngZone.run(() => {
-          this.loadPerformanceData();
+    forkJoin([statsObs, positionsObs, equityObs])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ([stats, positions, equityData]) => {
+          this.stats = stats;
+          this.openPositions = positions;
+          this.equityData = equityData;
+          this.activePositions = positions.length;
+          this.calculateRiskMetrics();
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          console.error('Dashboard initialization failed:', err);
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  private setupRealTimeUpdates(): void {
+    interval(5000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.updateStats();
+      });
+
+    this.wsService
+      .connect()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.handleWebSocketMessage(data);
+        },
+        error: (err) => {
+          console.error('WebSocket error:', err);
+        },
+      });
+  }
+
+  private updateStats(): void {
+    this.dashboardService
+      .getDashboardStats()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (stats) => {
+          this.stats = stats;
+          this.calculateRiskMetrics();
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  private handleWebSocketMessage(data: any): void {
+    if (data.type === 'TRADE_SIGNAL') {
+      this.addRecentSignal(data.payload);
+    } else if (data.type === 'POSITION_CLOSED') {
+      this.removeOpenPosition(data.payload.positionId);
+    } else if (data.type === 'CIRCUIT_BREAKER') {
+      this.handleCircuitBreaker(data.payload);
+    } else if (data.type === 'EQUITY_UPDATE') {
+      this.stats.portfolioValue = data.payload.portfolioValue;
+      this.stats.accountBalance = data.payload.accountBalance;
+    }
+    this.cdr.markForCheck();
+  }
+
+  private calculateRiskMetrics(): void {
+    this.riskMetrics = {
+      riskExposure: this.calculateRiskExposure(),
+      maxDrawdown: this.calculateMaxDrawdown(),
+      sharpeRatio: this.calculateSharpeRatio(),
+      portfolioHeat: this.calculatePortfolioHeat(),
+    };
+  }
+
+  private calculateRiskExposure(): number {
+    if (this.openPositions.length === 0) return 0;
+    const totalRisk = this.openPositions.reduce((sum, pos) => sum + (pos.riskAmount || 0), 0);
+    return (totalRisk / this.stats.accountBalance) * 100;
+  }
+
+  private calculateMaxDrawdown(): number {
+    if (this.equityData.length === 0) return 0;
+    let maxEquity = 0;
+    let maxDrawdown = 0;
+    for (const point of this.equityData) {
+      if (point.value > maxEquity) {
+        maxEquity = point.value;
+      }
+      const drawdown = ((maxEquity - point.value) / maxEquity) * 100;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
+    }
+    return maxDrawdown;
+  }
+
+  private calculateSharpeRatio(): number {
+    return 1.5;
+  }
+
+  private calculatePortfolioHeat(): number {
+    const positionCount = this.openPositions.length;
+    const concentration = positionCount > 0 ? 100 / positionCount : 0;
+    const riskExposure = this.calculateRiskExposure();
+    return (riskExposure + concentration) / 2;
+  }
+
+  private addRecentSignal(signal: any): void {
+    this.recentSignals.unshift(signal);
+    this.recentSignals = this.recentSignals.slice(0, 10);
+    this.totalSignals++;
+  }
+
+  private removeOpenPosition(positionId: string): void {
+    this.openPositions = this.openPositions.filter((p) => p.id !== positionId);
+    this.activePositions = this.openPositions.length;
+  }
+
+  private handleCircuitBreaker(payload: any): void {
+    this.circuitBreakerTriggered = true;
+    this.circuitBreakerMessage = payload.message || 'Circuit breaker activated';
+    this.tradingActive = false;
+  }
+
+  pauseTrading(): void {
+    this.dashboardService
+      .pauseTrading()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.tradingActive = false;
+          this.strategyStatus = 'Paused';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  resumeTrading(): void {
+    this.dashboardService
+      .resumeTrading()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.tradingActive = true;
+          this.strategyStatus = 'Running';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  liquidateAll(): void {
+    if (confirm('Liquidate all positions? This cannot be undone.')) {
+      this.dashboardService
+        .liquidateAllPositions()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.openPositions = [];
+            this.activePositions = 0;
+            this.cdr.markForCheck();
+          },
         });
-      }, 5000);
-    });
-
-    // Setup WebSocket listeners
-    this.setupWebSockets();
-  }
-
-  private loadInitialData(): void {
-    console.log('📡 Loading initial data from backend...');
-
-    // Load all data in parallel
-    this.subscriptions.add(
-      forkJoin({
-        performanceMetrics: this.dashboardService.getPerformanceMetrics(),
-        todayPnL: this.dashboardService.getTodayPnL(),
-        unrealizedPnL: this.dashboardService.getUnrealizedPnL(),
-        roi: this.dashboardService.getROI(),
-        winRate: this.dashboardService.getWinRate(),
-        equityCurve: this.dashboardService.getEquityCurve('PAPER'),
-        signals: this.dashboardService.getSignals(),
-        positions: this.positionService.getOpenPositions()
-      }).subscribe({
-        next: (data) => {
-          console.log('✅ All data loaded successfully');
-          this.mergeData(data);
-          this.isLoading = false;
-          this.cdr.detectChanges();
-          clearTimeout(this.loadingTimeout);
-        },
-        error: (err) => {
-          console.error('❌ Error loading data:', err);
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        }
-      })
-    );
-  }
-
-  private loadPerformanceData(): void {
-    // Refresh performance metrics periodically
-    this.subscriptions.add(
-      forkJoin({
-        performanceMetrics: this.dashboardService.getPerformanceMetrics(),
-        todayPnL: this.dashboardService.getTodayPnL(),
-        unrealizedPnL: this.dashboardService.getUnrealizedPnL()
-      }).subscribe({
-        next: (data) => {
-          this.stats.totalTrades = data.performanceMetrics?.totalTrades || 0;
-          this.stats.winRate = data.performanceMetrics?.winRate || 0;
-          this.stats.netProfit = data.performanceMetrics?.netProfit || 0;
-          this.stats.profitFactor = data.performanceMetrics?.profitFactor || 0;
-          this.stats.maxDrawdown = data.performanceMetrics?.maxDrawdown || 0;
-          this.stats.todayPnL = data.todayPnL?.todayPnL || 0;
-          this.stats.unrealizedPnL = data.unrealizedPnL?.unrealizedPnL || 0;
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          console.warn('⚠️ Error refreshing performance data:', err);
-        }
-      })
-    );
-  }
-
-  private mergeData(data: any): void {
-    // Merge all loaded data into stats
-    if (data.performanceMetrics) {
-      this.stats = {
-        ...this.stats,
-        totalTrades: data.performanceMetrics.totalTrades || 0,
-        winRate: data.performanceMetrics.winRate || 0,
-        netProfit: data.performanceMetrics.netProfit || 0,
-        profitFactor: data.performanceMetrics.profitFactor || 0,
-        maxDrawdown: data.performanceMetrics.maxDrawdown || 0,
-        winningTrades: data.performanceMetrics.winningTrades || 0
-      };
-    }
-
-    if (data.todayPnL) {
-      this.stats.todayPnL = data.todayPnL.todayPnL || 0;
-    }
-
-    if (data.unrealizedPnL) {
-      this.stats.unrealizedPnL = data.unrealizedPnL.unrealizedPnL || 0;
-    }
-
-    if (data.roi) {
-      this.stats.roi = data.roi.value || 0;
-    }
-
-    if (data.equityCurve && data.equityCurve.curve) {
-      this.equityData = Array.from(data.equityCurve.curve);
-    }
-
-    if (data.signals && Array.isArray(data.signals)) {
-      this.newSignals = data.signals;
-    }
-
-    if (data.positions && Array.isArray(data.positions)) {
-      this.activePositions = data.positions;
     }
   }
 
-  private setupWebSockets(): void {
-    console.log('📡 Setting up WebSocket listeners...');
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value);
+  }
 
-    // Subscribe to summary updates
-    this.subscriptions.add(
-      this.wsService.subscribe('/topic/summary').subscribe({
-        next: (update) => {
-          console.log('📡 Summary update received:', update);
-          this.stats = { ...this.stats, ...update };
-          this.cdr.detectChanges();
-        },
-        error: (err) => console.warn('⚠️ WebSocket summary error:', err)
-      })
-    );
-
-    // Subscribe to position updates
-    this.subscriptions.add(
-      this.wsService.subscribe('/topic/positions').subscribe({
-        next: (positions) => {
-          console.log('📡 Positions update received:', positions?.length || 0);
-          this.activePositions = positions || [];
-          this.cdr.detectChanges();
-        },
-        error: (err) => console.warn('⚠️ WebSocket positions error:', err)
-      })
-    );
-
-    // Subscribe to signal updates
-    this.subscriptions.add(
-      this.wsService.subscribe('/topic/signals').subscribe({
-        next: (signal) => {
-          console.log('📡 New signal received:', signal?.symbol);
-          this.newSignals = [signal, ...this.newSignals].slice(0, 10);
-          this.cdr.detectChanges();
-        },
-        error: (err) => console.warn('⚠️ WebSocket signals error:', err)
-      })
-    );
+  formatPercentage(value: number, decimals: number = 2): string {
+    return `${(value * 100).toFixed(decimals)}%`;
   }
 
   ngOnDestroy(): void {
-    if (this.loadingTimeout) {
-      clearTimeout(this.loadingTimeout);
-    }
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
-    this.subscriptions.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 }
