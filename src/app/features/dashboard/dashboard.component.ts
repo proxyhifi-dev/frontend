@@ -66,6 +66,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 this.ngZone.run(() => {
       setTimeout(() => {
         this.isLoading = false;
+        this.cdr.detectChanges();
       }, 500);
     });
     
@@ -89,6 +90,7 @@ this.ngZone.run(() => {
           console.log('✅ Dashboard stats loaded:', data);
           this.stats = { ...this.stats, ...data };
           this.isLoading = false;
+          this.cdr.detectChanges();
           clearTimeout(this.loadingTimeout);
         },
         error: (err) => {
@@ -96,6 +98,7 @@ this.ngZone.run(() => {
           console.warn('Using fallback stats');
           // Don't block loading if stats fail
           this.isLoading = false;
+          this.cdr.detectChanges();
           clearTimeout(this.loadingTimeout);
         }
       })
