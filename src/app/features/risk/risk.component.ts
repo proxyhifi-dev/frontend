@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CorrelationHeatmapComponent } from './components/correlation-heatmap.component';
 import { RiskService } from '../../core/services/risk.service';
 import { StoreService } from '../../core/services/store.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -9,7 +10,7 @@ import { RiskStatus } from '../../core/models/domain.model';
 @Component({
   selector: 'app-risk',
   standalone: true,
-  imports: [CommonModule, CurrencyInrPipe],
+  imports: [CommonModule, CurrencyInrPipe], CorrelationHeatmapComponent,
   templateUrl: './risk.component.html',
   styleUrls: ['./risk.component.scss']
 })
