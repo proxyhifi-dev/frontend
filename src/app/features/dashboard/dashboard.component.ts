@@ -61,12 +61,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     console.log('Backend: http://127.0.0.1:8080');
     
     // ✅ CRITICAL: Hard timeout after 3 seconds - force show content regardless
-    this.loadingTimeout = setTimeout(() => {
-      console.warn('⚠️ Loading timeout (3s) reached - forcing content display');
+    // ✅ Show dashboard after short delay to ensure rendering
+    setTimeout(() => {
       this.isLoading = false;
-      this.cdr.markForCheck();
-      this.loadingMessage = 'Dashboard Ready';
-    }, 3000);
+    }, 500);
+    
     
     // Load initial data
     this.loadInitialData();
