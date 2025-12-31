@@ -1,36 +1,51 @@
 <div class="glass-card widget">
   <div class="widget-header">
     <h3>Active Positions ({{ positions.length }})</h3>
-    <a routerLink="/positions" class="view-all">View All</a>
+    <button class="btn-link">View All</button>
   </div>
 
-  <table class="live-table">
-    <thead>
-    <tr>
-      <th>Symbol</th>
-      <th>Size</th>
-      <th>Entry</th>
-      <th>LTP</th>
-      <th>P&L</th>
-      <th>Actions</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr *ngFor="let pos of positions">
-      <td class="bold">{{ pos.symbol }} <span class="badge">{{ pos.grade }}</span></td>
-      <td>{{ pos.quantity }}</td>
-      <td>{{ pos.entryPrice | currencyInr }}</td>
-      <td [class.flash-green]="true">{{ pos.currentPrice | currencyInr }}</td>
-      <td [ngClass]="getPnLClass(pos)">
-        {{ calculatePnL(pos) | currencyInr }}
-      </td>
-      <td>
-        <button class="btn-sm exit">Exit</button>
-      </td>
-    </tr>
-    <tr *ngIf="positions.length === 0">
-      <td colspan="6" class="empty">No active trades</td>
-    </tr>
-    </tbody>
-  </table>
+  <div class="positions-grid">
+    <div *ngIf="positions.length === 0" class="empty-state">
+      <p>No active trades</p>
+    </div>
+
+    <div class="pos-card" *ngFor="let pos of positions">
+      <div class="pos-header">
+        <div class="symbol-group">
+          <span class="symbol">{{ pos.symbol }}</span>
+          <span class="badge" [class.long]="pos.quantity > 0" [class.short]="pos.quantity < 0">
+            {{ pos.quantity > 0 ? 'LONG' : 'SHORT' }}
+          </span>
+        </div>
+        <span class="qty">{{ pos.quantity }} Qty</span>
+      </div>
+
+      <div class="pos-body">
+        <div class="price-row">
+          <span class="label">Entry</span>
+          <span class="val">{{ pos.entryPrice | number:'1.2-2' }}</span>
+        </div>
+        <div class="price-row">
+          <span class="label">LTP</span>
+          <span class="val">{{ pos.ltp | number:'1.2-2' }}</span>
+        </div>
+
+        <div class="pnl-bar-container">
+          <div class="pnl-bar"
+               [style.width.%]="(pos.pnlPercent > 0 ? pos.pnlPercent * 5 : -pos.pnlPercent * 5) + 20"
+               [class.profit]="pos.pnl > 0"
+               [class.loss]="pos.pnl < 0">
+          </div>
+        </div>
+      </div>
+
+      <div class="pos-footer">
+        <div class="pnl-info" [class.text-green]="pos.pnl > 0" [class.text-red]="pos.pnl < 0">
+          <span class="amount">{{ pos.pnl | currency:'INR' }}</span>
+          <span class="pct">({{ pos.pnlPercent | number:'1.2-2' }}%)</span>
+        </div>
+        <button class="btn-close">Close</button>
+      </div>
+    </div>
+  </div>
 </div>

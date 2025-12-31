@@ -1,24 +1,31 @@
 import { Injectable } from '@angular/core';
-import { StoreService } from './store.service';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class NotificationService {
+  constructor() {}
 
-  constructor(private store: StoreService) {}
-
-  success(title: string, message: string) {
-    this.store.notify(title, message, 'success');
+  // Standard method for success notifications
+  success(title: string, message: string): void {
+    console.log(`✅ SUCCESS: [${title}] ${message}`);
+    // You can replace this with a proper Toast/Snackbar later
+    alert(`${title}\n${message}`);
   }
 
-  error(title: string, message: string) {
-    this.store.notify(title, message, 'error');
+  // Standard method for error notifications
+  error(title: string, message: string): void {
+    console.error(`❌ ERROR: [${title}] ${message}`);
+    // You can replace this with a proper Toast/Snackbar later
+    alert(`${title}\n${message}`);
   }
 
-  warning(title: string, message: string) {
-    this.store.notify(title, message, 'warning');
+  // Keeping these for backward compatibility with your interceptor
+  showError(message: string): void {
+    this.error('System Error', message);
   }
 
-  info(title: string, message: string) {
-    this.store.notify(title, message, 'info');
+  showSuccess(message: string): void {
+    this.success('Success', message);
   }
 }

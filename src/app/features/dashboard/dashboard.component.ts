@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription, switchMap, catchError, of, finalize, forkJoin } from 'rxjs';
+import { Subscription, catchError, of, finalize, forkJoin } from 'rxjs';
 
+// Services
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PositionService } from '../../core/services/position.service';
 import { SignalService } from '../../core/services/signal.service';
@@ -9,6 +10,7 @@ import { WebSocketService } from '../../core/services/websocket.service';
 import { StoreService } from '../../core/services/store.service';
 import { OnboardingService } from '../../core/services/onboarding.service';
 
+// Components
 import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card';
 import { EquityCurveChartComponent } from './components/equity-curve-chart.component';
 import { PositionsWidgetComponent } from './components/positions-widget/positions-widget.component';
@@ -31,58 +33,46 @@ import { DashboardStats, Position, Signal } from '../../core/models/domain.model
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  isLoading = true;
-  stats: DashboardStats = {
+  // ✅ Start true, but we will force it false
+  public isLoading = true;
+
+  public stats: DashboardStats = {
     todayPnL: 0, weeklyPnL: 0, monthlyPnL: 0, totalPnL: 0,
     unrealizedPnL: 0, winRate: 0, profitFactor: 0, activePositionsCount: 0,
     riskLimit: 5000, roi: 0
   };
 
-  activePositions: Position[] = [];
-  equityData: any[] = [];
-  newSignals: Signal[] = [];
+  public activePositions: Position[] = [];
+  public equityData: any[] = [];
+  public newSignals: Signal[] = [];
 
   private sub = new Subscription();
 
   constructor(
-    private dashboardSvc: DashboardService,
-    private positionSvc: PositionService,
-    private signalSvc: SignalService,
-    private wsService: WebSocketService,
+    public dashboardSvc: DashboardService,
+    public positionSvc: PositionService,
+    public signalSvc: SignalService,
+    public wsService: WebSocketService,
     public store: StoreService,
     public onboarding: OnboardingService
   ) {}
 
   ngOnInit() {
-    // ✅ Fix: Safety Timer - Forces dashboard to open after 2s even if backend fails
+    // ✅ SAFETY TIMER: Force loading screen to hide after 3 seconds
     setTimeout(() => {
-        if (this.isLoading) {
-            console.warn("⚠️ Backend slow/unreachable. Force loading dashboard.");
-            this.isLoading = false;
-        }
-    }, 2000);
+      if (this.isLoading) {
+        console.warn('⚠️ Backend slow/offline. Forcing Dashboard display.');
+        this.isLoading = false;
+      }
+    }, 3000);
 
-    this.sub.add(
-      this.store.state$.pipe(
-        switchMap(() => {
-          this.isLoading = true;
-          return this.dashboardSvc.getSummary().pipe(
-            catchError(err => {
-              console.error('Summary API Error:', err);
-              return of(this.stats);
-            })
-          );
-        })
-      ).subscribe(data => {
-        this.stats = data || this.stats;
-        this.loadWidgets();
-      })
-    );
+    this.loadAllData();
     this.setupWebSockets();
   }
 
-  loadWidgets() {
+  loadAllData() {
     const requests = {
+      summary: this.dashboardSvc.getSummary().pipe(catchError(() => of(this.stats))),
       positions: this.positionSvc.getOpenPositions().pipe(catchError(() => of([]))),
       signals: this.signalSvc.getLatestSignals().pipe(catchError(() => of([]))),
       equity: this.dashboardSvc.getEquityCurve().pipe(catchError(() => of([])))
@@ -90,11 +80,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.sub.add(
       forkJoin(requests).pipe(
-        finalize(() => this.isLoading = false) // ✅ Fix: Ensures loading spinner stops
-      ).subscribe(results => {
-        this.activePositions = results.positions;
-        this.newSignals = results.signals;
-        this.equityData = results.equity;
+        finalize(() => this.isLoading = false) // ✅ Ensure spinner stops
+      ).subscribe(res => {
+        this.stats = res.summary || this.stats;
+        this.activePositions = res.positions;
+        this.newSignals = res.signals;
+        this.equityData = res.equity;
       })
     );
   }

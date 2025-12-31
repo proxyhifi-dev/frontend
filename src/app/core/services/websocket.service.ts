@@ -1,18 +1,18 @@
-import { Injectable, OnDestroy } from '@angular/core';
-import { Client, Message } from '@stomp/stompjs';
-import { Observable, BehaviorSubject, ReplaySubject, filter, switchMap } from 'rxjs';
+import { Injectable } from '@angular/core';
+import { Client, Stomp } from '@stomp/stompjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-@Injectable({ providedIn: 'root' })
-export class WebSocketService implements OnDestroy {
+@Injectable({
+  providedIn: 'root'
+})
+export class WebSocketService {
   private client: Client;
-  private connectionStatus = new BehaviorSubject<boolean>(false);
-  // ReplaySubject(1) ensures late subscribers get the last connection event
-  private connected$ = new ReplaySubject<boolean>(1);
+  private state$ = new BehaviorSubject<string>('DISCONNECTED');
 
   constructor() {
     this.client = new Client({
-      brokerURL: environment.wsUrl || 'ws://localhost:8080/ws',
+      brokerURL: environment.wsUrl, // ✅ Uses ws://127.0.0.1:8080/ws
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -20,44 +20,30 @@ export class WebSocketService implements OnDestroy {
 
     this.client.onConnect = (frame) => {
       console.log('✅ WebSocket Connected');
-      this.connectionStatus.next(true);
-      this.connected$.next(true);
+      this.state$.next('CONNECTED');
     };
 
-    this.client.onDisconnect = () => {
-      console.log('❌ WebSocket Disconnected');
-      this.connectionStatus.next(false);
-      this.connected$.next(false);
+    this.client.onStompError = (frame) => {
+      console.error('❌ Broker reported error: ' + frame.headers['message']);
+      this.state$.next('ERROR');
     };
 
     this.client.activate();
   }
 
-  /**
-   * ✅ Improved Subscribe:
-   * Waits for the connection to be 'true' before calling client.subscribe
-   */
-  subscribe(topic: string): Observable<any> {
-    return this.connected$.pipe(
-      filter(connected => connected === true), // Only proceed if connected
-      switchMap(() => new Observable(observer => {
-        const sub = this.client.subscribe(topic, (message: Message) => {
-          try {
-            observer.next(JSON.parse(message.body));
-          } catch (err) {
-            console.error('Parse error', err);
-          }
-        });
-        return () => sub.unsubscribe();
-      }))
-    );
-  }
-
-  getStatus(): Observable<boolean> {
-    return this.connectionStatus.asObservable();
-  }
-
-  ngOnDestroy() {
-    this.client.deactivate();
+  public subscribe(topic: string): Observable<any> {
+    return new Observable(observer => {
+      // Wait for connection before subscribing
+      const checkConnection = setInterval(() => {
+        if (this.client.connected) {
+          clearInterval(checkConnection);
+          this.client.subscribe(topic, message => {
+            if (message.body) {
+              observer.next(JSON.parse(message.body));
+            }
+          });
+        }
+      }, 500);
+    });
   }
 }

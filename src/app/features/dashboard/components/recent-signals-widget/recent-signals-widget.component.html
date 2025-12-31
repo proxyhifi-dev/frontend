@@ -1,34 +1,43 @@
 <div class="glass-card widget">
   <div class="widget-header">
     <h3>Scanner Output</h3>
-    <span class="scan-timer">Next scan: 45s</span>
+    <span class="scan-timer">Live Updates</span>
   </div>
 
   <div class="signal-list">
+    <div *ngIf="signals.length === 0" class="no-data">
+      Searching for high-probability signals...
+    </div>
+
     <div class="signal-card" *ngFor="let signal of signals">
       <div class="signal-main">
         <div class="symbol-info">
           <h4>{{ signal.symbol }}</h4>
-          <span class="grade" [attr.data-grade]="signal.grade">{{ signal.grade }}</span>
+          <span class="grade" [attr.data-grade]="signal.grade">{{ signal.grade || 'N/A' }}</span>
         </div>
+
         <div class="score-circle">
           <svg viewBox="0 0 36 36" class="circular-chart">
             <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-            <path class="circle" [attr.stroke-dasharray]="signal.score + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path class="circle" [attr.stroke-dasharray]="(signal.signalScore || 0) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
           </svg>
-          <div class="percentage">{{ signal.score }}</div>
+          <div class="percentage">{{ signal.signalScore || 0 }}</div>
         </div>
       </div>
 
       <div class="layer-stats">
-        <span>VWAP: {{ signal.layerScores.vwap }}/5</span>
-        <span>RSI: {{ signal.layerScores.rsi }}</span>
-        <span>ADX: {{ signal.layerScores.adx }}</span>
+        <span>Entry: {{ signal.entryPrice | number:'1.2-2' }}</span>
+        <span *ngIf="signal.layerScores">RSI: {{ signal.layerScores.rsi }}</span>
+        <span *ngIf="!signal.layerScores">Score: {{ signal.signalScore }}</span>
       </div>
 
       <div class="actions">
-        <button class="btn-approve">APPROVE</button>
-        <button class="btn-reject">REJECT</button>
+        <button class="btn-approve">
+          <span class="icon">✓</span> Approve
+        </button>
+        <button class="btn-reject">
+          <span class="icon">✕</span> Reject
+        </button>
       </div>
     </div>
   </div>

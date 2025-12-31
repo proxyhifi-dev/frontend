@@ -1,12 +1,11 @@
 import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common'; // Contains standard 'currency' pipe
 import { RouterModule } from '@angular/router';
-import { CurrencyInrPipe } from '../../../../shared/pipes/currency-inr-pipe';
 
 @Component({
   selector: 'app-positions-widget',
   standalone: true,
-  imports: [CommonModule, RouterModule, CurrencyInrPipe],
+  imports: [CommonModule, RouterModule], // ✅ Removed CurrencyInrPipe
   templateUrl: './positions-widget.component.html'
 })
 export class PositionsWidgetComponent {
