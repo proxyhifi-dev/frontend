@@ -11,8 +11,8 @@ import { RiskStatus } from '../../core/models/domain.model';
   selector: 'app-risk',
   standalone: true,
  imports: [CommonModule, CurrencyInrPipe],
- styleUrls: ['./risk.component.scss']']
-})
+ templateUrl: './risk.component.html',
+ styleUrls: ['./risk.component.scss']})
 export class RiskComponent implements OnInit {
   riskStatus: RiskStatus = {
     dailyLoss: 0,
