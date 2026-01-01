@@ -37,4 +37,9 @@ export class BotService {
       observer.complete();
     });
   }
+
+  // Alias for triggerManualScan to match component usage
+  scanNow(): Observable<any> {
+    return this.triggerManualScan();
+  }
 }

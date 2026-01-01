@@ -1,11 +1,19 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PositionService } from '../../core/services/position.service';
 import { WebSocketService } from '../../core/services/websocket.service';
-import { Subscription, forkJoin } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';import { BotService } from '../../core/services/bot.service';
-import { Subject } from 'rxjs';
+import { BotService } from '../../core/services/bot.service';
+import { Subscription, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+
+// Import Child Components
+import { BotStatusWidgetComponent } from './components/bot-status-widget.component';
+import { EquityCurveChartComponent } from './components/equity-curve-chart.component';
+// Assuming these exist based on your file list:
+import { RiskHealthWidgetComponent } from './components/risk-health-widget.component';
+import { RecentSignalsWidgetComponent } from './components/recent-signals-widget/recent-signals-widget.component';
 
 export interface DashboardStats {
   todayPnL: number;
@@ -38,7 +46,14 @@ export interface DashboardStats {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    BotStatusWidgetComponent,
+    EquityCurveChartComponent,
+    RiskHealthWidgetComponent,
+    RecentSignalsWidgetComponent
+  ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -78,6 +93,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   timeRanges: string[] = ['1D', '5D', '1M', '3M', '6M', '1Y'];
   selectedTimeRange: string = '1D';
   isLoading: boolean = true;
+  loadingMessage: string = 'Initializing Dashboard...'; // Added missing property
 
   private destroy$ = new Subject<void>();
   private subscriptions: Subscription[] = [];
@@ -106,25 +122,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
         (error: any) => {
           console.error('Failed to load dashboard stats', error);
           this.isLoading = false;
+          this.loadingMessage = 'Failed to load data.';
         }
       );
     this.subscriptions.push(sub);
   }
 
   setupWebSocketSubscriptions(): void {
-    if (this.wsService.connect) {
-      const sub = this.wsService.connect()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe();
-      this.subscriptions.push(sub);
-    }
+    const sub = this.wsService.connect()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe();
+    this.subscriptions.push(sub);
   }
 
   toggleMode(): void {
     this.stats.isLiveMode = !this.stats.isLiveMode;
-    if (this.dashboardService.toggleMode) {
-      this.dashboardService.toggleMode(this.stats.isLiveMode).subscribe();
-    }
+    this.dashboardService.toggleMode(this.stats.isLiveMode).subscribe();
   }
 
   toggleNotifications(): void {
@@ -137,57 +150,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   pauseBot(): void {
     this.stats.isPaused = !this.stats.isPaused;
-    if (this.dashboardService.pauseTrading && !this.stats.isPaused) {
-      this.dashboardService.pauseTrading().subscribe();
-    } else if (this.dashboardService.resumeTrading && this.stats.isPaused) {
+    if (!this.stats.isPaused) {
       this.dashboardService.resumeTrading().subscribe();
+    } else {
+      this.dashboardService.pauseTrading().subscribe();
     }
   }
 
   scanNow(): void {
-    // Trigger immediate scan
-    if (this.botService.scanNow) {
-      this.botService.scanNow().subscribe();
-    }
+    this.botService.scanNow().subscribe();
   }
 
   setTimeRange(range: string): void {
     this.selectedTimeRange = range;
   }
 
-  expandPositions(): void {
-    // Open full positions view
-  }
+  expandPositions(): void {}
 
   closePosition(position: any): void {
-    if (this.positionService.closePosition) {
-      this.positionService.closePosition(position.id).subscribe();
-    }
+    this.positionService.closePosition(position.id).subscribe();
   }
 
-  modifySL(position: any): void {
-    // Open modify stop loss dialog
-  }
+  modifySL(position: any): void {}
 
-  approveSignal(signal: any): void {
-    // Approve trading signal
-  }
+  approveSignal(signal: any): void {}
 
-  rejectSignal(signal: any): void {
-    // Reject trading signal
-  }
+  rejectSignal(signal: any): void {}
 
-  viewAllSignals(): void {
-    // Navigate to full signals view
-  }
+  viewAllSignals(): void {}
 
-  viewFullRisk(): void {
-    // Navigate to risk page
-  }
+  viewFullRisk(): void {}
 
-  navigateToDashboard(): void {
-    // Navigate back to dashboard (for logo click)
-  }
+  navigateToDashboard(): void {}
 
   ngOnDestroy(): void {
     this.destroy$.next();

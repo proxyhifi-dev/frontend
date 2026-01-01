@@ -1,21 +1,22 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BotService } from '../../../core/services/bot.service';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Subject } from 'rxjs';
 
-interface BotStatus {
+export interface BotStatus {
   isActive: boolean;
   status: 'Running' | 'Paused' | 'Stopped';
- nextScanTime: string;  scannedStocks: number;
+  nextScanTime: Date;
+  scannedStocks: number;
   totalStocks: number;
- lastScanTime: string;  currentStrategy: string;
+  lastScanTime: Date;
+  currentStrategy: string;
 }
 
 @Component({
   selector: 'app-bot-status-widget',
-  standalone: true,
+  standalone: true, // ✅ Must be true to avoid NG2012
   imports: [CommonModule],
   template: `
     <div class="bot-status-widget">
@@ -26,29 +27,29 @@ interface BotStatus {
           {{ botStatus.status }}
         </div>
       </div>
-      
+
       <div class="status-grid">
         <div class="status-item">
           <label>Next Scan</label>
           <span class="value">{{ countdownTime }}</span>
         </div>
-        
+
         <div class="status-item">
           <label>Scanned / Total</label>
           <span class="value">{{ botStatus.scannedStocks }}/{{ botStatus.totalStocks }}</span>
         </div>
-        
+
         <div class="status-item">
           <label>Last Scan</label>
           <span class="value">{{ lastScanFormatted }}</span>
         </div>
-        
+
         <div class="status-item">
           <label>Strategy</label>
           <span class="value">{{ botStatus.currentStrategy }}</span>
         </div>
       </div>
-      
+
       <div class="action-buttons">
         <button (click)="toggleBotStatus()" class="btn-toggle">
           {{ botStatus.isActive ? 'Pause' : 'Resume' }} Bot
@@ -66,13 +67,13 @@ interface BotStatus {
       border-radius: 8px;
       border: 1px solid var(--border-color);
     }
-    
+
     .widget-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
-      
+
       h3 {
         margin: 0;
         color: var(--text-primary);
@@ -80,7 +81,7 @@ interface BotStatus {
         font-weight: 600;
       }
     }
-    
+
     .status-indicator {
       display: flex;
       align-items: center;
@@ -91,12 +92,12 @@ interface BotStatus {
       color: #00C853;
       font-size: 12px;
       font-weight: 600;
-      
+
       &.paused {
         background: rgba(255, 107, 0, 0.1);
         color: #FF6B00;
       }
-      
+
       .dot {
         width: 8px;
         height: 8px;
@@ -104,25 +105,25 @@ interface BotStatus {
         background: #00C853;
         display: inline-block;
         animation: pulse 2s infinite;
-        
+
         .paused & {
           background: #FF6B00;
           animation: none;
         }
       }
     }
-    
+
     .status-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 16px;
       margin-bottom: 20px;
     }
-    
+
     .status-item {
       display: flex;
       flex-direction: column;
-      
+
       label {
         font-size: 11px;
         color: var(--text-secondary);
@@ -130,18 +131,18 @@ interface BotStatus {
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
-      
+
       .value {
         font-size: 14px;
         font-weight: 600;
         color: var(--text-primary);
       }
     }
-    
+
     .action-buttons {
       display: flex;
       gap: 10px;
-      
+
       button {
         flex: 1;
         padding: 8px 12px;
@@ -151,29 +152,29 @@ interface BotStatus {
         font-size: 13px;
         border: none;
         transition: all 0.3s ease;
-        
+
         &:hover:not(:disabled) {
           opacity: 0.9;
         }
-        
+
         &:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
       }
-      
+
       .btn-toggle {
         background: var(--accent);
         color: white;
       }
-      
+
       .btn-scan {
         background: transparent;
         border: 1px solid var(--accent);
         color: var(--accent);
       }
     }
-    
+
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
@@ -190,20 +191,19 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
     lastScanTime: new Date(Date.now() - 60000),
     currentStrategy: 'MACD + RSI'
   };
-  
+
   countdownTime: string = '0:30';
   lastScanFormatted: string = '1m ago';
-  
+
   private destroy$ = new Subject<void>();
-  private subscriptions: any[] = [];
-  
+
   constructor(private botService: BotService) {}
-  
+
   ngOnInit(): void {
     this.startCountdownTimer();
     this.subscribeToBotStatus();
   }
-  
+
   private startCountdownTimer(): void {
     interval(1000)
       .pipe(takeUntil(this.destroy$))
@@ -216,11 +216,11 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
         this.updateLastScanTime();
       });
   }
-  
+
   private updateLastScanTime(): void {
     const now = new Date();
     const diff = (now.getTime() - this.botStatus.lastScanTime.getTime()) / 1000;
-    
+
     if (diff < 60) {
       this.lastScanFormatted = Math.floor(diff) + 's ago';
     } else if (diff < 3600) {
@@ -229,17 +229,17 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
       this.lastScanFormatted = Math.floor(diff / 3600) + 'h ago';
     }
   }
-  
+
   private subscribeToBotStatus(): void {
     this.botService.getBotStatus()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (status: BotStatus) => {
-          this.botStatus = status;
+        next: (status: any) => {
+          if(status) this.botStatus = { ...this.botStatus, ...status };
         }
       });
   }
-  
+
   toggleBotStatus(): void {
     const newStatus = this.botStatus.isActive ? 'Paused' : 'Running';
     this.botService.setBotStatus(newStatus === 'Running')
@@ -251,7 +251,7 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
         }
       });
   }
-  
+
   triggerScan(): void {
     this.botService.triggerManualScan()
       .pipe(takeUntil(this.destroy$))
@@ -262,7 +262,7 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
         }
       });
   }
-  
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();

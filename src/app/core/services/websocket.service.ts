@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Client, Stomp } from '@stomp/stompjs';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Client } from '@stomp/stompjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -12,7 +12,7 @@ export class WebSocketService {
 
   constructor() {
     this.client = new Client({
-      brokerURL: environment.wsUrl, // ✅ Uses ws://127.0.0.1:8080/ws
+      brokerURL: environment.wsUrl,
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -31,9 +31,16 @@ export class WebSocketService {
     this.client.activate();
   }
 
+  // Added method to satisfy DashboardComponent
+  public connect(): Observable<any> {
+    if (!this.client.active) {
+      this.client.activate();
+    }
+    return this.state$.asObservable();
+  }
+
   public subscribe(topic: string): Observable<any> {
     return new Observable(observer => {
-      // Wait for connection before subscribing
       const checkConnection = setInterval(() => {
         if (this.client.connected) {
           clearInterval(checkConnection);

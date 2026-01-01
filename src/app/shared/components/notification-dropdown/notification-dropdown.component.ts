@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NotificationService } from '../../../core/services/notification.service';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
 import { trigger, state, style, animate, transition } from '@angular/animations';
 
 export interface Notification {
@@ -34,8 +33,8 @@ export interface Notification {
         </div>
 
         <div class="notification-tabs">
-          <button 
-            *ngFor="let tab of tabs" 
+          <button
+            *ngFor="let tab of tabs"
             [class.active]="activeTab === tab"
             (click)="activeTab = tab"
             class="tab-btn">
@@ -47,9 +46,9 @@ export interface Notification {
           <div *ngIf="filteredNotifications.length === 0" class="empty-state">
             <p>No {{ activeTab.toLowerCase() }} notifications</p>
           </div>
-          
-          <div 
-            *ngFor="let notif of filteredNotifications" 
+
+          <div
+            *ngFor="let notif of filteredNotifications"
             [class.notification-item]="true"
             [class.unread]="!notif.read"
             (click)="markAsRead(notif)">
@@ -69,8 +68,7 @@ export interface Notification {
       </div>
     </div>
   `,
-  95
-    [`
+  styles: [`
     .notification-dropdown-wrapper {
       position: relative;
       display: inline-block;
@@ -265,9 +263,8 @@ export interface Notification {
       border-top: 1px solid var(--border-color);
       text-align: right;
     }
-  260
-
-   animations: [
+  `],
+  animations: [
     trigger('slideIn', [
       transition(':enter', [
         style({ transform: 'translateX(100%)', opacity: 0 }),
@@ -277,8 +274,7 @@ export interface Notification {
         animate('300ms ease-in', style({ transform: 'translateX(100%)', opacity: 0 }))
       ])
     ])
-  ],
-  
+  ]
 })
 export class NotificationDropdownComponent implements OnInit, OnDestroy {
   isOpen = false;
@@ -297,8 +293,6 @@ export class NotificationDropdownComponent implements OnInit, OnDestroy {
   }
 
   loadNotifications(): void {
-    // Subscribe to notifications from service
-    // For now, using mock data - replace with actual service call
     this.notifications = [
       {
         id: '1',
