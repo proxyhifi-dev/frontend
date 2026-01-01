@@ -112,7 +112,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadDashboardData(): void {
     this.isLoading = true;
-    const sub = this.dashboardService.getDashboardStats()
+    const sub = this.dashboardService.getSummary()
       .pipe(takeUntil(this.destroy$))
       .subscribe(
         (data: any) => {
