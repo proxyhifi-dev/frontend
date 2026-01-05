@@ -1,29 +1,19 @@
-<div class="auth-wrapper">
-  <div class="login-card glass-card">
-    <div class="auth-header">
-      <div class="logo-circle">A</div>
-      <h2>APEX TERMINAL</h2>
-      <p>Secure Biometric or Password Entry</p>
-    </div>
-
+<div class="auth-container">
+  <div class="auth-card">
+    <h2>Login</h2>
     <form (ngSubmit)="onSubmit()">
-      <div class="input-field">
+      <div class="form-group">
         <label>Username</label>
-        <input type="text" [(ngModel)]="form.username" name="user" required>
+        <input type="text" [(ngModel)]="form.username" name="username" class="form-control" placeholder="Enter username">
       </div>
-
-      <div class="input-field">
-        <label>Access Key</label>
-        <input type="password" [(ngModel)]="form.password" name="pass" required>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" [(ngModel)]="form.password" name="password" class="form-control" placeholder="Enter password">
       </div>
-
-      <button type="submit" class="btn-login" [disabled]="loading">
-        {{ loading ? 'AUTHENTICATING...' : 'ENTER SYSTEM' }}
-      </button>
+      <button type="submit" [disabled]="loading" class="btn btn-primary btn-block">Login</button>
     </form>
-
-    <div class="security-footer">
-      <i class="icon-shield"></i> 256-bit AES Encrypted Session
-    </div>
+    <hr>
+    <button (click)="loginWithFyers()" [disabled]="loading" class="btn btn-info btn-block">Login with Fyers</button>
+    <p class="text-center mt-3">Don't have an account? <a href="/register">Register here</a></p>
   </div>
 </div>
