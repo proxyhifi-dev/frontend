@@ -2,10 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { AuthService } from 'src/app/core/services/auth.service';
-import { FyersOAuthService } from 'src/app/core/services/fyers-oauth.service';
-import { NotificationService } from 'src/app/core/services/notification.service';
-import { LoadingService } from 'src/app/core/services/loading.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { FyersOAuthService } from '../../../core/services/fyers-oauth.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { LoadingService } from '../../../core/services/loading.service';
 
 @Component({
   selector: 'app-login',
@@ -47,14 +47,11 @@ export class LoginComponent implements OnInit {
     const { username, password } = this.loginForm.value;
     this.authService.login(username, password).subscribe({
       next: (response: any) => {
-        if (response.token) {
-          localStorage.setItem('token', response.token);
-          this.notificationService.success('Login successful!');
-          this.router.navigate(['/dashboard']);
-        }
+        this.notificationService.success('Login successful!');
+        this.router.navigate(['/dashboard']);
       },
-      error: () => {
-        this.notificationService.error('Invalid credentials. Please try again.');
+      error: (err: any) => {
+        this.notificationService.error(err.error?.error || 'Invalid credentials. Please try again.');
       }
     });
   }

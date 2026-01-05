@@ -2,8 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { AuthService } from 'src/app/core/services/auth.service';
-import { NotificationService } from 'src/app/core/services/notification.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 
 @Component({
   selector: 'app-register',
@@ -46,7 +46,7 @@ export class RegisterComponent implements OnInit {
         this.notificationService.success('Registration successful! Redirecting to login...');
         setTimeout(() => this.router.navigate(['/login']), 2000);
       },
-      error: (err) => {
+      error: (err: any) => {
         this.notificationService.error(err.error?.message || 'Registration failed');
       }
     });

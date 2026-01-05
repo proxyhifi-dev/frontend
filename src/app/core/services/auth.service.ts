@@ -1,72 +1,62 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, map } from 'rxjs';
-import { User } from '../models/auth.model';
+import { Router } from '@angular/router';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
-// Define the expected structure of the API response
-interface LoginResponse {
-  user: User;
-  token: string;
-}
-
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class AuthService {
-  private currentUserSubject: BehaviorSubject<User | null>;
-  public currentUser: Observable<User | null>;
+  private apiUrl = environment.apiUrl;
+  private currentUserSubject = new BehaviorSubject<any>(null);
+  public currentUser$ = this.currentUserSubject.asObservable();
 
-  // Use HttpClient directly to avoid circular dependencies with ApiService/Interceptors
-  constructor(private http: HttpClient) {
-    const storedUser = localStorage.getItem('apex_user');
-    this.currentUserSubject = new BehaviorSubject<User | null>(storedUser ? JSON.parse(storedUser) : null);
-    this.currentUser = this.currentUserSubject.asObservable();
+  constructor(
+    private http: HttpClient,
+    private router: Router
+  ) {
+    const user = localStorage.getItem('user');
+    if (user) {
+      this.currentUserSubject.next(JSON.parse(user));
+    }
   }
 
-  public get currentUserValue(): User | null {
-    return this.currentUserSubject.value;
+  login(username: string, password: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/login`, { username, password })
+      .pipe(
+        tap((response: any) => {
+          localStorage.setItem('token', response.accessToken || response.token);
+          localStorage.setItem('user', JSON.stringify(response.user || response));
+          this.currentUserSubject.next(response.user || response);
+        })
+      );
   }
 
-  // ✅ Fix: Add the missing 'token' property required by AuthGuard
-  public get token(): string | null {
-    // Assuming the token is stored in the User object or you can store it separately in localStorage
-    return this.currentUserValue?.token || localStorage.getItem('apex_token') || null;
-  }
-
-  login(password: string) {
-    // ✅ Fix: Strictly type the response to LoginResponse
-    return this.http.post<LoginResponse>('/api/auth/login', { password }).pipe(
-      map(res => {
-        // ✅ Fix: TypeScript now knows 'res' has 'user' and 'token'
-        if (res && res.user) {
-          // If the token comes separately, merge it or store it
-          if (res.token) {
-            res.user.token = res.token; // Ensure User model has token field, or store separately
-            localStorage.setItem('apex_token', res.token);
-          }
-
-          localStorage.setItem('apex_user', JSON.stringify(res.user));
-          this.currentUserSubject.next(res.user);
-        }
-        return res;
-      })
-    );
-  }
-
-  logout() {
-    localStorage.removeItem('apex_user');
-    localStorage.removeItem('apex_token');
+  logout(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     this.currentUserSubject.next(null);
+    this.router.navigate(['/login']);
   }
-}
 
-// Additional methods for Fyers OAuth (append to existing auth.service.ts)
-getFyersAuthUrl(): Observable<{ authUrl: string }> {
-  return this.http.get<{ authUrl: string }>(`${this.apiUrl}/auth/fyers/auth-url`);
-}
+  isAuthenticated(): boolean {
+    return !!localStorage.getItem('token');
+  }
 
-handleFyersCallback(authCode: string): Observable<any> {
-  return this.http.post(`${this.apiUrl}/auth/fyers/callback`, { authCode });
-}
+  getToken(): string | null {
+    return localStorage.getItem('token');
+  }
 
-register(email: string, username: string, password: string): Observable<any> {
-  return this.http.post(`${this.apiUrl}/auth/register`, { email, username, password });
+  getFyersAuthUrl(): Observable<{ authUrl: string }> {
+    return this.http.get<{ authUrl: string }>(`${this.apiUrl}/auth/fyers/auth-url`);
+  }
+
+  handleFyersCallback(authCode: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/fyers/callback`, { authCode });
+  }
+
+  register(email: string, username: string, password: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/register`, { email, username, password });
+  }
 }
