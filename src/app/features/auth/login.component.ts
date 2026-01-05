@@ -1,64 +1,58 @@
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AuthService } from '../../../core/services/auth.service';
-import { FyersOAuthService } from '../../../core/services/fyers-oauth.service';
-import { NotificationService } from '../../../core/services/notification.service';
-import { LoadingService } from '../../../core/services/loading.service';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
+import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
+import { NotificationService } from '../../core/services/notification.service';
+import { LoadingService } from '../../core/services/loading.service';
 
 @Component({
   selector: 'app-login',
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.scss'],
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule]
+  imports: [CommonModule, FormsModule],
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.scss']
 })
-export class LoginComponent implements OnInit {
-  loginForm!: FormGroup;
-  loading$ = this.loadingService.loading$;
-  
+export class LoginComponent {
+  form = { username: '', password: '' };
+  loading = false;
+
   constructor(
-    private fb: FormBuilder,
     private authService: AuthService,
-    private fyersOAuthService: FyersOAuthService,
+    private fyersService: FyersOAuthService,
     private notificationService: NotificationService,
     private loadingService: LoadingService,
     private router: Router
   ) {}
 
-  ngOnInit(): void {
-    this.initializeForm();
-  }
-
-  initializeForm(): void {
-    this.loginForm = this.fb.group({
-      username: ['', [Validators.required]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
-    });
+  get loading$() {
+    return this.loadingService.loading$;
   }
 
   onSubmit(): void {
-    if (this.loginForm.invalid) {
-      this.notificationService.error('Please fill in all fields');
+    if (!this.form.username || !this.form.password) {
+      this.notificationService.error('Please enter username and password');
       return;
     }
 
-    const { username, password } = this.loginForm.value;
-    this.authService.login(username, password).subscribe({
+    this.loading = true;
+    this.authService.login(this.form.username, this.form.password).subscribe({
       next: (response: any) => {
+        this.loading = false;
         this.notificationService.success('Login successful!');
         this.router.navigate(['/dashboard']);
       },
       error: (err: any) => {
-        this.notificationService.error(err.error?.error || 'Invalid credentials. Please try again.');
+        this.loading = false;
+        this.notificationService.error(err.error?.error || 'Login failed');
       }
     });
   }
 
   loginWithFyers(): void {
-    this.fyersOAuthService.getAuthUrl().subscribe({
-      next: (response) => {
+    this.fyersService.getAuthUrl().subscribe({
+      next: (response: any) => {
         window.location.href = response.authUrl;
       },
       error: () => {

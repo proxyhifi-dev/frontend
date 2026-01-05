@@ -1,53 +1,43 @@
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AuthService } from '../../../core/services/auth.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
+import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-register',
-  template: `<div class="container"><p>Registration Coming Soon</p></div>`,
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule]
+  imports: [CommonModule, FormsModule],
+  templateUrl: './register.component.html',
+  styleUrls: ['./register.component.scss']
 })
-export class RegisterComponent implements OnInit {
-  registerForm!: FormGroup;
-  
+export class RegisterComponent {
+  form = { email: '', username: '', password: '', confirmPassword: '' };
+  loading = false;
+
   constructor(
-    private fb: FormBuilder,
     private authService: AuthService,
     private notificationService: NotificationService,
     private router: Router
   ) {}
 
-  ngOnInit(): void {
-    this.initializeForm();
-  }
-
-  initializeForm(): void {
-    this.registerForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      username: ['', [Validators.required, Validators.minLength(3)]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
-      confirmPassword: ['', [Validators.required]]
-    });
-  }
-
   onSubmit(): void {
-    if (this.registerForm.invalid) {
-      this.notificationService.error('Please fill in all fields');
+    if (this.form.password !== this.form.confirmPassword) {
+      this.notificationService.error('Passwords do not match');
       return;
     }
 
-    const { email, username, password } = this.registerForm.value;
-    this.authService.register(email, username, password).subscribe({
+    this.loading = true;
+    this.authService.register(this.form.email, this.form.username, this.form.password).subscribe({
       next: () => {
-        this.notificationService.success('Registration successful! Redirecting to login...');
-        setTimeout(() => this.router.navigate(['/login']), 2000);
+        this.loading = false;
+        this.notificationService.success('Registration successful! Please login.');
+        this.router.navigate(['/login']);
       },
       error: (err: any) => {
-        this.notificationService.error(err.error?.message || 'Registration failed');
+        this.loading = false;
+        this.notificationService.error(err.error?.error || 'Registration failed');
       }
     });
   }
