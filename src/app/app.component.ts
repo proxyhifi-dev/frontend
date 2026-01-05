@@ -1,24 +1,17 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
+import { NotificationToastComponent } from './shared/components/notification-toast/notification-toast.component';
+import { LoadingSpinnerComponent } from './shared/components/loading-spinner/loading-spinner.component';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
-  imports: [CommonModule, RouterOutlet],
   template: `
-    <div class="app-container">
-      <router-outlet></router-outlet>
-    </div>
+    <app-loading-spinner></app-loading-spinner>
+    <app-notification-toast></app-notification-toast>
+    <router-outlet></router-outlet>
   `,
-  styles: [`
-    .app-container {
-      width: 100%;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-  `]
+  standalone: true,
+  imports: [RouterOutlet, LoadingSpinnerComponent, NotificationToastComponent]
 })
 export class AppComponent {
   title = 'Apex Trading Bot';

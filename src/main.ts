@@ -1,19 +1,20 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { AppComponent } from './app/app.component';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { routes } from './app/app.routes';
-import { baseUrlInterceptor } from './app/core/interceptors/base-url.interceptor';
-import { errorInterceptor } from './app/core/interceptors/error.interceptor';
-import { provideAnimations } from '@angular/platform-browser/animations';
+import { AppComponent } from './app/app.component';
+import { JwtInterceptor } from './app/core/interceptors/jwt.interceptor';
+import { LoadingInterceptor } from './app/core/interceptors/loading.interceptor';
+import { ErrorInterceptor } from './app/core/interceptors/error.interceptor';
+import { BaseUrlInterceptor } from './app/core/interceptors/base-url.interceptor';
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideAnimations(),
     provideRouter(routes),
-    // ✅ This registers both your Base URL and Error handler
-    provideHttpClient(
-      withInterceptors([baseUrlInterceptor, errorInterceptor])
-    )
+    provideHttpClient(),
+    { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: LoadingInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: BaseUrlInterceptor, multi: true }
   ]
-}).catch((err) => console.error(err));
+});

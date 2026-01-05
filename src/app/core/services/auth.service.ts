@@ -57,3 +57,16 @@ export class AuthService {
     this.currentUserSubject.next(null);
   }
 }
+
+// Additional methods for Fyers OAuth (append to existing auth.service.ts)
+getFyersAuthUrl(): Observable<{ authUrl: string }> {
+  return this.http.get<{ authUrl: string }>(`${this.apiUrl}/auth/fyers/auth-url`);
+}
+
+handleFyersCallback(authCode: string): Observable<any> {
+  return this.http.post(`${this.apiUrl}/auth/fyers/callback`, { authCode });
+}
+
+register(email: string, username: string, password: string): Observable<any> {
+  return this.http.post(`${this.apiUrl}/auth/register`, { email, username, password });
+}
