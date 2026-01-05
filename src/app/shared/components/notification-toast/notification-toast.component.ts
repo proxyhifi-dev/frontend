@@ -1,10 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { trigger, transition, style, animate } from '@angular/animations';
+import { Subscription } from 'rxjs';
 import { NotificationService } from '../../../core/services/notification.service';
 
-interface Toast {
-  id: string;
+interface Notification {
+  id: number;
   message: string;
   type: 'success' | 'error' | 'warning' | 'info';
 }
@@ -14,96 +14,82 @@ interface Toast {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="notification-container">
-      <div
-        *ngFor="let toast of toasts"
-        [@toastAnimation]
-        [class]="'notification-toast toast-' + toast.type"
-      >
-        <div class="toast-content">
-          <span class="toast-message">{{ toast.message }}</span>
-          <button type="button" class="toast-close" (click)="removeToast(toast.id)">×</button>
-        </div>
+    <div class="toast-container">
+      <div *ngFor="let notification of notifications" 
+           [class]="'toast toast-' + notification.type">
+        <span>{{ notification.message }}</span>
+        <button class="close-btn" (click)="removeNotification(notification.id)">×</button>
       </div>
     </div>
   `,
   styles: [`
-    .notification-container {
+    .toast-container {
       position: fixed;
       top: 20px;
       right: 20px;
       z-index: 10000;
       max-width: 400px;
     }
-    .notification-toast {
-      display: flex;
+    .toast {
+      padding: 15px 20px;
       margin-bottom: 10px;
-      border-radius: 4px;
-      background: white;
+      border-radius: 8px;
+      color: white;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      padding: 16px;
-      border-left: 4px solid #ccc;
-    }
-    .toast-content {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      width: 100%;
-      gap: 10px;
+      align-items: center;
+      animation: slideIn 0.3s ease-out;
     }
-    .toast-message {
-      flex: 1;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-    .toast-close {
+    .toast-success { background: #10b981; }
+    .toast-error { background: #ef4444; }
+    .toast-warning { background: #f59e0b; }
+    .toast-info { background: #3b82f6; }
+    .close-btn {
       background: none;
       border: none;
+      color: white;
       font-size: 24px;
       cursor: pointer;
-      color: #999;
       padding: 0;
+      margin-left: 10px;
       line-height: 1;
     }
-    .toast-close:hover { color: #333; }
-    .toast-success { border-left-color: #10b981; }
-    .toast-error { border-left-color: #ef4444; }
-    .toast-warning { border-left-color: #f59e0b; }
-    .toast-info { border-left-color: #3b82f6; }
-  `],
-  animations: [
-    trigger('toastAnimation', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'translateX(100%)' }),
-        animate('300ms ease-out', style({ opacity: 1, transform: 'translateX(0)' }))
-      ]),
-      transition(':leave', [
-        animate('300ms ease-in', style({ opacity: 0, transform: 'translateX(100%)' }))
-      ])
-    ])
-  ]
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  `]
 })
-export class NotificationToastComponent implements OnInit {
-  toasts: Toast[] = [];
-  private toastTimeout = 5000;
+export class NotificationToastComponent implements OnInit, OnDestroy {
+  notifications: Notification[] = [];
+  private subscription?: Subscription;
+  private idCounter = 0;
 
   constructor(private notificationService: NotificationService) {}
 
   ngOnInit(): void {
-    this.notificationService.notification$.subscribe((notification: any) => {
+    this.subscription = this.notificationService.notifications$.subscribe((notification: any) => {
       if (notification && notification.message) {
-        const toast: Toast = {
-          id: Date.now().toString(),
+        const notif: Notification = {
+          id: this.idCounter++,
           message: notification.message,
           type: notification.type || 'info'
         };
-        this.toasts.push(toast);
-        setTimeout(() => this.removeToast(toast.id), this.toastTimeout);
+        this.notifications.push(notif);
+        
+        setTimeout(() => {
+          this.removeNotification(notif.id);
+        }, 5000);
       }
     });
   }
 
-  removeToast(id: string): void {
-    this.toasts = this.toasts.filter(t => t.id !== id);
+  removeNotification(id: number): void {
+    this.notifications = this.notifications.filter(n => n.id !== id);
+  }
+
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
   }
 }

@@ -22,6 +22,14 @@ export class AuthService {
     }
   }
 
+  get currentUserValue(): any {
+    return this.currentUserSubject.value;
+  }
+
+  get token(): string | null {
+    return localStorage.getItem('token');
+  }
+
   login(username: string, password: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/auth/login`, { username, password })
       .pipe(
