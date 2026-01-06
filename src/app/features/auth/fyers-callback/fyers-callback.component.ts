@@ -53,27 +53,60 @@ export class FyersCallbackComponent implements OnInit {
       if (authCode) {
         this.authService.handleFyersCallback(authCode, state).subscribe({
           next: (response: any) => {
-            this.notificationService.success('✅ Fyers account connected successfully!');
+            console.log('Fyers callback response:', response);
             
-            // Redirect to dashboard after 1.5 seconds so user can see the success message
-            setTimeout(() => {
-              this.router.navigate(['/dashboard']);
-            }, 1500);
+            // Check if response contains JWT token (new flow)
+            if (response.accessToken || response.token) {
+              // Save JWT token and user profile
+              const token = response.accessToken || response.token;
+              localStorage.setItem('token', token);
+              
+              if (response.user) {
+                localStorage.setItem('user', JSON.stringify(response.user));
+              }
+              
+              // Update auth service state
+              this.authService.updateAuthState(response.user, token);
+              
+              this.notificationService.success('✅ Fyers account connected successfully!');
+              
+              // Navigate to dashboard
+              setTimeout(() => {
+                this.router.navigate(['/dashboard']);
+              }, 1000);
+            } 
+            // Legacy flow: message-only response (requires login)
+            else if (response.message || response.requiresLogin) {
+              this.notificationService.success('✅ Fyers account connected! Please login to continue.');
+              
+              setTimeout(() => {
+                this.router.navigate(['/login']);
+              }, 1500);
+            }
+            // Unknown response format
+            else {
+              console.warn('Unexpected response format:', response);
+              this.notificationService.success('✅ Fyers authentication completed');
+              
+              setTimeout(() => {
+                this.router.navigate(['/dashboard']);
+              }, 1000);
+            }
           },
           error: (err: any) => {
             console.error('Fyers callback error:', err);
             this.notificationService.error('❌ Failed to connect Fyers account');
             
-            // Redirect to dashboard even on error so user isn't stuck
+            // Redirect to login page on error
             setTimeout(() => {
-              this.router.navigate(['/dashboard']);
+              this.router.navigate(['/login']);
             }, 2000);
           }
         });
       } else {
         this.notificationService.error('Invalid callback: Missing auth code');
         setTimeout(() => {
-          this.router.navigate(['/dashboard']);
+          this.router.navigate(['/login']);
         }, 1500);
       }
     });
