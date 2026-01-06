@@ -48,21 +48,33 @@ export class FyersCallbackComponent implements OnInit {
   ngOnInit(): void {
     this.route.queryParams.subscribe((params: any) => {
       const authCode = params['auth_code'];
+      const state = params['state'];
       
       if (authCode) {
-        this.authService.handleFyersCallback(authCode).subscribe({
-          next: () => {
-            this.notificationService.success('Fyers account connected successfully!');
-            this.router.navigate(['/dashboard']);
+        this.authService.handleFyersCallback(authCode, state).subscribe({
+          next: (response: any) => {
+            this.notificationService.success('✅ Fyers account connected successfully!');
+            
+            // Redirect to dashboard after 1.5 seconds so user can see the success message
+            setTimeout(() => {
+              this.router.navigate(['/dashboard']);
+            }, 1500);
           },
           error: (err: any) => {
-            this.notificationService.error('Failed to connect Fyers account');
-            this.router.navigate(['/login']);
+            console.error('Fyers callback error:', err);
+            this.notificationService.error('❌ Failed to connect Fyers account');
+            
+            // Redirect to dashboard even on error so user isn't stuck
+            setTimeout(() => {
+              this.router.navigate(['/dashboard']);
+            }, 2000);
           }
         });
       } else {
-        this.notificationService.error('Invalid callback');
-        this.router.navigate(['/login']);
+        this.notificationService.error('Invalid callback: Missing auth code');
+        setTimeout(() => {
+          this.router.navigate(['/dashboard']);
+        }, 1500);
       }
     });
   }
