@@ -1,6 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable } from 'rxjs';
 import { LoadingService } from '../../../core/services/loading.service';
 
 @Component({
@@ -8,55 +7,81 @@ import { LoadingService } from '../../../core/services/loading.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="loading$ | async" class="loading-overlay">
-      <div class="spinner-container">
-        <div class="spinner"></div>
-        <p class="loading-text">Loading...</p>
+    @if (isLoading()) {
+      <div class="spinner-container" [class.overlay]="overlay">
+        <div class="spinner">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          @if (message) {
+            <p class="loading-message">{{ message }}</p>
+          }
+        </div>
       </div>
-    </div>
+    }
   `,
   styles: [`
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
+    .spinner-container {
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 9999;
-      backdrop-filter: blur(4px);
+      padding: 20px;
     }
-    .spinner-container {
+
+    .spinner-container.overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+    }
+
+    .spinner {
       text-align: center;
     }
-    .spinner {
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top: 4px solid #3b82f6;
+
+    .spinner-border {
+      width: 3rem;
+      height: 3rem;
+      border: 0.25em solid rgba(255, 255, 255, 0.2);
+      border-right-color: #fff;
       border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
+      animation: spinner-border 0.75s linear infinite;
     }
-    .loading-text {
+
+    .loading-message {
       color: white;
-      margin-top: 16px;
+      margin-top: 10px;
       font-size: 14px;
-      font-weight: 500;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    @keyframes spinner-border {
+      to {
+        transform: rotate(360deg);
+      }
     }
   `]
 })
 export class LoadingSpinnerComponent {
-  loading$: Observable<boolean>;
+  @Input() message?: string;
+  @Input() overlay: boolean = false;
+  
+  private loadingService = inject(LoadingService);
 
-  constructor(private loadingService: LoadingService) {
-    this.loading$ = this.loadingService.loading$;
-  }
+  // Use signal directly
+  isLoading = this.loadingService.isLoading;
 }

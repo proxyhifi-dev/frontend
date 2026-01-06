@@ -1,11 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
-import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
-import { NotificationService } from '../../core/services/notification.service';
+import { HttpClient } from '@angular/common/http';
 import { LoadingService } from '../../core/services/loading.service';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -15,49 +14,48 @@ import { LoadingService } from '../../core/services/loading.service';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent {
-  form = { username: '', password: '' };
-  loading = false;
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  private loadingService = inject(LoadingService);
+  private toastService = inject(ToastService);
 
-  constructor(
-    private authService: AuthService,
-    private fyersService: FyersOAuthService,
-    private notificationService: NotificationService,
-    private loadingService: LoadingService,
-    private router: Router
-  ) {}
+  credentials = {
+    email: '',
+    password: ''
+  };
 
-  get loading$() {
-    return this.loadingService.loading$;
+  // Use signal instead of Observable
+  get isLoading() {
+    return this.loadingService.isLoading();
   }
 
-  onSubmit(): void {
-    if (!this.form.username || !this.form.password) {
-      this.notificationService.error('Please enter username and password');
+  login() {
+    if (!this.credentials.email || !this.credentials.password) {
+      this.toastService.showWarning('Please enter email and password');
       return;
     }
 
-    this.loading = true;
-    this.authService.login(this.form.username, this.form.password).subscribe({
-      next: (response: any) => {
-        this.loading = false;
-        this.notificationService.success('Login successful!');
-        this.router.navigate(['/dashboard']);
-      },
-      error: (err: any) => {
-        this.loading = false;
-        this.notificationService.error(err.error?.error || 'Login failed');
-      }
-    });
+    this.http.post('/api/auth/login', this.credentials)
+      .subscribe({
+        next: (response: any) => {
+          localStorage.setItem('token', response.token);
+          this.toastService.showSuccess('Login successful!');
+          this.router.navigate(['/dashboard']);
+        },
+        error: () => {
+          // Error is handled by interceptor
+        }
+      });
   }
 
-  loginWithFyers(): void {
-    this.fyersService.getAuthUrl().subscribe({
-      next: (response: any) => {
-        window.location.href = response.authUrl;
-      },
-      error: () => {
-        this.notificationService.error('Failed to initiate Fyers login');
-      }
-    });
+  loginWithFyers() {
+    const clientId = 'YOUR_FYERS_CLIENT_ID';
+    const redirectUri = encodeURIComponent('http://localhost:4200/auth/fyers/callback');
+    const state = Math.random().toString(36).substring(7);
+    
+    sessionStorage.setItem('fyers_state', state);
+    
+    const authUrl = `https://api-t1.fyers.in/api/v3/generate-authcode?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&state=${state}`;
+    window.location.href = authUrl;
   }
 }
