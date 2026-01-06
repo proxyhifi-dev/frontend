@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -37,7 +38,7 @@ export class LoginComponent {
       return;
     }
 
-    this.http.post('/api/auth/login', this.form)
+    this.http.post(`${environment.apiUrl}/auth/login`, this.form)
       .subscribe({
         next: (response: any) => {
           localStorage.setItem('token', response.token);
@@ -51,13 +52,20 @@ export class LoginComponent {
   }
 
   loginWithFyers() {
-    const clientId = 'YOUR_FYERS_CLIENT_ID';
-    const redirectUri = encodeURIComponent('http://localhost:4200/auth/fyers/callback');
+    const clientId = environment.fyersClientId;
+    const redirectUri = encodeURIComponent(environment.fyersRedirectUri);
     const state = Math.random().toString(36).substring(7);
     
+    // Store state for verification
     sessionStorage.setItem('fyers_state', state);
     
-    const authUrl = `https://api-t1.fyers.in/api/v3/generate-authcode?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&state=${state}`;
+    // Construct Fyers OAuth URL
+    const authUrl = `${environment.fyersAuthUrl}?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&state=${state}`;
+    
+    console.log('Redirecting to Fyers OAuth:', authUrl);
+    this.toastService.showInfo('Redirecting to Fyers authentication...');
+    
+    // Redirect to Fyers
     window.location.href = authUrl;
   }
 }

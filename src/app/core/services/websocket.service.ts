@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { Client, IMessage } from '@stomp/stompjs';
 import { ToastService } from './toast.service';
 import { inject } from '@angular/core';
+import { environment } from '../../../environments/environment';
 
 export interface WebSocketMessage {
   type: string;
@@ -57,6 +58,12 @@ export class WebSocketService {
   }
 
   private getWebSocketUrl(): string {
+    // Use environment variable, fallback to auto-detection
+    if (environment.wsUrl) {
+      return environment.wsUrl;
+    }
+    
+    // Auto-detect from current location
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = '8080'; // Your backend port
