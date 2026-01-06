@@ -1,56 +1,161 @@
-import { Injectable } from '@angular/core';
-import { Client } from '@stomp/stompjs';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { Injectable, signal } from '@angular/core';
+import { Client, IMessage } from '@stomp/stompjs';
+import { ToastService } from './toast.service';
+import { inject } from '@angular/core';
+
+export interface WebSocketMessage {
+  type: string;
+  data: any;
+  timestamp: number;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class WebSocketService {
-  private client: Client;
-  private state$ = new BehaviorSubject<string>('DISCONNECTED');
+  private client: Client | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 5000;
+  private toastService = inject(ToastService);
+
+  connectionStatus = signal<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
+  messages = signal<WebSocketMessage[]>([]);
 
   constructor() {
+    this.initializeWebSocket();
+  }
+
+  private initializeWebSocket() {
+    const wsUrl = this.getWebSocketUrl();
+    
     this.client = new Client({
-      brokerURL: environment.wsUrl,
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
+      brokerURL: wsUrl,
+      connectHeaders: {
+        // Add auth token if needed
+        // 'Authorization': `Bearer ${token}`
+      },
+      debug: (str) => {
+        console.log('STOMP Debug:', str);
+      },
+      reconnectDelay: this.reconnectDelay,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      onConnect: () => {
+        this.onConnected();
+      },
+      onStompError: (frame) => {
+        this.onError(frame);
+      },
+      onWebSocketClose: () => {
+        this.onDisconnected();
+      }
     });
 
-    this.client.onConnect = (frame) => {
-      console.log('✅ WebSocket Connected');
-      this.state$.next('CONNECTED');
-    };
-
-    this.client.onStompError = (frame) => {
-      console.error('❌ Broker reported error: ' + frame.headers['message']);
-      this.state$.next('ERROR');
-    };
-
+    this.connectionStatus.set('connecting');
     this.client.activate();
   }
 
-  // Added method to satisfy DashboardComponent
-  public connect(): Observable<any> {
-    if (!this.client.active) {
-      this.client.activate();
-    }
-    return this.state$.asObservable();
+  private getWebSocketUrl(): string {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname;
+    const port = '8080'; // Your backend port
+    return `${protocol}//${host}:${port}/ws`;
   }
 
-  public subscribe(topic: string): Observable<any> {
-    return new Observable(observer => {
-      const checkConnection = setInterval(() => {
-        if (this.client.connected) {
-          clearInterval(checkConnection);
-          this.client.subscribe(topic, message => {
-            if (message.body) {
-              observer.next(JSON.parse(message.body));
-            }
-          });
-        }
-      }, 500);
+  private onConnected() {
+    console.log('WebSocket connected successfully');
+    this.connectionStatus.set('connected');
+    this.reconnectAttempts = 0;
+    this.toastService.showSuccess('Real-time connection established');
+
+    // Subscribe to topics
+    this.subscribeToTopics();
+  }
+
+  private subscribeToTopics() {
+    if (!this.client) return;
+
+    // Subscribe to market data
+    this.client.subscribe('/topic/market-data', (message: IMessage) => {
+      this.handleMessage('market-data', message);
     });
+
+    // Subscribe to position updates
+    this.client.subscribe('/topic/positions', (message: IMessage) => {
+      this.handleMessage('positions', message);
+    });
+
+    // Subscribe to trade updates
+    this.client.subscribe('/topic/trades', (message: IMessage) => {
+      this.handleMessage('trades', message);
+    });
+
+    // Subscribe to bot status
+    this.client.subscribe('/topic/bot-status', (message: IMessage) => {
+      this.handleMessage('bot-status', message);
+    });
+  }
+
+  private handleMessage(type: string, message: IMessage) {
+    try {
+      const data = JSON.parse(message.body);
+      const wsMessage: WebSocketMessage = {
+        type,
+        data,
+        timestamp: Date.now()
+      };
+      
+      this.messages.update(msgs => [...msgs.slice(-99), wsMessage]); // Keep last 100 messages
+    } catch (error) {
+      console.error('Error parsing WebSocket message:', error);
+    }
+  }
+
+  private onError(frame: any) {
+    console.error('WebSocket error:', frame);
+    this.connectionStatus.set('error');
+    this.toastService.showError('Real-time connection error. Retrying...');
+    this.attemptReconnect();
+  }
+
+  private onDisconnected() {
+    console.log('WebSocket disconnected');
+    this.connectionStatus.set('disconnected');
+    this.attemptReconnect();
+  }
+
+  private attemptReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      this.toastService.showError('Unable to establish real-time connection. Please refresh.');
+      return;
+    }
+
+    this.reconnectAttempts++;
+    console.log(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+    
+    setTimeout(() => {
+      if (this.client && !this.client.active) {
+        this.connectionStatus.set('connecting');
+        this.client.activate();
+      }
+    }, this.reconnectDelay * this.reconnectAttempts);
+  }
+
+  sendMessage(destination: string, body: any) {
+    if (this.client && this.client.connected) {
+      this.client.publish({
+        destination,
+        body: JSON.stringify(body)
+      });
+    } else {
+      this.toastService.showWarning('Real-time connection not available');
+    }
+  }
+
+  disconnect() {
+    if (this.client) {
+      this.client.deactivate();
+    }
   }
 }

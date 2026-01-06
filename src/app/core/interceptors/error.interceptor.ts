@@ -1,19 +1,62 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
-import { NotificationService } from '../services/notification.service';
+import { catchError, retry, throwError, timer } from 'rxjs';
+import { ToastService } from '../services/toast.service';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
-  const notificationService = inject(NotificationService);
+  const toastService = inject(ToastService);
 
   return next(req).pipe(
-    catchError((error) => {
-      let errorMessage = error.error?.message || 'An unknown error occurred';
+    retry({
+      count: 2,
+      delay: (error, retryCount) => {
+        // Only retry on network errors or 5xx errors
+        if (error instanceof HttpErrorResponse) {
+          if (error.status >= 500 || error.status === 0) {
+            return timer(1000 * retryCount);
+          }
+        }
+        throw error;
+      }
+    }),
+    catchError((error: HttpErrorResponse) => {
+      let errorMessage = 'An unexpected error occurred';
 
-      // ✅ Call the new method
-      notificationService.error('API Error', errorMessage);
+      if (error.error instanceof ErrorEvent) {
+        // Client-side error
+        errorMessage = `Error: ${error.error.message}`;
+      } else {
+        // Server-side error
+        switch (error.status) {
+          case 0:
+            errorMessage = 'No internet connection. Please check your network.';
+            break;
+          case 400:
+            errorMessage = error.error?.message || 'Invalid request';
+            break;
+          case 401:
+            errorMessage = 'Session expired. Please login again.';
+            // Optionally redirect to login
+            break;
+          case 403:
+            errorMessage = 'Access denied. You do not have permission.';
+            break;
+          case 404:
+            errorMessage = 'Resource not found';
+            break;
+          case 500:
+            errorMessage = 'Server error. Please try again later.';
+            break;
+          case 503:
+            errorMessage = 'Service temporarily unavailable';
+            break;
+          default:
+            errorMessage = error.error?.message || `Error: ${error.status}`;
+        }
+      }
 
-      return throwError(() => new Error(errorMessage));
+      toastService.showError(errorMessage);
+      return throwError(() => error);
     })
   );
 };
