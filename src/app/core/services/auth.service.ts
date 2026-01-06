@@ -56,6 +56,17 @@ export class AuthService {
     return localStorage.getItem('token');
   }
 
+  // Public method to update authentication state (used by Fyers callback)
+  updateAuthState(user: any, token: string): void {
+    if (token) {
+      localStorage.setItem('token', token);
+    }
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+      this.currentUserSubject.next(user);
+    }
+  }
+
   getFyersAuthUrl(): Observable<{ authUrl: string }> {
     return this.http.get<{ authUrl: string }>(`${this.apiUrl}/auth/fyers/auth-url`);
   }
