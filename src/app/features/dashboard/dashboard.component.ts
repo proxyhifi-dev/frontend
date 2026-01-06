@@ -5,6 +5,10 @@ import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { WebSocketService, WebSocketMessage } from '../../core/services/websocket.service';
 import { ToastService } from '../../core/services/toast.service';
+import { BotStatusWidgetComponent } from '../../shared/components/bot-status-widget/bot-status-widget.component';
+import { EquityCurveChartComponent } from '../../shared/components/equity-curve-chart/equity-curve-chart.component';
+import { RecentSignalsWidgetComponent } from '../../shared/components/recent-signals-widget/recent-signals-widget.component';
+import { RiskHealthWidgetComponent } from '../../shared/components/risk-health-widget/risk-health-widget.component';
 
 interface Stats {
   isLiveMode: boolean;
@@ -33,7 +37,15 @@ interface Position {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    FormsModule,
+    BotStatusWidgetComponent,
+    EquityCurveChartComponent,
+    RecentSignalsWidgetComponent,
+    RiskHealthWidgetComponent
+  ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
