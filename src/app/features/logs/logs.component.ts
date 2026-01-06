@@ -1,19 +1,22 @@
 import { Component, OnInit, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { WebSocketService, WebSocketMessage } from '../../core/services/websocket.service';
 import { HttpClient } from '@angular/common/http';
 
 interface LogEntry {
-  timestamp: string;
+  time: Date;
+  timestamp?: string;  // For API compatibility
   level: string;
   message: string;
+  component: string;
   details?: any;
 }
 
 @Component({
   selector: 'app-logs',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './logs.component.html',
   styleUrls: ['./logs.component.scss']
 })
@@ -23,7 +26,8 @@ export class LogsComponent implements OnInit {
 
   logs: LogEntry[] = [];
   filteredLogs: LogEntry[] = [];
-  selectedLevel: string = 'ALL';
+  filterLevel: string = 'All';
+  liveTail: boolean = true;
   autoScroll: boolean = true;
 
   constructor() {
@@ -34,13 +38,17 @@ export class LogsComponent implements OnInit {
       
       logsMessages.forEach(message => {
         const logEntry: LogEntry = {
+          time: new Date(message.timestamp),
           timestamp: new Date(message.timestamp).toISOString(),
           level: message.data.level || 'INFO',
           message: message.data.message || '',
+          component: message.data.component || 'SYSTEM',
           details: message.data.details
         };
         
-        this.addLog(logEntry);
+        if (this.liveTail) {
+          this.addLog(logEntry);
+        }
       });
     });
   }
@@ -53,7 +61,10 @@ export class LogsComponent implements OnInit {
     this.http.get<LogEntry[]>('/api/logs')
       .subscribe({
         next: (logs) => {
-          this.logs = logs;
+          this.logs = logs.map(log => ({
+            ...log,
+            time: new Date(log.timestamp || Date.now())
+          }));
           this.filterLogs();
         },
         error: () => {
@@ -81,16 +92,21 @@ export class LogsComponent implements OnInit {
   }
 
   filterLogs() {
-    if (this.selectedLevel === 'ALL') {
+    if (this.filterLevel === 'All') {
       this.filteredLogs = this.logs;
     } else {
-      this.filteredLogs = this.logs.filter(log => log.level === this.selectedLevel);
+      this.filteredLogs = this.logs.filter(log => log.level === this.filterLevel);
     }
   }
 
-  onLevelChange(level: string) {
-    this.selectedLevel = level;
-    this.filterLogs();
+  getLevelClass(level: string): string {
+    const levelMap: { [key: string]: string } = {
+      'INFO': 'badge-info',
+      'WARN': 'badge-warning',
+      'ERROR': 'badge-error',
+      'DEBUG': 'badge-debug'
+    };
+    return levelMap[level] || 'badge-default';
   }
 
   clearLogs() {
@@ -104,7 +120,7 @@ export class LogsComponent implements OnInit {
 
   private scrollToBottom() {
     setTimeout(() => {
-      const element = document.querySelector('.logs-container');
+      const element = document.querySelector('.logs-stream');
       if (element) {
         element.scrollTop = element.scrollHeight;
       }
@@ -113,6 +129,7 @@ export class LogsComponent implements OnInit {
 
   private generateMockLogs(): LogEntry[] {
     const levels = ['INFO', 'WARN', 'ERROR', 'DEBUG'];
+    const components = ['BOT', 'STRATEGY', 'RISK', 'BROKER', 'SYSTEM'];
     const messages = [
       'Bot started successfully',
       'Market data feed connected',
@@ -121,18 +138,18 @@ export class LogsComponent implements OnInit {
       'Stop loss triggered',
       'Connection retry attempt',
       'Trade completed with profit',
-      'Risk limit checked'
+      'Risk limit checked',
+      'Signal generated for TCS',
+      'Circuit breaker armed'
     ];
 
     return Array.from({ length: 50 }, (_, i) => ({
+      time: new Date(Date.now() - i * 60000),
       timestamp: new Date(Date.now() - i * 60000).toISOString(),
       level: levels[Math.floor(Math.random() * levels.length)],
+      component: components[Math.floor(Math.random() * components.length)],
       message: messages[Math.floor(Math.random() * messages.length)],
       details: Math.random() > 0.5 ? { id: i, value: Math.random() * 1000 } : undefined
     }));
-  }
-
-  getLogClass(level: string): string {
-    return `log-${level.toLowerCase()}`;
   }
 }
