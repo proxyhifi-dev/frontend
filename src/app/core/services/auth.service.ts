@@ -60,9 +60,13 @@ export class AuthService {
     return this.http.get<{ authUrl: string }>(`${this.apiUrl}/auth/fyers/auth-url`);
   }
 
-  handleFyersCallback(authCode: string): Observable<any> {
-    // ✅ FIX: Send 'auth_code' (snake_case) to match Backend's AuthController expectation
-    return this.http.post(`${this.apiUrl}/auth/fyers/callback`, { auth_code: authCode });
+  handleFyersCallback(authCode: string, state?: string): Observable<any> {
+    // Send both auth_code and state to backend
+    const payload: any = { auth_code: authCode };
+    if (state) {
+      payload.state = state;
+    }
+    return this.http.post(`${this.apiUrl}/auth/fyers/callback`, payload);
   }
 
   register(email: string, username: string, password: string): Observable<any> {
