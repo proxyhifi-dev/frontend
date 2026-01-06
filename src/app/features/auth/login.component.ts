@@ -19,23 +19,25 @@ export class LoginComponent {
   private loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
 
-  credentials = {
-    email: '',
+  // Form object matching template
+  form = {
+    username: '',
     password: ''
   };
 
-  // Use signal instead of Observable
-  get isLoading() {
+  // Loading state for template
+  get loading() {
     return this.loadingService.isLoading();
   }
 
-  login() {
-    if (!this.credentials.email || !this.credentials.password) {
-      this.toastService.showWarning('Please enter email and password');
+  // Method called by template
+  onSubmit() {
+    if (!this.form.username || !this.form.password) {
+      this.toastService.showWarning('Please enter username and password');
       return;
     }
 
-    this.http.post('/api/auth/login', this.credentials)
+    this.http.post('/api/auth/login', this.form)
       .subscribe({
         next: (response: any) => {
           localStorage.setItem('token', response.token);
