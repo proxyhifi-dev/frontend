@@ -17,7 +17,7 @@ import { CommonModule } from '@angular/common';
       </svg>
       <div class="chart-info">
         <p>Showing equity curve for {{ timeRange }}</p>
-        <p>Data points: {{ data?.length || 0 }}</p>
+        <p>Data points: {{ data.length }}</p>
       </div>
     </div>
   `,
