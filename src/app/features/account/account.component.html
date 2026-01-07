@@ -6,7 +6,7 @@
         <div class="info">
           <h3>{{ profile.name }}</h3>
           <p>{{ profile.email }}</p>
-          <span class="badge paper">PAPER TRADING ACCOUNT</span>
+          <span class="badge paper">{{ isLiveMode ? 'LIVE TRADING ACCOUNT' : 'PAPER TRADING ACCOUNT' }}</span>
         </div>
       </div>
 
@@ -30,12 +30,14 @@
       <div class="glass-card broker-card">
         <div class="card-header">
           <h3>BROKER INTEGRATION</h3>
-          <span class="status-dot red"></span>
+          <span class="status-dot" [class.red]="broker.status !== 'CONNECTED'"></span>
         </div>
         <div class="broker-details">
           <div class="row">
             <label>Connection</label>
-            <span class="text-red">🔴 {{ broker.status }}</span>
+            <span [class.text-red]="broker.status !== 'CONNECTED'">
+              {{ broker.status === 'CONNECTED' ? '🟢 CONNECTED' : '🔴 DISCONNECTED' }}
+            </span>
           </div>
           <div class="row">
             <label>API Key</label>

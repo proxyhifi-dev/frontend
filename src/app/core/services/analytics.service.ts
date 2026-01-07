@@ -1,17 +1,16 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { StoreService } from './store.service';
+import { PerformanceMetrics } from '../models/domain.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
-  private baseUrl = '/api';
+  private baseUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient, private store: StoreService) {}
+  constructor(private http: HttpClient) {}
 
-  getOverview(period: string = '30d'): Observable<any> {
-    const isLive = this.store.snapshot.isLiveMode;
-    const endpoint = isLive ? `${this.baseUrl}/performance/live` : `${this.baseUrl}/performance/paper`;
-    return this.http.get<any>(`${endpoint}?period=${period}`);
+  getMetrics(): Observable<PerformanceMetrics> {
+    return this.http.get<PerformanceMetrics>(`${this.baseUrl}/performance/metrics`);
   }
 }

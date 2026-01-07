@@ -32,7 +32,7 @@
         <td>
           <div class="symbol-col">
             <span class="symbol-text">{{ pos.symbol }}</span>
-            <span class="badge">{{ pos.sector }}</span>
+            <span class="badge" *ngIf="pos.sector">{{ pos.sector }}</span>
           </div>
         </td>
         <td>{{ pos.entryPrice | currencyInr }}</td>

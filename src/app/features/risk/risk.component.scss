@@ -26,11 +26,11 @@
 
 .heatmap {
   margin-top: 20px;
-  .row { display: grid; grid-template-columns: 80px 80px 80px; gap: 4px; margin-bottom: 4px; font-size: 10px; }
+  .row { display: grid; gap: 4px; margin-bottom: 4px; font-size: 10px; }
+  .row.header { font-weight: 600; color: var(--text-secondary); }
   .box {
     height: 40px; display: grid; place-items: center; border-radius: 4px; font-weight: bold;
-    &.low { background: rgba(0, 200, 83, 0.2); color: #00C853; }
-    &.self { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
+    background: rgba(255,255,255,0.05); color: var(--text-secondary);
   }
 }
 
