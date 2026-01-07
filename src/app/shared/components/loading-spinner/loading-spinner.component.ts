@@ -53,9 +53,7 @@ import { LoadingService } from '../../../core/services/loading.service';
   `]
 })
 export class LoadingSpinnerComponent {
-  constructor(private loadingService: LoadingService) {}
+  readonly isLoading = this.loadingService.isLoading;
 
-  get isLoading() {
-    return this.loadingService.isLoading;
-  }
+  constructor(private loadingService: LoadingService) {}
 }
