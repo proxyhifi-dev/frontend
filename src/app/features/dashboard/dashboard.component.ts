@@ -5,8 +5,10 @@ import { DashboardService } from '../../core/services/dashboard.service';
 import { PositionService } from '../../core/services/position.service';
 import { WebSocketService } from '../../core/services/websocket.service';
 import { BotService } from '../../core/services/bot.service';
-import { Subscription, Subject } from 'rxjs';
+import { StoreService } from '../../core/services/store.service';
+import { forkJoin, Subscription, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { PositionView, Signal } from '../../core/models/domain.model';
 
 // Import Child Components
 import { BotStatusWidgetComponent } from './components/bot-status-widget.component';
@@ -86,8 +88,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     isPaused: false
   };
 
-  activePositions: any[] = [];
-  newSignals: any[] = [];
+  activePositions: PositionView[] = [];
+  newSignals: Signal[] = [];
   notifications: any[] = [];
   equityData: any[] = [];
   timeRanges: string[] = ['1D', '5D', '1M', '3M', '6M', '1Y'];
@@ -102,7 +104,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private dashboardService: DashboardService,
     private positionService: PositionService,
     private wsService: WebSocketService,
-    private botService: BotService
+    private botService: BotService,
+    private store: StoreService
   ) {}
 
   ngOnInit(): void {
@@ -112,19 +115,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadDashboardData(): void {
     this.isLoading = true;
-    const sub = this.dashboardService.getSummary()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(
-        (data: any) => {
-          this.stats = { ...this.stats, ...data };
+    const mode = this.store.snapshot.isLiveMode ? 'LIVE' : 'PAPER';
+    this.stats.isLiveMode = this.store.snapshot.isLiveMode;
+
+    const sub = forkJoin({
+      summary: this.dashboardService.getSummary(mode),
+      today: this.dashboardService.getTodayPnL(),
+      unrealized: this.dashboardService.getUnrealizedPnL(),
+      metrics: this.dashboardService.getPerformanceMetrics(),
+      equity: this.dashboardService.getEquityCurve(mode),
+      signals: this.dashboardService.getSignals(),
+      positions: this.positionService.getOpenPositions()
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ({ summary, today, unrealized, metrics, equity, signals, positions }) => {
+          const totalCapital = summary.availableFunds ?? summary.availablePaperFunds ?? summary.availableRealFunds ?? summary.currentValue ?? 0;
+          this.stats = {
+            ...this.stats,
+            todayPnL: today?.todayPnL ?? summary.todaysPnl ?? 0,
+            unrealizedPnL: unrealized?.unrealizedPnL ?? 0,
+            winRate: metrics?.winRate ?? 0,
+            totalTrades: metrics?.totalTrades ?? 0,
+            roi: summary.currentValue && summary.totalInvested
+              ? ((summary.currentValue - summary.totalInvested) / summary.totalInvested) * 100
+              : 0,
+            totalCapital,
+            portfolioValue: summary.currentValue ?? 0,
+            accountBalance: summary.availableFunds ?? summary.availablePaperFunds ?? 0,
+            activePositions: positions.length,
+            lastScan: signals?.[0]?.scanTime ? new Date(signals[0].scanTime).toLocaleString() : 'N/A'
+          };
+          this.activePositions = positions;
+          this.newSignals = signals;
+          this.equityData = equity?.curve ?? equity ?? [];
           this.isLoading = false;
         },
-        (error: any) => {
+        error: (error: any) => {
           console.error('Failed to load dashboard stats', error);
           this.isLoading = false;
           this.loadingMessage = 'Failed to load data.';
         }
-      );
+      });
     this.subscriptions.push(sub);
   }
 
@@ -136,8 +167,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   toggleMode(): void {
-    this.stats.isLiveMode = !this.stats.isLiveMode;
+    this.store.toggleMode();
+    this.stats.isLiveMode = this.store.snapshot.isLiveMode;
     this.dashboardService.toggleMode(this.stats.isLiveMode).subscribe();
+    this.loadDashboardData();
   }
 
   toggleNotifications(): void {
@@ -150,11 +183,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   pauseBot(): void {
     this.stats.isPaused = !this.stats.isPaused;
-    if (!this.stats.isPaused) {
-      this.dashboardService.resumeTrading().subscribe();
-    } else {
-      this.dashboardService.pauseTrading().subscribe();
-    }
   }
 
   scanNow(): void {
@@ -167,15 +195,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   expandPositions(): void {}
 
-  closePosition(position: any): void {
-    this.positionService.closePosition(position.id).subscribe();
-  }
+  closePosition(position: PositionView): void {}
 
-  modifySL(position: any): void {}
-
-  approveSignal(signal: any): void {}
-
-  rejectSignal(signal: any): void {}
+  modifySL(position: PositionView): void {}
 
   viewAllSignals(): void {}
 

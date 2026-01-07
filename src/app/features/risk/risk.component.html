@@ -7,80 +7,71 @@
   <div class="grid-3">
     <div class="glass-card cb-card">
       <div class="cb-header">
-        <h4>DAILY LIMIT (-5%)</h4>
-        <span class="badge" [class.danger]="riskStatus.cbActive">🟢 SAFE</span>
+        <h4>EQUITY</h4>
+        <span class="badge">₹</span>
       </div>
       <div class="cb-body">
-        <div class="main-stat">{{ riskStatus.dailyLoss | currencyInr }}</div>
-        <div class="sub-stat">Limit: {{ riskStatus.dailyLimit | currencyInr }}</div>
-        <div class="progress-container">
-          <div class="fill" [style.width.%]="(riskStatus.dailyLoss/riskStatus.dailyLimit)*100"></div>
-        </div>
-        <div class="buffer">Buffer: {{ getBuffer(riskStatus.dailyLoss, riskStatus.dailyLimit) | currencyInr }}</div>
+        <div class="main-stat">{{ riskStatus.equity | currencyInr }}</div>
+        <div class="sub-stat">Current account equity</div>
       </div>
     </div>
 
     <div class="glass-card cb-card">
       <div class="cb-header">
-        <h4>WEEKLY LIMIT (-10%)</h4>
-        <span class="badge warning">🟡 CAUTION</span>
+        <h4>OPEN POSITIONS</h4>
+        <span class="badge warning">LIVE</span>
       </div>
       <div class="cb-body">
-        <div class="main-stat">{{ riskStatus.weeklyLoss | currencyInr }}</div>
-        <div class="sub-stat">Limit: {{ riskStatus.weeklyLimit | currencyInr }}</div>
-        <div class="progress-container">
-          <div class="fill yellow" [style.width.%]="50"></div>
-        </div>
-        <div class="buffer">Buffer: ₹5,000</div>
+        <div class="main-stat">{{ riskStatus.openPositions }}</div>
+        <div class="sub-stat">Active trades tracked</div>
       </div>
     </div>
 
     <div class="glass-card cb-card">
       <div class="cb-header">
-        <h4>MONTHLY STATUS</h4>
-        <span class="badge success">🟢 PROFITABLE</span>
+        <h4>RISK LEVEL</h4>
+        <span class="badge success">STATUS</span>
       </div>
       <div class="cb-body">
-        <div class="main-stat positive">+{{ riskStatus.monthlyPnl | currencyInr }}</div>
-        <div class="sub-stat">Status: No Drawdown</div>
-        <div class="drawdown-info">Peak: ₹1,08,000</div>
+        <div class="main-stat">{{ getRiskLabel() }}</div>
+        <div class="sub-stat">Based on open positions</div>
       </div>
     </div>
   </div>
 
   <div class="grid-split mt-24">
     <div class="glass-card section">
-      <h3>CAPITAL EXPOSURE</h3>
+      <h3>RISK SNAPSHOT</h3>
       <div class="exposure-grid">
         <div class="exp-item">
-          <label>Total Capital</label>
-          <span>{{ exposure.total | currencyInr }}</span>
+          <label>Equity</label>
+          <span>{{ riskStatus.equity | currencyInr }}</span>
         </div>
         <div class="exp-item">
-          <label>Used</label>
-          <span class="accent">{{ exposure.used | currencyInr }} (68.5%)</span>
+          <label>Open Positions</label>
+          <span class="accent">{{ riskStatus.openPositions }}</span>
         </div>
-      </div>
-
-      <h4 class="mt-16">SECTOR LIMITS</h4>
-      <div class="sector-bar" *ngFor="let s of exposure.sectors">
-        <div class="flex-between">
-          <span>{{ s.name }}</span>
-          <span [class.text-red]="s.status==='FULL'">{{ s.count }}/{{ s.limit }}</span>
-        </div>
-        <div class="bar-bg"><div class="fill" [class.red]="s.status==='FULL'" [style.width.%]="(s.count/s.limit)*100"></div></div>
       </div>
     </div>
 
     <div class="glass-card section">
       <h3>CORRELATION HEATMAP</h3>
       <div class="heatmap-container">
-        <div class="heatmap">
-          <div class="row"><span></span> <span>TCS</span> <span>RELIANCE</span></div>
-          <div class="row"><span>TCS</span> <span class="box self">1.0</span> <span class="box low">0.28</span></div>
-          <div class="row"><span>RELIANCE</span> <span class="box low">0.28</span> <span class="box self">1.0</span></div>
+        <div class="heatmap" *ngIf="correlation.symbols.length > 0; else noCorrelation">
+          <div class="row header" [style.gridTemplateColumns]="'80px repeat(' + correlation.symbols.length + ', 1fr)'">
+            <span></span>
+            <span *ngFor="let symbol of correlation.symbols">{{ symbol }}</span>
+          </div>
+          <div class="row" *ngFor="let symbol of correlation.symbols; let rowIndex = index" [style.gridTemplateColumns]="'80px repeat(' + correlation.symbols.length + ', 1fr)'">
+            <span>{{ symbol }}</span>
+            <span class="box" *ngFor="let value of correlation.matrix[rowIndex]">
+              {{ value | number:'1.2-2' }}
+            </span>
+          </div>
         </div>
-        <p class="analysis-text">🟢 Portfolio is well-diversified. Correlation is low.</p>
+        <ng-template #noCorrelation>
+          <p class="analysis-text">No correlation data available yet.</p>
+        </ng-template>
       </div>
     </div>
   </div>

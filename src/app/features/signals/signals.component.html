@@ -2,14 +2,18 @@
   <div class="header-row">
     <div class="title-group">
       <h2>STRATEGY SIGNALS</h2>
-      <span class="scan-time">Last Scan: Just now</span>
+      <span class="scan-time">Last Scan: {{ lastScanLabel }}</span>
     </div>
     <div class="actions">
       <div class="toggle-group">
-        <label>Auto-Approve A+++</label>
-        <input type="checkbox" [(ngModel)]="autoApproveVal">
+        <label>Paper Mode</label>
+        <input type="checkbox" [(ngModel)]="isPaperMode" (change)="toggleMode()">
       </div>
-      <button class="btn-primary">▶ Scan Now</button>
+      <div class="filter-group">
+        <button class="btn-outline" [class.active]="activeFilter === 'all'" (click)="updateFilter('all')">All</button>
+        <button class="btn-outline" [class.active]="activeFilter === 'pending'" (click)="updateFilter('pending')">Entry Ready</button>
+      </div>
+      <button class="btn-primary" (click)="scanNow()">▶ Scan Now</button>
     </div>
   </div>
 
@@ -17,33 +21,31 @@
     <div class="list-header">
       <span>Symbol</span>
       <span>Score/Grade</span>
-      <span>ADX</span>
-      <span>RSI</span>
+      <span>Entry</span>
+      <span>Scan Time</span>
       <span>Status</span>
-      <span>Action</span>
+      <span>Details</span>
     </div>
 
     <div class="signal-row-wrapper" *ngFor="let s of signals">
       <div class="signal-main-row" (click)="s.expanded = !s.expanded">
         <div class="symbol-info">
           <span class="symbol">{{ s.symbol }}</span>
-          <span class="sector" *ngIf="s.sector">{{ s.sector }}</span>
         </div>
         <div class="score-cell">
           <div class="score-bar-bg">
-            <div class="score-fill" [style.width.%]="s.score" [style.background]="getScoreColor(s.score)"></div>
+            <div class="score-fill" [style.width.%]="s.signalScore" [style.background]="getScoreColor(s.signalScore)"></div>
           </div>
-          <span class="grade">{{ s.score }} ({{ s.grade }})</span>
+          <span class="grade">{{ s.signalScore }} ({{ s.grade }})</span>
         </div>
-        <div class="metric">{{ s.adx }}</div>
-        <div class="metric">{{ s.rsi }}</div>
+        <div class="metric">{{ s.entryPrice ? ('₹' + (s.entryPrice | number:'1.2-2')) : 'N/A' }}</div>
+        <div class="metric">{{ s.scanTime ? (s.scanTime | date:'short') : 'N/A' }}</div>
         <div class="status">
-          <span class="badge" [class.approved]="s.status === 'APPROVED'" [class.rejected]="s.status === 'REJECTED'">
-            {{ s.status }}
+          <span class="badge" [class.approved]="s.hasEntrySignal">
+            {{ getStatusLabel(s) }}
           </span>
         </div>
         <div class="action-btns">
-          <button *ngIf="s.status === 'PENDING'" class="btn-approve" (click)="approve(s); $event.stopPropagation()">✓</button>
           <button class="btn-expand">{{ s.expanded ? '▲' : '▼' }}</button>
         </div>
       </div>
@@ -53,32 +55,30 @@
           <div class="layer-breakdown">
             <h4>SCORING FACTORS</h4>
             <ul>
-              <li><span>Trend Strength</span> <span class="val">{{ s.adx_score || 0 }}/25</span></li>
-              <li><span>RSI Status</span> <span class="val">{{ s.rsi }}</span></li>
+              <li><span>Signal Score</span> <span class="val">{{ s.signalScore }}/100</span></li>
+              <li><span>Grade</span> <span class="val">{{ s.grade }}</span></li>
             </ul>
           </div>
 
           <div class="gate-checklist">
             <h4>RISK GATES</h4>
             <div class="gates">
-              <span [class]="getGateClass(s.score >= 70)">Score > 70</span>
-              <span [class]="getGateClass(s.adx >= 25)">ADX > 25</span>
-              <span [class]="getGateClass((s.correlation || 0) < 0.7)">Correlation</span>
+              <span class="gate-pass">Entry Signal: {{ s.hasEntrySignal ? 'Yes' : 'No' }}</span>
+              <span class="gate-pass">Score: {{ s.signalScore }}</span>
             </div>
           </div>
 
           <div class="execution-preview">
             <h4>EXECUTION PREVIEW</h4>
             <div class="preview-stats">
-              <div><label>Risk (1%)</label> <span>₹1,000</span></div>
-              <div><label>Qty</label> <span>10</span></div>
+              <div><label>Entry</label> <span>{{ s.entryPrice ? ('₹' + (s.entryPrice | number:'1.2-2')) : 'N/A' }}</span></div>
+              <div><label>Scan Time</label> <span>{{ s.scanTime ? (s.scanTime | date:'short') : 'N/A' }}</span></div>
               <div>
-                <label>Stop Loss</label>
-                <span *ngIf="s.entryPrice && s.atr">₹{{ s.entryPrice - (s.atr * 2) | number:'1.2-2' }}</span>
-                <span *ngIf="!s.entryPrice || !s.atr">N/A</span>
+                <label>Has Entry Signal</label>
+                <span>{{ s.hasEntrySignal ? 'Yes' : 'No' }}</span>
               </div>
             </div>
-            <button class="btn-execute-big" [disabled]="s.status !== 'PENDING'">EXECUTE TRADE</button>
+            <button class="btn-execute-big" [disabled]="!s.hasEntrySignal">EXECUTE TRADE</button>
           </div>
         </div>
       </div>

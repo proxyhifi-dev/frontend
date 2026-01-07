@@ -32,14 +32,14 @@
   </div>
 </nav>
 
-<div class="paper-mode-banner" *ngIf="!stats.isLiveMode">
-  <div class="banner-content">
-    <div class="banner-status">🔷 PAPER TRADING MODE - No real money is being traded</div>
-    <div class="banner-metrics">
-      <div class="metric">Bot: <strong>{{ stats.botStatus }}</strong></div>
-      <div class="metric">Positions: <strong>{{ stats.activePositions }}</strong></div>
-      <div class="metric">Circuit Breaker: <strong>{{ stats.circuitBreakerStatus }}</strong></div>
-      <div class="metric">Last Scan: <strong>{{ stats.lastScan }}</strong></div>
+  <div class="paper-mode-banner" *ngIf="!stats.isLiveMode">
+    <div class="banner-content">
+      <div class="banner-status">🔷 PAPER TRADING MODE - No real money is being traded</div>
+      <div class="banner-metrics">
+        <div class="metric">Bot: <strong>{{ stats.botStatus }}</strong></div>
+        <div class="metric">Positions: <strong>{{ stats.activePositions }}</strong></div>
+        <div class="metric">Circuit Breaker: <strong>{{ stats.circuitBreakerStatus }}</strong></div>
+        <div class="metric">Last Scan: <strong>{{ stats.lastScan }}</strong></div>
       <div class="metric">Capital: <strong>₹{{ stats.totalCapital | number }}</strong></div>
     </div>
   </div>
@@ -86,7 +86,7 @@
           <div class="position-card" *ngFor="let pos of activePositions.slice(0, 2)">
             <div class="position-header">
               <h3>{{ pos.symbol }}</h3>
-              <span class="position-sector">{{ pos.sector }}</span>
+              <span class="position-sector" *ngIf="pos.sector">{{ pos.sector }}</span>
             </div>
             <div class="position-grid">
               <div class="pos-item">
@@ -100,17 +100,16 @@
               <div class="pos-item">
                 <span class="label">P&L</span>
                 <span class="value" [ngClass]="{ 'positive': pos.pnl >= 0, 'negative': pos.pnl < 0 }">
-                  ₹{{ pos.pnl | number }} {{ pos.pnlPercent | number:'1.1-1' }}%
+                  ₹{{ pos.pnl | number }} {{ (pos.pnlPercent || 0) | number:'1.1-1' }}%
                 </span>
               </div>
               <div class="pos-item">
-                <span class="label">Target</span>
-                <span class="value">{{ pos.targetDistance }} to go</span>
+                <span class="label">Qty</span>
+                <span class="value">{{ pos.quantity }}</span>
               </div>
             </div>
             <div class="position-actions">
-              <button class="btn-secondary" (click)="closePosition(pos)">Close</button>
-              <button class="btn-secondary" (click)="modifySL(pos)">Edit SL</button>
+              <button class="btn-secondary" disabled>Manage in broker</button>
             </div>
           </div>
 
@@ -139,7 +138,7 @@
         </div>
       </div>
 
-      <app-recent-signals-widget></app-recent-signals-widget>
+      <app-recent-signals-widget [signals]="newSignals"></app-recent-signals-widget>
 
       <app-risk-health-widget></app-risk-health-widget>
 
