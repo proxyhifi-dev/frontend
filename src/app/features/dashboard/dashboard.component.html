@@ -1,151 +1,173 @@
-<nav class="navbar">
-  <div class="navbar-logo" (click)="navigateToDashboard()">
+<nav class="apex-navbar">
+  <div class="navbar-left" (click)="navigateToDashboard()">
     <span class="logo-icon">⚡</span>
     <span class="logo-text">APEX</span>
   </div>
 
-  <div class="nav-links">
+  <div class="navbar-links">
     <a class="nav-link active" routerLink="/dashboard">Dashboard</a>
-    <a class="nav-link" routerLink="/positions">Positions</a>
-    <a class="nav-link" routerLink="/signals">Signals</a>
-    <a class="nav-link" routerLink="/risk">Risk</a>
-    <a class="nav-link" routerLink="/analytics">Analytics</a>
+    <a class="nav-link" routerLink="/account">Account</a>
+    <a class="nav-link" routerLink="/history">History</a>
+    <a class="nav-link" routerLink="/settings">Settings</a>
   </div>
 
-  <div class="navbar-right">
-    <div class="mode-toggle" [ngClass]="{ 'live-mode': stats.isLiveMode }">
-      <span class="mode-label">{{ stats.isLiveMode ? 'LIVE' : 'PAPER' }}</span>
-      <label class="switch">
-        <input type="checkbox" [checked]="stats.isLiveMode" (change)="toggleMode()">
-        <span class="slider"></span>
-      </label>
+  <div class="navbar-actions">
+    <div class="market-time">
+      <span class="market-dot" [class.active]="isMarketOpen"></span>
+      <span>{{ currentTime }}</span>
     </div>
-
-    <div class="notifications" (click)="toggleNotifications()">
-      <span class="bell-icon">🔔</span>
-      <span class="notification-badge" *ngIf="notifications.length > 0">{{ notifications.length }}</span>
+    <div class="bot-status" [class.paused]="stats.isPaused">
+      <span class="status-dot"></span>
+      <span>{{ stats.isPaused ? 'Paused' : 'Active' }}</span>
     </div>
-
-    <div class="profile-menu" (click)="toggleProfile()">
-      <span class="profile-icon">👤</span>
-    </div>
+    <button class="icon-btn" (click)="pauseBot()">{{ stats.isPaused ? '▶' : '⏸' }}</button>
+    <button class="icon-btn primary" (click)="scanNow()">▶</button>
+    <button class="icon-btn ghost" (click)="toggleMode()">
+      {{ stats.isLiveMode ? '💰' : '📄' }}
+    </button>
   </div>
 </nav>
 
-  <div class="paper-mode-banner" *ngIf="!stats.isLiveMode">
-    <div class="banner-content">
-      <div class="banner-status">🔷 PAPER TRADING MODE - No real money is being traded</div>
-      <div class="banner-metrics">
-        <div class="metric">Bot: <strong>{{ stats.botStatus }}</strong></div>
-        <div class="metric">Positions: <strong>{{ stats.activePositions }}</strong></div>
-        <div class="metric">Circuit Breaker: <strong>{{ stats.circuitBreakerStatus }}</strong></div>
-        <div class="metric">Last Scan: <strong>{{ stats.lastScan }}</strong></div>
-      <div class="metric">Capital: <strong>₹{{ stats.totalCapital | number }}</strong></div>
-    </div>
-  </div>
+<div class="mode-banner" [class.live]="stats.isLiveMode">
+  <span class="banner-icon">{{ stats.isLiveMode ? '💰' : '📄' }}</span>
+  <span>{{ stats.isLiveMode ? 'LIVE MODE - REAL FUNDS' : 'PAPER MODE' }}</span>
 </div>
 
-<div class="dashboard-container" *ngIf="!isLoading">
-
-  <div class="kpi-row">
-    <div class="kpi-card" [ngClass]="{ 'positive': stats.todayPnL >= 0, 'negative': stats.todayPnL < 0 }">
-      <div class="kpi-title">TODAY P&L</div>
-      <div class="kpi-value">₹{{ stats.todayPnL | number }}</div>
-      <div class="kpi-change">{{ stats.todayPnL >= 0 ? '📈' : '📉' }} {{ (stats.todayPnL / stats.totalCapital * 100) | number:'1.2-2' }}%</div>
+<div class="dashboard-shell" *ngIf="!isLoading">
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-title">Today P&amp;L</div>
+      <div class="stat-value">₹{{ stats.todayPnL | number }}</div>
+      <div class="stat-change" [class.positive]="stats.todayPnL >= 0" [class.negative]="stats.todayPnL < 0">
+        {{ stats.todayPnL >= 0 ? '+' : '' }}{{ todayPnlPercent | number:'1.2-2' }}%
+      </div>
     </div>
 
-    <div class="kpi-card" [ngClass]="{ 'positive': stats.unrealizedPnL >= 0, 'negative': stats.unrealizedPnL < 0 }">
-      <div class="kpi-title">UNREALIZED P&L</div>
-      <div class="kpi-value">₹{{ stats.unrealizedPnL | number }}</div>
-      <div class="kpi-change">{{ stats.unrealizedPnL >= 0 ? '📈' : '📉' }} {{ (stats.unrealizedPnL / stats.totalCapital * 100) | number:'1.2-2' }}%</div>
+    <div class="stat-card">
+      <div class="stat-title">Weekly P&amp;L</div>
+      <div class="stat-value">₹{{ stats.weeklyPnL | number }}</div>
+      <div class="stat-change" [class.positive]="stats.weeklyPnL >= 0" [class.negative]="stats.weeklyPnL < 0">
+        {{ stats.weeklyPnL >= 0 ? '+' : '' }}{{ weeklyPnlPercent | number:'1.2-2' }}%
+      </div>
     </div>
 
-    <div class="kpi-card">
-      <div class="kpi-title">WIN RATE</div>
-      <div class="kpi-value">{{ stats.winRate | number:'1.1-1' }}%</div>
-      <div class="kpi-change">Trades: {{ stats.totalTrades }}</div>
+    <div class="stat-card">
+      <div class="stat-title">Positions</div>
+      <div class="stat-value">{{ stats.activePositions }}/{{ maxPositions }}</div>
+      <div class="stat-sub">{{ stats.activePositions >= maxPositions ? 'Full' : 'Available' }}</div>
     </div>
 
-    <div class="kpi-card" [ngClass]="{ 'positive': stats.roi >= 0, 'negative': stats.roi < 0 }">
-      <div class="kpi-title">ROI</div>
-      <div class="kpi-value">{{ stats.roi | number:'1.1-1' }}%</div>
-      <div class="kpi-change">Return on Investment</div>
+    <div class="stat-card">
+      <div class="stat-title">Circuit Breaker</div>
+      <div class="stat-value">{{ circuitUsage | number:'1.0-0' }}%</div>
+      <div class="stat-sub" [class.positive]="circuitUsage < 70" [class.warning]="circuitUsage >= 70 && circuitUsage < 90" [class.negative]="circuitUsage >= 90">
+        {{ circuitStatus }}
+      </div>
     </div>
   </div>
 
-  <div class="main-grid">
+  <div class="content-grid">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Active Positions</h2>
+        <button class="btn-danger" [disabled]="activePositions.length === 0">Close All</button>
+      </div>
 
-    <div class="left-column">
-
-      <div class="widget positions-widget">
-        <div class="widget-header">
-          <h2>LIVE POSITIONS ({{ stats.activePositions }})</h2>
-          <button class="btn-small" (click)="expandPositions()">View All</button>
-        </div>
-        <div class="positions-list">
-          <div class="position-card" *ngFor="let pos of activePositions.slice(0, 2)">
-            <div class="position-header">
-              <h3>{{ pos.symbol }}</h3>
-              <span class="position-sector" *ngIf="pos.sector">{{ pos.sector }}</span>
+      <div class="positions" *ngIf="activePositions.length; else emptyPositions">
+        <div class="position-card" *ngFor="let pos of activePositions.slice(0, 2)">
+          <div class="position-top">
+            <div>
+              <div class="position-symbol">{{ pos.symbol }}</div>
+              <div class="position-sector">{{ pos.sector || 'N/A' }}</div>
             </div>
-            <div class="position-grid">
-              <div class="pos-item">
-                <span class="label">Entry</span>
-                <span class="value">₹{{ pos.entryPrice | number }}</span>
-              </div>
-              <div class="pos-item">
-                <span class="label">Current</span>
-                <span class="value animated">₹{{ pos.currentPrice | number }}</span>
-              </div>
-              <div class="pos-item">
-                <span class="label">P&L</span>
-                <span class="value" [ngClass]="{ 'positive': pos.pnl >= 0, 'negative': pos.pnl < 0 }">
-                  ₹{{ pos.pnl | number }} {{ (pos.pnlPercent || 0) | number:'1.1-1' }}%
-                </span>
-              </div>
-              <div class="pos-item">
-                <span class="label">Qty</span>
-                <span class="value">{{ pos.quantity }}</span>
-              </div>
-            </div>
-            <div class="position-actions">
-              <button class="btn-secondary" disabled>Manage in broker</button>
+            <div class="position-pnl" [class.positive]="pos.pnl >= 0" [class.negative]="pos.pnl < 0">
+              {{ pos.pnl >= 0 ? '+' : '' }}₹{{ pos.pnl | number:'1.0-0' }}
             </div>
           </div>
 
-          <div class="empty-slot" *ngIf="stats.activePositions < 25">
-            <span>Available Slot {{ stats.activePositions + 1 }}</span>
-            <p>Waiting for new signal...</p>
+          <div class="sparkline">
+            <span class="sparkline-fill" [style.width.%]="getPositionProgress(pos)"></span>
+          </div>
+
+          <div class="position-grid">
+            <div>
+              <span>Entry</span>
+              <strong>₹{{ pos.entryPrice | number:'1.2-2' }}</strong>
+            </div>
+            <div>
+              <span>Current</span>
+              <strong>₹{{ pos.currentPrice | number:'1.2-2' }}</strong>
+            </div>
+            <div>
+              <span>Target</span>
+              <strong>₹{{ getPositionTarget(pos) | number:'1.2-2' }}</strong>
+            </div>
+            <div>
+              <span>Stop Loss</span>
+              <strong>₹{{ (pos.stopLoss || pos.entryPrice * 0.97) | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <div class="position-actions">
+            <button class="btn-outline">Close</button>
+            <button class="btn-secondary">Modify SL</button>
           </div>
         </div>
       </div>
 
-      <app-bot-status-widget></app-bot-status-widget>
+      <ng-template #emptyPositions>
+        <div class="empty-state">No positions yet</div>
+      </ng-template>
+    </section>
 
-    </div>
-
-    <div class="right-column">
-
-      <div class="widget equity-curve-widget">
-        <div class="widget-header">
-          <h2>EQUITY CURVE</h2>
-          <div class="time-range-buttons">
-            <button class="time-btn" *ngFor="let range of timeRanges" (click)="setTimeRange(range)">{{ range }}</button>
+    <aside class="side-stack">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Next Scan</h2>
+          <span class="dot-group">•••</span>
+        </div>
+        <div class="scan-card">
+          <div class="scan-count">{{ scanCountdown }}</div>
+          <div class="scan-label">seconds</div>
+          <div class="scan-bar">
+            <span [style.width.%]="scanProgress"></span>
+          </div>
+          <div class="scan-meta">
+            <div>
+              <span>Last Scan</span>
+              <strong>{{ stats.lastScan }}</strong>
+            </div>
+            <div>
+              <span>Signals</span>
+              <strong>{{ stats.signalsFound }}</strong>
+            </div>
           </div>
         </div>
-        <div class="chart-container">
-          <app-equity-curve-chart [data]="equityData" [timeRange]="selectedTimeRange"></app-equity-curve-chart>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Recent Signals</h2>
+          <span class="dot-group">•••</span>
         </div>
-      </div>
-
-      <app-recent-signals-widget [signals]="newSignals"></app-recent-signals-widget>
-
-      <app-risk-health-widget></app-risk-health-widget>
-
-    </div>
-
+        <div class="signals" *ngIf="newSignals.length; else emptySignals">
+          <div class="signal-row" *ngFor="let signal of newSignals.slice(0, 3)">
+            <span class="signal-status" [class.approved]="signal.hasEntrySignal" [class.rejected]="!signal.hasEntrySignal">
+              {{ signal.hasEntrySignal ? '✓' : '✗' }}
+            </span>
+            <div class="signal-info">
+              <strong>{{ signal.symbol }}</strong>
+              <span>{{ signal.grade }}</span>
+            </div>
+            <div class="signal-score">{{ signal.signalScore }}</div>
+          </div>
+        </div>
+        <ng-template #emptySignals>
+          <div class="empty-state">No signals yet</div>
+        </ng-template>
+      </section>
+    </aside>
   </div>
-
 </div>
 
 <div class="loading-overlay" *ngIf="isLoading">
