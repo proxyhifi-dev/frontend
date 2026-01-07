@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable } from 'rxjs';
 import { LoadingService } from '../../../core/services/loading.service';
 
 @Component({
@@ -8,7 +7,7 @@ import { LoadingService } from '../../../core/services/loading.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="loading$ | async" class="loading-overlay">
+    <div *ngIf="isLoading()" class="loading-overlay">
       <div class="spinner-container">
         <div class="spinner"></div>
         <p class="loading-text">Loading...</p>
@@ -54,9 +53,9 @@ import { LoadingService } from '../../../core/services/loading.service';
   `]
 })
 export class LoadingSpinnerComponent {
-  loading$: Observable<boolean>;
+  constructor(private loadingService: LoadingService) {}
 
-  constructor(private loadingService: LoadingService) {
-    this.loading$ = this.loadingService.loading$;
+  get isLoading() {
+    return this.loadingService.isLoading;
   }
 }

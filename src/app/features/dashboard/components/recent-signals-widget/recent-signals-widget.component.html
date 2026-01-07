@@ -27,17 +27,13 @@
 
       <div class="layer-stats">
         <span>Entry: {{ signal.entryPrice | number:'1.2-2' }}</span>
-        <span *ngIf="signal.layerScores">RSI: {{ signal.layerScores.rsi }}</span>
-        <span *ngIf="!signal.layerScores">Score: {{ signal.signalScore }}</span>
+        <span>Score: {{ signal.signalScore }}</span>
       </div>
 
       <div class="actions">
-        <button class="btn-approve">
-          <span class="icon">✓</span> Approve
-        </button>
-        <button class="btn-reject">
-          <span class="icon">✕</span> Reject
-        </button>
+        <span class="badge" [class.approved]="signal.hasEntrySignal">
+          {{ signal.hasEntrySignal ? 'ENTRY READY' : 'MONITOR' }}
+        </span>
       </div>
     </div>
   </div>
