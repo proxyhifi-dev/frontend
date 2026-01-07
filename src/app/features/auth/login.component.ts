@@ -26,10 +26,6 @@ export class LoginComponent {
     private router: Router
   ) {}
 
-  get loading$() {
-    return this.loadingService.loading$;
-  }
-
   onSubmit(): void {
     if (!this.form.username || !this.form.password) {
       this.notificationService.error('Please enter username and password');

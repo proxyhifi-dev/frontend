@@ -2,6 +2,8 @@ import { Injectable, signal } from '@angular/core';
 import { Client, IMessage } from '@stomp/stompjs';
 import { ToastService } from './toast.service';
 import { inject } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { Observable } from 'rxjs';
 
 export interface WebSocketMessage {
   type: string;
@@ -54,6 +56,56 @@ export class WebSocketService {
 
     this.connectionStatus.set('connecting');
     this.client.activate();
+  }
+
+  connect(): Observable<'connected' | 'disconnected' | 'connecting' | 'error'> {
+    if (this.client && !this.client.active) {
+      this.client.activate();
+    }
+    return toObservable(this.connectionStatus);
+  }
+
+  subscribe<T>(destination: string): Observable<T> {
+    return new Observable<T>(observer => {
+      if (!this.client) {
+        observer.error(new Error('WebSocket client not initialized'));
+        return;
+      }
+
+      let subscription: { unsubscribe: () => void } | null = null;
+      let intervalId: number | null = null;
+
+      const attachSubscription = () => {
+        if (this.client && this.client.connected) {
+          subscription = this.client.subscribe(destination, (message: IMessage) => {
+            try {
+              observer.next(JSON.parse(message.body) as T);
+            } catch (error) {
+              observer.error(error);
+            }
+          });
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+        }
+      };
+
+      if (this.client.connected) {
+        attachSubscription();
+      } else {
+        intervalId = window.setInterval(attachSubscription, 500);
+      }
+
+      return () => {
+        if (subscription) {
+          subscription.unsubscribe();
+        }
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+      };
+    });
   }
 
   private getWebSocketUrl(): string {
