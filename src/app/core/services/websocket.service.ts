@@ -4,6 +4,7 @@ import { ToastService } from './toast.service';
 import { inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface WebSocketMessage {
   type: string;
@@ -109,6 +110,10 @@ export class WebSocketService {
   }
 
   private getWebSocketUrl(): string {
+    if (environment.wsUrl) {
+      return environment.wsUrl;
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = '8080'; // Your backend port
