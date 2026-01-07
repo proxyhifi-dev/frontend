@@ -7,6 +7,29 @@
 
 .actions {
   display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  .search-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 18, 37, 0.8);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 4px 10px;
+  }
+  .search-input {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 12px;
+    width: 160px;
+    outline: none;
+  }
+  .search-clear:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
   .filter-group { display: flex; gap: 8px; }
   .btn-outline {
     border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary);
