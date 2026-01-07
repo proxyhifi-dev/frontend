@@ -1,24 +1,28 @@
 <div class="auth-container">
-  <div class="auth-card">
-    <h2>Create Account</h2>
+  <div class="auth-card glass-card">
+    <div class="auth-header">
+      <span class="logo">APEX ⚡</span>
+      <h2>Create your account</h2>
+      <p>Start your trading analytics journey in minutes.</p>
+    </div>
     <form (ngSubmit)="onSubmit()">
       <div class="form-group">
         <label for="register-email">Email</label>
-        <input id="register-email" type="email" [(ngModel)]="form.email" name="email" class="form-control" placeholder="Enter email" autocomplete="email">
+        <input id="register-email" type="email" [(ngModel)]="form.email" name="email" class="dark-input" placeholder="Enter email" autocomplete="email">
       </div>
       <div class="form-group">
         <label for="register-username">Username</label>
-        <input id="register-username" type="text" [(ngModel)]="form.username" name="username" class="form-control" placeholder="Choose username" autocomplete="username">
+        <input id="register-username" type="text" [(ngModel)]="form.username" name="username" class="dark-input" placeholder="Choose username" autocomplete="username">
       </div>
       <div class="form-group">
         <label for="register-password">Password</label>
-        <input id="register-password" type="password" [(ngModel)]="form.password" name="password" class="form-control" placeholder="Enter password" autocomplete="new-password">
+        <input id="register-password" type="password" [(ngModel)]="form.password" name="password" class="dark-input" placeholder="Enter password" autocomplete="new-password">
       </div>
       <div class="form-group">
         <label for="register-confirm">Confirm Password</label>
-        <input id="register-confirm" type="password" [(ngModel)]="form.confirmPassword" name="confirmPassword" class="form-control" placeholder="Confirm password" autocomplete="new-password">
+        <input id="register-confirm" type="password" [(ngModel)]="form.confirmPassword" name="confirmPassword" class="dark-input" placeholder="Confirm password" autocomplete="new-password">
       </div>
-      <button type="submit" [disabled]="loading" class="btn btn-primary btn-block">Register</button>
+      <button type="submit" [disabled]="loading" class="btn btn-primary btn-block">Create Account</button>
     </form>
     <p class="text-center mt-3">Already have an account? <a routerLink="/login">Login here</a></p>
   </div>
