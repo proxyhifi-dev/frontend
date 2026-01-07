@@ -1,58 +1,103 @@
-export interface Position {
+export interface Holding {
+  symbol: string;
+  quantity: number;
+  avgPrice: number;
+  currentPrice: number;
+  pnl: number;
+  pnlPercent: number;
+}
+
+export interface UserProfile {
+  name: string;
+  availableFunds: number;
+  availableRealFunds: number;
+  availablePaperFunds: number;
+  totalInvested: number;
+  currentValue: number;
+  todaysPnl: number;
+  holdings: Holding[];
+}
+
+export interface Trade {
   id: number;
+  symbol: string;
+  tradeType: string;
+  quantity: number;
+  entryPrice: number;
+  exitPrice?: number;
+  entryTime: string;
+  exitTime?: string;
+  stopLoss?: number;
+  currentStopLoss?: number;
+  atr?: number;
+  highestPrice?: number;
+  isPaperTrade?: boolean;
+  status?: string;
+  exitReason?: string;
+  breakevenMoved?: boolean;
+  realizedPnl?: number;
+  currentPrice?: number;
+  pnl?: number;
+  pnlPercent?: number;
+}
+
+export interface PaperPosition {
+  symbol: string;
+  quantity: number;
+  entryPrice: number;
+  ltp: number;
+  pnl: number;
+  pnlPercent: number;
+}
+
+export interface PositionView {
+  id?: number;
   symbol: string;
   quantity: number;
   entryPrice: number;
   currentPrice: number;
   pnl: number;
-  pnlPercent: number;
-  productType: string;
-  status: 'OPEN' | 'CLOSED';
-  entryTime: string;
-  exitTime?: string;
+  pnlPercent?: number;
+  exitPrice?: number;
+  realizedPnl?: number;
   exitReason?: string;
   sector?: string;
-  realizedPnl?: number;
-  exitPrice?: number;
+  stopLoss?: number;
 }
 
 export interface Signal {
   id: number;
   symbol: string;
-  score: number;
-  grade: 'A+++' | 'A++' | 'A' | 'B';
-  adx: number;
-  rsi: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXECUTED';
-  generatedTime: string;
-  rejectionReason?: string;
-  atr?: number;
+  signalScore: number;
+  grade: string;
   entryPrice?: number;
-  sector?: string;
-  correlation?: number;
-  adx_score?: number;
+  scanTime: string;
+  hasEntrySignal: boolean;
 }
 
-// ✅ Ensuring these are exported to fix TS2305 errors
-export interface RiskStatus {
-  dailyLoss: number;
-  dailyLimit: number;
-  weeklyLoss: number;
-  weeklyLimit: number;
-  monthlyPnl: number;
-  consecutiveLosses: number;
-  cbActive: boolean;
-}
-
-export interface DashboardStats {
-  todayPnL: number;
-  weeklyPnL: number;
-  monthlyPnL: number;
-  totalPnL: number;
-  unrealizedPnL: number;
+export interface PerformanceMetrics {
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
   winRate: number;
+  netProfit: number;
+  averageWin: number;
+  averageLoss: number;
   profitFactor: number;
-  activePositionsCount: number;
-  riskLimit: number;
-  roi: number;
+  expectancy?: number;
+  maxDrawdown: number;
+  longestWinStreak?: number;
+  longestLossStreak?: number;
+  lastTradeTime?: string;
+  lastTradeSymbol?: string;
+}
+
+export interface RiskStatus {
+  equity: number;
+  openPositions: number;
+}
+
+export interface CorrelationMatrix {
+  symbols: string[];
+  matrix: number[][];
 }

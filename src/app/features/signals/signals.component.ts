@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { StoreService } from '../../core/services/store.service';
 import { SignalService } from '../../core/services/signal.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Signal } from '../../core/models/domain.model';
@@ -15,43 +14,72 @@ import { Signal } from '../../core/models/domain.model';
 })
 export class SignalsComponent implements OnInit {
   signals: (Signal & { expanded?: boolean })[] = [];
-  autoApproveVal = false;
-  activeFilter: 'all' | 'approved' | 'rejected' | 'pending' = 'all';
+  isPaperMode = true;
+  activeFilter: 'all' | 'pending' = 'all';
+  lastScanLabel = 'N/A';
 
   constructor(
     private signalSvc: SignalService,
-    private store: StoreService,
     private notify: NotificationService
   ) {}
 
   ngOnInit() {
     this.loadSignals();
+    this.loadMode();
   }
 
   loadSignals() {
-    this.signalSvc.getLatestSignals().subscribe(data => {
-      this.signals = data.map(s => ({ ...s, expanded: false }));
+    const source$ = this.activeFilter === 'pending'
+      ? this.signalSvc.getPendingSignals()
+      : this.signalSvc.getSignals();
+    source$.subscribe(data => {
+      this.signals = data
+        .slice()
+        .sort((a, b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime())
+        .map(s => ({ ...s, expanded: false }));
+      if (this.signals.length > 0) {
+        const latest = this.signals[0];
+        this.lastScanLabel = latest.scanTime ? new Date(latest.scanTime).toLocaleString() : 'N/A';
+      }
     });
   }
 
-  approve(signal: Signal) {
-    this.signalSvc.approveSignal(signal.id).subscribe({
+  loadMode() {
+    this.signalSvc.getMode().subscribe({
+      next: (data) => { this.isPaperMode = data.paperMode; },
+      error: () => { this.isPaperMode = true; }
+    });
+  }
+
+  toggleMode() {
+    this.signalSvc.setMode(this.isPaperMode).subscribe({
+      next: () => this.notify.success('Mode Updated', this.isPaperMode ? 'Paper mode enabled.' : 'Live mode enabled.'),
+      error: (err: any) => this.notify.error('Mode Update Failed', err.message)
+    });
+  }
+
+  scanNow() {
+    this.signalSvc.scanNow().subscribe({
       next: () => {
-        this.notify.success('Signal Approved', `Order sent for ${signal.symbol}`);
+        this.notify.success('Scan Started', 'Manual scan triggered.');
         this.loadSignals();
       },
-      error: (err: any) => this.notify.error('Approval Failed', err.message)
+      error: (err: any) => this.notify.error('Scan Failed', err.message)
     });
   }
 
-  getGateClass(passed: boolean): string {
-    return passed ? 'gate-pass' : 'gate-fail';
+  updateFilter(filter: 'all' | 'pending') {
+    this.activeFilter = filter;
+    this.loadSignals();
   }
 
   getScoreColor(score: number): string {
-    if (score >= 90) return '#00C853';
-    if (score >= 80) return '#64DD17';
-    if (score >= 70) return '#FFD600';
+    if (score >= 80) return '#00C853';
+    if (score >= 60) return '#FFD600';
     return '#FF1744';
+  }
+
+  getStatusLabel(signal: Signal): string {
+    return signal.hasEntrySignal ? 'ENTRY READY' : 'MONITOR';
   }
 }

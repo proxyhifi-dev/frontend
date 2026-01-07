@@ -1,16 +1,21 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { RiskStatus } from '../models/domain.model';
+import { CorrelationMatrix, RiskStatus } from '../models/domain.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class RiskService {
-  private apiUrl = '/api/risk';
+  private apiUrl = `${environment.apiUrl}/risk`;
 
   constructor(private http: HttpClient) {}
 
-  getCircuitBreakerStatus(): Observable<RiskStatus> {
+  getStatus(): Observable<RiskStatus> {
     return this.http.get<RiskStatus>(`${this.apiUrl}/status`);
+  }
+
+  getCorrelationMatrix(): Observable<CorrelationMatrix> {
+    return this.http.get<CorrelationMatrix>(`${this.apiUrl}/correlation-matrix`);
   }
 
   triggerEmergencyStop(): Observable<any> {

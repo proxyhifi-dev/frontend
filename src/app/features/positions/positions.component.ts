@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { PositionService } from '../../core/services/position.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
-import { Position } from '../../core/models/domain.model';
+import { PositionView } from '../../core/models/domain.model';
 
 @Component({
   selector: 'app-positions',
@@ -14,8 +14,8 @@ import { Position } from '../../core/models/domain.model';
 })
 export class PositionsComponent implements OnInit {
   activeTab: 'open' | 'closed' = 'open';
-  openPositions: Position[] = [];
-  closedPositions: Position[] = [];
+  openPositions: PositionView[] = [];
+  closedPositions: PositionView[] = [];
   isLoading = false;
 
   constructor(
@@ -43,15 +43,7 @@ export class PositionsComponent implements OnInit {
     });
   }
 
-  closePosition(pos: Position) {
-    if (confirm(`Sell ${pos.quantity} qty of ${pos.symbol} at Market Price?`)) {
-      this.positionSvc.closePosition(pos.id).subscribe({
-        next: () => {
-          this.notify.success('Order Sent', `Sell order for ${pos.symbol} submitted.`);
-          this.refresh();
-        },
-        error: (err: any) => this.notify.error('Execution Failed', err.message)
-      });
-    }
+  closePosition(pos: PositionView) {
+    this.notify.warning('Action Unavailable', `Close action for ${pos.symbol} is not exposed by the backend yet.`);
   }
 }

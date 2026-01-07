@@ -1,11 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CorrelationHeatmapComponent } from './components/correlation-heatmap.component';
 import { RiskService } from '../../core/services/risk.service';
-import { StoreService } from '../../core/services/store.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
-import { RiskStatus } from '../../core/models/domain.model';
+import { CorrelationMatrix, RiskStatus } from '../../core/models/domain.model';
 
 @Component({
   selector: 'app-risk',
@@ -15,28 +13,17 @@ import { RiskStatus } from '../../core/models/domain.model';
  styleUrls: ['./risk.component.scss']})
 export class RiskComponent implements OnInit {
   riskStatus: RiskStatus = {
-    dailyLoss: 0,
-    dailyLimit: 5000,
-    weeklyLoss: 0,
-    weeklyLimit: 10000,
-    monthlyPnl: 0,
-    consecutiveLosses: 0,
-    cbActive: false
+    equity: 0,
+    openPositions: 0
   };
 
-  exposure = {
-    total: 100000,
-    used: 68500,
-    sectors: [
-      { name: 'IT', count: 2, limit: 2, status: 'FULL' },
-      { name: 'Energy', count: 1, limit: 2, status: 'SAFE' },
-      { name: 'Banking', count: 0, limit: 2, status: 'SAFE' }
-    ]
+  correlation: CorrelationMatrix = {
+    symbols: [],
+    matrix: []
   };
 
   constructor(
     private riskSvc: RiskService,
-    private store: StoreService,
     private notify: NotificationService
   ) {}
 
@@ -45,7 +32,8 @@ export class RiskComponent implements OnInit {
   }
 
   loadRiskData() {
-    this.riskSvc.getCircuitBreakerStatus().subscribe((data: RiskStatus) => this.riskStatus = data);
+    this.riskSvc.getStatus().subscribe((data: RiskStatus) => this.riskStatus = data);
+    this.riskSvc.getCorrelationMatrix().subscribe((data: CorrelationMatrix) => this.correlation = data);
   }
 
   emergencyStop() {
@@ -61,7 +49,9 @@ export class RiskComponent implements OnInit {
     }
   }
 
-  getBuffer(current: number, limit: number): number {
-    return limit - Math.abs(current);
+  getRiskLabel(): string {
+    if (this.riskStatus.openPositions >= 5) return 'HIGH';
+    if (this.riskStatus.openPositions >= 3) return 'MEDIUM';
+    return 'LOW';
   }
 }

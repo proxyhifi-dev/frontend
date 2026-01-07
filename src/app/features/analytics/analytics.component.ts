@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card';
 import { AnalyticsService } from '../../core/services/analytics.service';
-import { StoreService } from '../../core/services/store.service';
-import { Subscription, switchMap } from 'rxjs';
+import { Subscription } from 'rxjs';
+import { PerformanceMetrics } from '../../core/models/domain.model';
 
 @Component({
   selector: 'app-analytics',
@@ -14,7 +14,17 @@ import { Subscription, switchMap } from 'rxjs';
   styleUrls: ['./analytics.component.scss']
 })
 export class AnalyticsComponent implements OnInit, OnDestroy {
-  stats: any = { winRate: 0, profitFactor: 0, totalTrades: 0, avgR: 0 };
+  stats: PerformanceMetrics = {
+    totalTrades: 0,
+    winningTrades: 0,
+    losingTrades: 0,
+    winRate: 0,
+    netProfit: 0,
+    averageWin: 0,
+    averageLoss: 0,
+    profitFactor: 0,
+    maxDrawdown: 0
+  };
   isLoading = true;
 
   // Chart configs required by template
@@ -36,22 +46,14 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
   private sub = new Subscription();
 
-  constructor(private analyticsSvc: AnalyticsService, private store: StoreService) {}
+  constructor(private analyticsSvc: AnalyticsService) {}
 
   ngOnInit() {
     this.sub.add(
-      this.store.state$.pipe(
-        switchMap(() => {
-          this.isLoading = true;
-          return this.analyticsSvc.getOverview();
-        })
-      ).subscribe(data => {
+      this.analyticsSvc.getMetrics().subscribe(data => {
         this.stats = data || this.stats;
         this.isLoading = false;
-        // Update charts if data exists
-        if(this.stats.wins !== undefined) {
-             this.pieOptions.series = [this.stats.wins, this.stats.losses];
-        }
+        this.pieOptions.series = [this.stats.winningTrades || 0, this.stats.losingTrades || 0];
       })
     );
   }

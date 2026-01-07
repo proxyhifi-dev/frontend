@@ -3,3 +3,7 @@
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .chart-main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
 .chart-box { padding: 20px; text-align: center; }
+.metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding-top: 8px; }
+.metric-item { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary);
+  strong { color: var(--text-primary); font-size: 16px; }
+}
