@@ -1,19 +1,25 @@
 <div class="auth-container">
-  <div class="auth-card">
-    <h2>Login</h2>
+  <div class="auth-card glass-card">
+    <div class="auth-header">
+      <span class="logo">APEX ⚡</span>
+      <h2>Welcome back</h2>
+      <p>Sign in to continue tracking your trades.</p>
+    </div>
     <form (ngSubmit)="onSubmit()">
       <div class="form-group">
         <label for="login-username">Username</label>
-        <input id="login-username" type="text" [(ngModel)]="form.username" name="username" class="form-control" placeholder="Enter username" autocomplete="username">
+        <input id="login-username" type="text" [(ngModel)]="form.username" name="username" class="dark-input" placeholder="Enter username" autocomplete="username">
       </div>
       <div class="form-group">
         <label for="login-password">Password</label>
-        <input id="login-password" type="password" [(ngModel)]="form.password" name="password" class="form-control" placeholder="Enter password" autocomplete="current-password">
+        <input id="login-password" type="password" [(ngModel)]="form.password" name="password" class="dark-input" placeholder="Enter password" autocomplete="current-password">
       </div>
       <button type="submit" [disabled]="loading" class="btn btn-primary btn-block">Login</button>
     </form>
-    <hr>
-    <button (click)="loginWithFyers()" [disabled]="loading" class="btn btn-info btn-block">Login with Fyers</button>
+    <div class="auth-divider">
+      <span>or</span>
+    </div>
+    <button (click)="loginWithFyers()" [disabled]="loading" class="btn btn-outline btn-block">Login with Fyers</button>
     <p class="text-center mt-3">Don't have an account? <a routerLink="/register">Register here</a></p>
   </div>
 </div>

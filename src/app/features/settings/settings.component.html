@@ -17,19 +17,19 @@
       <div class="setting-group">
         <label>Trading Mode</label>
         <div class="toggle-row">
-          <button [class.active]="config.mode==='paper'" (click)="config.mode='paper'">📄 Paper</button>
-          <button [class.active]="config.mode==='live'" (click)="config.mode='live'">💰 Live</button>
+          <button class="tab-btn" [class.active]="config.mode==='paper'" (click)="config.mode='paper'">📄 Paper</button>
+          <button class="tab-btn" [class.active]="config.mode==='live'" (click)="config.mode='live'">💰 Live</button>
         </div>
       </div>
 
       <div class="setting-group">
         <label>Max Concurrent Positions</label>
-        <input type="number" [(ngModel)]="config.trading.maxPositions" min="1" max="5">
+        <input type="number" [(ngModel)]="config.trading.maxPositions" min="1" max="5" class="dark-input">
       </div>
 
       <div class="setting-group">
         <label>Sector Limit</label>
-        <input type="number" [(ngModel)]="config.trading.sectorLimit">
+        <input type="number" [(ngModel)]="config.trading.sectorLimit" class="dark-input">
         <small>Max stocks from same sector (IT, Banking, etc.)</small>
       </div>
     </div>
@@ -43,7 +43,7 @@
           <h4>Reset Paper Account</h4>
           <small>Clears all trades and resets capital to ₹1L</small>
         </div>
-        <button class="btn-danger">Reset Account</button>
+        <button class="btn btn-danger">Reset Account</button>
       </div>
 
       <div class="danger-row">
@@ -51,12 +51,12 @@
           <h4>Clear All Data</h4>
           <small>Deletes entire database history</small>
         </div>
-        <button class="btn-danger-outline">Delete Data</button>
+        <button class="btn btn-danger-outline">Delete Data</button>
       </div>
     </div>
 
     <div class="panel-footer">
-      <button class="btn-save" (click)="save()">Save Changes</button>
+      <button class="btn btn-primary" (click)="save()">Save Changes</button>
     </div>
   </div>
 </div>

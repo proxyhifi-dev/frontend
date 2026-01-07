@@ -2,10 +2,10 @@
   <div class="header-row">
     <h2>POSITIONS</h2>
     <div class="tabs">
-      <button [class.active]="activeTab === 'open'" (click)="activeTab = 'open'">
+      <button class="tab-btn" [class.active]="activeTab === 'open'" (click)="activeTab = 'open'">
         🔴 OPEN ({{ openPositions.length }})
       </button>
-      <button [class.active]="activeTab === 'closed'" (click)="activeTab = 'closed'">
+      <button class="tab-btn" [class.active]="activeTab === 'closed'" (click)="activeTab = 'closed'">
         🟢 CLOSED ({{ closedPositions.length }})
       </button>
     </div>
@@ -13,7 +13,7 @@
 
   <div class="filters-bar glass-card">
     <input type="text" placeholder="🔍 Search symbol..." class="dark-input">
-    <button class="btn-outline">Export CSV</button>
+    <button class="btn btn-outline btn-sm">Export CSV</button>
   </div>
 
   <div class="table-wrapper glass-card" *ngIf="activeTab === 'open'">
@@ -41,7 +41,7 @@
           {{ pos.pnl | currencyInr }}
         </td>
         <td>
-          <button class="btn-danger btn-sm" (click)="closePosition(pos)">Close</button>
+          <button class="btn btn-danger btn-sm" (click)="closePosition(pos)">Close</button>
         </td>
       </tr>
       <tr *ngIf="openPositions.length === 0">
