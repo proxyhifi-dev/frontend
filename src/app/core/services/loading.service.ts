@@ -5,23 +5,24 @@ import { Injectable, signal } from '@angular/core';
 })
 export class LoadingService {
   private loadingCount = 0;
-  isLoading = signal(false);
+  private readonly _isLoading = signal(false);
+  readonly isLoading = this._isLoading.asReadonly();
 
   show() {
     this.loadingCount++;
-    this.isLoading.set(true);
+    queueMicrotask(() => this._isLoading.set(true));
   }
 
   hide() {
     this.loadingCount--;
     if (this.loadingCount <= 0) {
       this.loadingCount = 0;
-      this.isLoading.set(false);
+      queueMicrotask(() => this._isLoading.set(false));
     }
   }
 
   reset() {
     this.loadingCount = 0;
-    this.isLoading.set(false);
+    queueMicrotask(() => this._isLoading.set(false));
   }
 }

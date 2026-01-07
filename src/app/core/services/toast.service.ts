@@ -11,7 +11,8 @@ export interface Toast {
   providedIn: 'root'
 })
 export class ToastService {
-  toasts = signal<Toast[]>([]);
+  private readonly _toasts = signal<Toast[]>([]);
+  readonly toasts = this._toasts.asReadonly();
   private toastIdCounter = 0;
 
   showSuccess(message: string, duration = 3000) {
@@ -33,8 +34,10 @@ export class ToastService {
   private show(type: Toast['type'], message: string, duration: number) {
     const id = `toast-${++this.toastIdCounter}`;
     const toast: Toast = { id, type, message, duration };
-    
-    this.toasts.update(toasts => [...toasts, toast]);
+
+    queueMicrotask(() => {
+      this._toasts.update(toasts => [...toasts, toast]);
+    });
 
     if (duration > 0) {
       setTimeout(() => this.remove(id), duration);
@@ -42,6 +45,8 @@ export class ToastService {
   }
 
   remove(id: string) {
-    this.toasts.update(toasts => toasts.filter(t => t.id !== id));
+    queueMicrotask(() => {
+      this._toasts.update(toasts => toasts.filter(t => t.id !== id));
+    });
   }
 }

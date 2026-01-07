@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { animate, style, transition, trigger } from '@angular/animations';
 import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
@@ -121,7 +122,18 @@ import { ToastService } from '../../../core/services/toast.service';
         max-width: none;
       }
     }
-  `]
+  `],
+  animations: [
+    trigger('slideIn', [
+      transition(':enter', [
+        style({ transform: 'translateY(8px)', opacity: 0 }),
+        animate('180ms ease-out', style({ transform: 'translateY(0)', opacity: 1 }))
+      ]),
+      transition(':leave', [
+        animate('160ms ease-in', style({ transform: 'translateY(8px)', opacity: 0 }))
+      ])
+    ])
+  ]
 })
 export class ToastContainerComponent {
   toastService = inject(ToastService);

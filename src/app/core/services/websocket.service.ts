@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { EnvironmentInjector, Injectable, runInInjectionContext, signal } from '@angular/core';
 import { Client, IMessage } from '@stomp/stompjs';
 import { ToastService } from './toast.service';
 import { inject } from '@angular/core';
@@ -21,11 +21,15 @@ export class WebSocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 5000;
   private toastService = inject(ToastService);
+  private connectionStatus$: Observable<'connected' | 'disconnected' | 'connecting' | 'error'>;
 
   connectionStatus = signal<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
   messages = signal<WebSocketMessage[]>([]);
 
-  constructor() {
+  constructor(private envInjector: EnvironmentInjector) {
+    this.connectionStatus$ = runInInjectionContext(this.envInjector, () =>
+      toObservable(this.connectionStatus)
+    );
     this.initializeWebSocket();
   }
 
@@ -63,7 +67,7 @@ export class WebSocketService {
     if (this.client && !this.client.active) {
       this.client.activate();
     }
-    return toObservable(this.connectionStatus);
+    return this.connectionStatus$;
   }
 
   subscribe<T>(destination: string): Observable<T> {
