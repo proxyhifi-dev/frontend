@@ -73,13 +73,13 @@ export interface BotStatus {
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
+    }
 
-      h3 {
-        margin: 0;
-        color: var(--text-primary);
-        font-size: 16px;
-        font-weight: 600;
-      }
+    .widget-header h3 {
+      margin: 0;
+      color: var(--text-primary);
+      font-size: 16px;
+      font-weight: 600;
     }
 
     .status-indicator {
@@ -92,25 +92,25 @@ export interface BotStatus {
       color: #00C853;
       font-size: 12px;
       font-weight: 600;
+    }
 
-      &.paused {
-        background: rgba(255, 107, 0, 0.1);
-        color: #FF6B00;
-      }
+    .status-indicator.paused {
+      background: rgba(255, 107, 0, 0.1);
+      color: #FF6B00;
+    }
 
-      .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #00C853;
-        display: inline-block;
-        animation: pulse 2s infinite;
+    .status-indicator .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00C853;
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
 
-        .paused & {
-          background: #FF6B00;
-          animation: none;
-        }
-      }
+    .status-indicator.paused .dot {
+      background: #FF6B00;
+      animation: none;
     }
 
     .status-grid {
@@ -123,56 +123,56 @@ export interface BotStatus {
     .status-item {
       display: flex;
       flex-direction: column;
+    }
 
-      label {
-        font-size: 11px;
-        color: var(--text-secondary);
-        margin-bottom: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
+    .status-item label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-      .value {
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--text-primary);
-      }
+    .status-item .value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
     }
 
     .action-buttons {
       display: flex;
       gap: 10px;
+    }
 
-      button {
-        flex: 1;
-        padding: 8px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 13px;
-        border: none;
-        transition: all 0.3s ease;
+    .action-buttons button {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      border: none;
+      transition: all 0.3s ease;
+    }
 
-        &:hover:not(:disabled) {
-          opacity: 0.9;
-        }
+    .action-buttons button:hover:not(:disabled) {
+      opacity: 0.9;
+    }
 
-        &:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-      }
+    .action-buttons button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
 
-      .btn-toggle {
-        background: var(--accent);
-        color: white;
-      }
+    .action-buttons .btn-toggle {
+      background: var(--accent);
+      color: white;
+    }
 
-      .btn-scan {
-        background: transparent;
-        border: 1px solid var(--accent);
-        color: var(--accent);
-      }
+    .action-buttons .btn-scan {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
     }
 
     @keyframes pulse {
