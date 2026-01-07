@@ -83,7 +83,6 @@ export class FyersCallbackComponent implements OnInit {
             }
             // Unknown response format
             else {
-              console.warn('Unexpected response format:', response);
               this.notificationService.success('✅ Fyers authentication completed');
               
               setTimeout(() => {
@@ -91,8 +90,8 @@ export class FyersCallbackComponent implements OnInit {
               }, 1000);
             }
           },
-          error: (err: any) => {
-            console.error('Fyers callback error:', err);
+          error: () => {
+            console.error('Fyers callback error.');
             this.notificationService.error('❌ Failed to connect Fyers account');
             
             // Redirect to login page on error
