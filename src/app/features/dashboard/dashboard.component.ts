@@ -130,30 +130,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: ({ summary, today, unrealized, metrics, equity, signals, positions }) => {
           const totalCapital = summary.availableFunds ?? summary.availablePaperFunds ?? summary.availableRealFunds ?? summary.currentValue ?? 0;
-          this.stats = {
-            ...this.stats,
-            todayPnL: today?.todayPnL ?? summary.todaysPnl ?? 0,
-            unrealizedPnL: unrealized?.unrealizedPnL ?? 0,
-            winRate: metrics?.winRate ?? 0,
-            totalTrades: metrics?.totalTrades ?? 0,
-            roi: summary.currentValue && summary.totalInvested
-              ? ((summary.currentValue - summary.totalInvested) / summary.totalInvested) * 100
-              : 0,
-            totalCapital,
-            portfolioValue: summary.currentValue ?? 0,
-            accountBalance: summary.availableFunds ?? summary.availablePaperFunds ?? 0,
-            activePositions: positions.length,
-            lastScan: signals?.[0]?.scanTime ? new Date(signals[0].scanTime).toLocaleString() : 'N/A'
-          };
-          this.activePositions = positions;
-          this.newSignals = signals;
-          this.equityData = equity?.curve ?? equity ?? [];
-          this.isLoading = false;
+          queueMicrotask(() => {
+            this.stats = {
+              ...this.stats,
+              todayPnL: today?.todayPnL ?? summary.todaysPnl ?? 0,
+              unrealizedPnL: unrealized?.unrealizedPnL ?? 0,
+              winRate: metrics?.winRate ?? 0,
+              totalTrades: metrics?.totalTrades ?? 0,
+              roi: summary.currentValue && summary.totalInvested
+                ? ((summary.currentValue - summary.totalInvested) / summary.totalInvested) * 100
+                : 0,
+              totalCapital,
+              portfolioValue: summary.currentValue ?? 0,
+              accountBalance: summary.availableFunds ?? summary.availablePaperFunds ?? 0,
+              activePositions: positions.length,
+              lastScan: signals?.[0]?.scanTime ? new Date(signals[0].scanTime).toLocaleString() : 'N/A'
+            };
+            this.activePositions = positions;
+            this.newSignals = signals;
+            this.equityData = equity?.curve ?? equity ?? [];
+            this.isLoading = false;
+          });
         },
         error: (error: any) => {
           console.error('Failed to load dashboard stats', error);
-          this.isLoading = false;
-          this.loadingMessage = 'Failed to load data.';
+          queueMicrotask(() => {
+            this.isLoading = false;
+            this.loadingMessage = 'Failed to load data.';
+          });
         }
       });
     this.subscriptions.push(sub);

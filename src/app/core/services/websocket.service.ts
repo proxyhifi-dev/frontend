@@ -23,6 +23,7 @@ export class WebSocketService {
   private toastService = inject(ToastService);
 
   connectionStatus = signal<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
+  readonly connectionStatus$ = toObservable(this.connectionStatus);
   messages = signal<WebSocketMessage[]>([]);
 
   constructor() {
@@ -63,7 +64,7 @@ export class WebSocketService {
     if (this.client && !this.client.active) {
       this.client.activate();
     }
-    return toObservable(this.connectionStatus);
+    return this.connectionStatus$;
   }
 
   subscribe<T>(destination: string): Observable<T> {
