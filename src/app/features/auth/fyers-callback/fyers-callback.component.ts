@@ -53,8 +53,6 @@ export class FyersCallbackComponent implements OnInit {
       if (authCode) {
         this.authService.handleFyersCallback(authCode, state).subscribe({
           next: (response: any) => {
-            console.log('Fyers callback response:', response);
-            
             // Check if response contains JWT token (new flow)
             if (response.accessToken || response.token) {
               // Save JWT token and user profile
