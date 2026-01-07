@@ -5,6 +5,20 @@
       <span class="scan-time">Last Scan: {{ lastScanLabel }}</span>
     </div>
     <div class="actions">
+      <div class="search-group">
+        <input
+          id="signals-search"
+          type="search"
+          class="search-input"
+          placeholder="Filter by symbol"
+          aria-label="Filter signals by symbol"
+          [(ngModel)]="searchTerm"
+          (input)="onSearchChange()"
+        >
+        <button class="btn-outline search-clear" type="button" (click)="searchTerm=''; onSearchChange()" [disabled]="!searchTerm">
+          Clear
+        </button>
+      </div>
       <div class="toggle-group">
         <label>Paper Mode</label>
         <input type="checkbox" [(ngModel)]="isPaperMode" (change)="toggleMode()">

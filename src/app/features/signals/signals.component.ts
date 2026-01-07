@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { SignalService } from '../../core/services/signal.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Signal } from '../../core/models/domain.model';
+import { StoreService } from '../../core/services/store.service';
 
 @Component({
   selector: 'app-signals',
@@ -12,20 +14,35 @@ import { Signal } from '../../core/models/domain.model';
   templateUrl: './signals.component.html',
   styleUrls: ['./signals.component.scss']
 })
-export class SignalsComponent implements OnInit {
+export class SignalsComponent implements OnInit, OnDestroy {
   signals: (Signal & { expanded?: boolean })[] = [];
+  allSignals: (Signal & { expanded?: boolean })[] = [];
   isPaperMode = true;
   activeFilter: 'all' | 'pending' = 'all';
   lastScanLabel = 'N/A';
+  searchTerm = '';
+  private destroy$ = new Subject<void>();
 
   constructor(
     private signalSvc: SignalService,
-    private notify: NotificationService
+    private notify: NotificationService,
+    private store: StoreService
   ) {}
 
   ngOnInit() {
     this.loadSignals();
     this.loadMode();
+    this.store.state$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((state) => {
+        this.searchTerm = state.searchSymbol ?? '';
+        this.applySearch();
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadSignals() {
@@ -33,14 +50,15 @@ export class SignalsComponent implements OnInit {
       ? this.signalSvc.getPendingSignals()
       : this.signalSvc.getSignals();
     source$.subscribe(data => {
-      this.signals = data
+      this.allSignals = data
         .slice()
         .sort((a, b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime())
         .map(s => ({ ...s, expanded: false }));
-      if (this.signals.length > 0) {
-        const latest = this.signals[0];
+      if (this.allSignals.length > 0) {
+        const latest = this.allSignals[0];
         this.lastScanLabel = latest.scanTime ? new Date(latest.scanTime).toLocaleString() : 'N/A';
       }
+      this.applySearch();
     });
   }
 
@@ -71,6 +89,23 @@ export class SignalsComponent implements OnInit {
   updateFilter(filter: 'all' | 'pending') {
     this.activeFilter = filter;
     this.loadSignals();
+  }
+
+  applySearch() {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) {
+      this.signals = [...this.allSignals];
+      return;
+    }
+
+    this.signals = this.allSignals.filter(signal =>
+      signal.symbol?.toLowerCase().includes(term)
+    );
+  }
+
+  onSearchChange() {
+    this.store.setSearchSymbol(this.searchTerm);
+    this.applySearch();
   }
 
   getScoreColor(score: number): string {

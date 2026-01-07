@@ -3,23 +3,23 @@
     <h2>Create Account</h2>
     <form (ngSubmit)="onSubmit()">
       <div class="form-group">
-        <label>Email</label>
-        <input type="email" [(ngModel)]="form.email" name="email" class="form-control" placeholder="Enter email">
+        <label for="register-email">Email</label>
+        <input id="register-email" type="email" [(ngModel)]="form.email" name="email" class="form-control" placeholder="Enter email" autocomplete="email">
       </div>
       <div class="form-group">
-        <label>Username</label>
-        <input type="text" [(ngModel)]="form.username" name="username" class="form-control" placeholder="Choose username">
+        <label for="register-username">Username</label>
+        <input id="register-username" type="text" [(ngModel)]="form.username" name="username" class="form-control" placeholder="Choose username" autocomplete="username">
       </div>
       <div class="form-group">
-        <label>Password</label>
-        <input type="password" [(ngModel)]="form.password" name="password" class="form-control" placeholder="Enter password">
+        <label for="register-password">Password</label>
+        <input id="register-password" type="password" [(ngModel)]="form.password" name="password" class="form-control" placeholder="Enter password" autocomplete="new-password">
       </div>
       <div class="form-group">
-        <label>Confirm Password</label>
-        <input type="password" [(ngModel)]="form.confirmPassword" name="confirmPassword" class="form-control" placeholder="Confirm password">
+        <label for="register-confirm">Confirm Password</label>
+        <input id="register-confirm" type="password" [(ngModel)]="form.confirmPassword" name="confirmPassword" class="form-control" placeholder="Confirm password" autocomplete="new-password">
       </div>
       <button type="submit" [disabled]="loading" class="btn btn-primary btn-block">Register</button>
     </form>
-    <p class="text-center mt-3">Already have an account? <a href="/login">Login here</a></p>
+    <p class="text-center mt-3">Already have an account? <a routerLink="/login">Login here</a></p>
   </div>
 </div>

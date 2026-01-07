@@ -6,6 +6,7 @@ export interface AppState {
   isSidebarCollapsed: boolean;
   notifications: any[];
   user: { name: string; capital: number };
+  searchSymbol: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -14,7 +15,8 @@ export class StoreService {
     isLiveMode: false, // Default to Paper Trading
     isSidebarCollapsed: false,
     notifications: [],
-    user: { name: 'Trader', capital: 100000 }
+    user: { name: 'Trader', capital: 100000 },
+    searchSymbol: ''
   };
 
   private state = new BehaviorSubject<AppState>(this.initialState);
@@ -40,6 +42,11 @@ export class StoreService {
   toggleSidebar() {
     const current = this.state.value;
     this.state.next({ ...current, isSidebarCollapsed: !current.isSidebarCollapsed });
+  }
+
+  setSearchSymbol(symbol: string) {
+    const current = this.state.value;
+    this.state.next({ ...current, searchSymbol: symbol });
   }
 
   notify(title: string, message: string, type: 'success' | 'warning' | 'error' | 'info' = 'info') {
