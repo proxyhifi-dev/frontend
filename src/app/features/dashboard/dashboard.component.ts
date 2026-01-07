@@ -10,15 +10,9 @@ import { forkJoin, Subscription, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { PositionView, Signal } from '../../core/models/domain.model';
 
-// Import Child Components
-import { BotStatusWidgetComponent } from './components/bot-status-widget.component';
-import { EquityCurveChartComponent } from './components/equity-curve-chart.component';
-// Assuming these exist based on your file list:
-import { RiskHealthWidgetComponent } from './components/risk-health-widget.component';
-import { RecentSignalsWidgetComponent } from './components/recent-signals-widget/recent-signals-widget.component';
-
 export interface DashboardStats {
   todayPnL: number;
+  weeklyPnL: number;
   unrealizedPnL: number;
   winRate: number;
   totalTrades: number;
@@ -50,11 +44,7 @@ export interface DashboardStats {
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule,
-    BotStatusWidgetComponent,
-    EquityCurveChartComponent,
-    RiskHealthWidgetComponent,
-    RecentSignalsWidgetComponent
+    RouterModule
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
@@ -62,6 +52,7 @@ export interface DashboardStats {
 export class DashboardComponent implements OnInit, OnDestroy {
   stats: DashboardStats = {
     todayPnL: 0,
+    weeklyPnL: 0,
     unrealizedPnL: 0,
     winRate: 0,
     totalTrades: 0,
@@ -92,13 +83,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   newSignals: Signal[] = [];
   notifications: any[] = [];
   equityData: any[] = [];
-  timeRanges: string[] = ['1D', '5D', '1M', '3M', '6M', '1Y'];
-  selectedTimeRange: string = '1D';
   isLoading: boolean = true;
-  loadingMessage: string = 'Initializing Dashboard...'; // Added missing property
+  loadingMessage: string = 'Initializing Dashboard...';
+
+  currentTime: string = '--:--:--';
+  isMarketOpen: boolean = false;
+  scanCountdown: number = 45;
+  scanInterval: number = 45;
+  maxPositions: number = 3;
 
   private destroy$ = new Subject<void>();
   private subscriptions: Subscription[] = [];
+  private clockIntervalId?: number;
+  private scanIntervalId?: number;
 
   constructor(
     private dashboardService: DashboardService,
@@ -111,6 +108,37 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadDashboardData();
     this.setupWebSocketSubscriptions();
+    this.startClock();
+    this.startScanCountdown();
+  }
+
+  get todayPnlPercent(): number {
+    return this.stats.totalCapital ? (this.stats.todayPnL / this.stats.totalCapital) * 100 : 0;
+  }
+
+  get weeklyPnlPercent(): number {
+    return this.stats.totalCapital ? (this.stats.weeklyPnL / this.stats.totalCapital) * 100 : 0;
+  }
+
+  get circuitUsage(): number {
+    if (!this.stats.dailyLossLimit) {
+      return 0;
+    }
+    return Math.min(100, (Math.abs(this.stats.dailyLossUsed) / this.stats.dailyLossLimit) * 100);
+  }
+
+  get circuitStatus(): string {
+    if (this.circuitUsage >= 90) {
+      return 'Critical';
+    }
+    if (this.circuitUsage >= 70) {
+      return 'Warning';
+    }
+    return 'Safe';
+  }
+
+  get scanProgress(): number {
+    return ((this.scanInterval - this.scanCountdown) / this.scanInterval) * 100;
   }
 
   loadDashboardData(): void {
@@ -134,6 +162,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.stats = {
               ...this.stats,
               todayPnL: today?.todayPnL ?? summary.todaysPnl ?? 0,
+              weeklyPnL: metrics?.netProfit ?? 0,
               unrealizedPnL: unrealized?.unrealizedPnL ?? 0,
               winRate: metrics?.winRate ?? 0,
               totalTrades: metrics?.totalTrades ?? 0,
@@ -144,7 +173,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
               portfolioValue: summary.currentValue ?? 0,
               accountBalance: summary.availableFunds ?? summary.availablePaperFunds ?? 0,
               activePositions: positions.length,
-              lastScan: signals?.[0]?.scanTime ? new Date(signals[0].scanTime).toLocaleString() : 'N/A'
+              lastScan: signals?.[0]?.scanTime ? new Date(signals[0].scanTime).toLocaleString() : 'N/A',
+              signalsFound: signals?.length ?? 0
             };
             this.activePositions = positions;
             this.newSignals = signals;
@@ -170,19 +200,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subscriptions.push(sub);
   }
 
+  startClock(): void {
+    this.updateClock();
+    this.clockIntervalId = window.setInterval(() => this.updateClock(), 1000);
+  }
+
+  updateClock(): void {
+    const now = new Date();
+    this.currentTime = now.toLocaleTimeString('en-US', { hour12: true });
+
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    this.isMarketOpen = (hours > 9 && hours < 15) || (hours === 9 && minutes >= 15) || (hours === 15 && minutes <= 30);
+  }
+
+  startScanCountdown(): void {
+    this.scanIntervalId = window.setInterval(() => {
+      if (this.stats.isPaused) {
+        return;
+      }
+      this.scanCountdown = this.scanCountdown > 0 ? this.scanCountdown - 1 : this.scanInterval;
+    }, 1000);
+  }
+
   toggleMode(): void {
     this.store.toggleMode();
     this.stats.isLiveMode = this.store.snapshot.isLiveMode;
     this.dashboardService.toggleMode(this.stats.isLiveMode).subscribe();
     this.loadDashboardData();
-  }
-
-  toggleNotifications(): void {
-    // Toggle notifications visibility
-  }
-
-  toggleProfile(): void {
-    // Toggle profile menu
   }
 
   pauseBot(): void {
@@ -193,19 +238,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.botService.scanNow().subscribe();
   }
 
-  setTimeRange(range: string): void {
-    this.selectedTimeRange = range;
+  getPositionTarget(position: PositionView): number {
+    return position.entryPrice * 1.05;
   }
 
-  expandPositions(): void {}
-
-  closePosition(position: PositionView): void {}
-
-  modifySL(position: PositionView): void {}
-
-  viewAllSignals(): void {}
-
-  viewFullRisk(): void {}
+  getPositionProgress(position: PositionView): number {
+    const target = this.getPositionTarget(position);
+    if (target === position.entryPrice) {
+      return 0;
+    }
+    const progress = ((position.currentPrice - position.entryPrice) / (target - position.entryPrice)) * 100;
+    return Math.min(100, Math.max(0, progress));
+  }
 
   navigateToDashboard(): void {}
 
@@ -213,5 +257,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.clockIntervalId) {
+      window.clearInterval(this.clockIntervalId);
+    }
+    if (this.scanIntervalId) {
+      window.clearInterval(this.scanIntervalId);
+    }
   }
 }
