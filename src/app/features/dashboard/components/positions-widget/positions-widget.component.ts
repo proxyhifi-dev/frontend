@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common'; // Contains standard 'currency' pipe
 import { RouterModule } from '@angular/router';
 
@@ -10,6 +10,7 @@ import { RouterModule } from '@angular/router';
 })
 export class PositionsWidgetComponent {
   @Input() positions: any[] = [];
+  @Output() closeRequested = new EventEmitter<any>();
 
   calculatePnL(pos: any): number {
     if (!pos.currentPrice || !pos.entryPrice) return 0;
@@ -18,5 +19,9 @@ export class PositionsWidgetComponent {
 
   getPnLClass(pos: any): string {
     return this.calculatePnL(pos) >= 0 ? 'positive' : 'negative';
+  }
+
+  requestClose(pos: any): void {
+    this.closeRequested.emit(pos);
   }
 }

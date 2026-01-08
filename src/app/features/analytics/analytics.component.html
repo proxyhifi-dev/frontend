@@ -2,9 +2,9 @@
   <div class="header-row">
     <h2>PERFORMANCE ANALYTICS</h2>
     <div class="tabs time-range">
-      <button class="tab-btn active">Last 30 Days</button>
-      <button class="tab-btn">90 Days</button>
-      <button class="tab-btn">All Time</button>
+      <button class="tab-btn" [class.active]="activeRange === '30d'" (click)="setRange('30d')">Last 30 Days</button>
+      <button class="tab-btn" [class.active]="activeRange === '90d'" (click)="setRange('90d')">90 Days</button>
+      <button class="tab-btn" [class.active]="activeRange === 'all'" (click)="setRange('all')">All Time</button>
     </div>
   </div>
 

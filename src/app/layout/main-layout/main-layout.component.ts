@@ -7,6 +7,8 @@ import { StoreService } from '../../core/services/store.service';
 import { SidebarComponent } from '../sidebar/sidebar.component'; // Ensure this file exists
 import { MobileNavComponent } from '../mobile-nav/mobile-nav.component';
 import { CommandPaletteComponent } from '../../shared/components/command-palette/command-palette.component';
+import { SignalService } from '../../core/services/signal.service';
+import { DashboardService } from '../../core/services/dashboard.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -18,15 +20,26 @@ import { CommandPaletteComponent } from '../../shared/components/command-palette
 export class MainLayoutComponent implements OnInit, OnDestroy {
   unreadCount = 3;
   searchQuery = '';
+  private lastMode?: boolean;
   private destroy$ = new Subject<void>();
 
-  constructor(public store: StoreService, private router: Router) {}
+  constructor(
+    public store: StoreService,
+    private router: Router,
+    private signalService: SignalService,
+    private dashboardService: DashboardService
+  ) {}
 
   ngOnInit(): void {
     this.store.state$
       .pipe(takeUntil(this.destroy$))
       .subscribe((state) => {
         this.searchQuery = state.searchSymbol ?? '';
+        if (this.lastMode !== state.isLiveMode) {
+          this.lastMode = state.isLiveMode;
+          this.dashboardService.toggleMode(state.isLiveMode).subscribe();
+          this.signalService.setMode(!state.isLiveMode).subscribe();
+        }
       });
   }
 

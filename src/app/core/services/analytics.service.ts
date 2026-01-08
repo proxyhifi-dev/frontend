@@ -10,7 +10,7 @@ export class AnalyticsService {
 
   constructor(private http: HttpClient) {}
 
-  getMetrics(): Observable<PerformanceMetrics> {
-    return this.http.get<PerformanceMetrics>(`${this.baseUrl}/performance/metrics`);
+  getMetrics(range: string = '30d'): Observable<PerformanceMetrics> {
+    return this.http.get<PerformanceMetrics>(`${this.baseUrl}/performance/metrics?range=${range}`);
   }
 }

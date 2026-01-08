@@ -92,7 +92,7 @@
                 <span>{{ s.hasEntrySignal ? 'Yes' : 'No' }}</span>
               </div>
             </div>
-            <button class="btn-execute-big" [disabled]="!s.hasEntrySignal">EXECUTE TRADE</button>
+            <button class="btn-execute-big" (click)="executeSignal(s)" [disabled]="!s.hasEntrySignal">EXECUTE TRADE</button>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { environment } from '../../../../environments/environment';
 
 interface CorrelationData {
   stocks: string[];
@@ -183,14 +184,24 @@ interface CorrelationData {
     }
   `]
 })
-export class CorrelationHeatmapComponent implements OnInit {
+export class CorrelationHeatmapComponent implements OnInit, OnChanges {
+  @Input() data?: CorrelationData;
+
   correlationData: CorrelationData = {
     stocks: [],
     matrix: []
   };
   
   ngOnInit(): void {
-    this.generateMockData();
+    if (!this.data && !environment.production) {
+      this.generateMockData();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['data'] && this.data) {
+      this.correlationData = this.data;
+    }
   }
   
   private generateMockData(): void {

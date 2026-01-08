@@ -33,6 +33,11 @@
   <span>{{ stats.isLiveMode ? 'LIVE MODE - REAL FUNDS' : 'PAPER MODE' }}</span>
 </div>
 
+<div class="mode-banner warning" *ngIf="dataWarnings.length">
+  <span class="banner-icon">⚠️</span>
+  <span>Some data failed to load: {{ dataWarnings.join(' ') }}</span>
+</div>
+
 <div class="dashboard-shell" *ngIf="!isLoading">
   <div class="stat-grid">
     <div class="stat-card">
@@ -109,7 +114,7 @@
           </div>
 
           <div class="position-actions">
-            <button class="btn-outline">Close</button>
+            <button class="btn-outline" type="button" (click)="closeActivePosition(pos)">Close</button>
             <button class="btn-secondary">Modify SL</button>
           </div>
         </div>

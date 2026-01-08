@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PerformanceMetrics } from '../models/domain.model';
 
@@ -28,65 +27,32 @@ export class DashboardService {
   }
 
   getSummary(type: 'PAPER' | 'LIVE' = 'PAPER'): Observable<any> {
-    return this.http.get(`${this.apiUrl}/account/summary?type=${type}`).pipe(
-      catchError(() => of({
-        name: 'Trader',
-        availableFunds: 0,
-        availableRealFunds: 0,
-        availablePaperFunds: 0,
-        totalInvested: 0,
-        currentValue: 0,
-        todaysPnl: 0,
-        holdings: []
-      }))
-    );
+    return this.http.get(`${this.apiUrl}/account/summary?type=${type}`);
   }
 
   // Added methods
   toggleMode(isLive: boolean): Observable<any> {
-    return this.http.post(`${this.apiUrl}/strategy/mode?paperMode=${!isLive}`, {}).pipe(
-      catchError(() => of({ success: true }))
-    );
+    return this.http.post(`${this.apiUrl}/strategy/mode?paperMode=${!isLive}`, {});
   }
 
   // Existing methods
   getTodayPnL(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/performance/today-pnl`).pipe(
-      catchError(() => of({ todayPnL: 0, tradesCount: 0 }))
-    );
+    return this.http.get(`${this.apiUrl}/performance/today-pnl`);
   }
 
   getUnrealizedPnL(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/performance/unrealized-pnl`).pipe(
-      catchError(() => of({ unrealizedPnL: 0, openPositions: 0 }))
-    );
+    return this.http.get(`${this.apiUrl}/performance/unrealized-pnl`);
   }
 
   getPerformanceMetrics(): Observable<PerformanceMetrics> {
-    return this.http.get<PerformanceMetrics>(`${this.apiUrl}/performance/metrics`).pipe(
-      catchError(() => of({
-        totalTrades: 0,
-        winningTrades: 0,
-        losingTrades: 0,
-        winRate: 0,
-        netProfit: 0,
-        profitFactor: 0,
-        averageWin: 0,
-        averageLoss: 0,
-        maxDrawdown: 0
-      }))
-    );
+    return this.http.get<PerformanceMetrics>(`${this.apiUrl}/performance/metrics`);
   }
 
   getEquityCurve(type: string = 'PAPER'): Observable<any> {
-    return this.http.get<any[]>(`${this.apiUrl}/performance/equity-curve?type=${type}`).pipe(
-      catchError(() => of({ type, curve: new Array(30).fill(100000) }))
-    );
+    return this.http.get<any[]>(`${this.apiUrl}/performance/equity-curve?type=${type}`);
   }
 
   getSignals(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/strategy/signals`).pipe(
-      catchError(() => of([]))
-    );
+    return this.http.get<any[]>(`${this.apiUrl}/strategy/signals`);
   }
 }

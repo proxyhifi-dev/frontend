@@ -4,6 +4,10 @@ import { RiskService } from '../../core/services/risk.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { CorrelationMatrix, RiskStatus } from '../../core/models/domain.model';
+import { BotService } from '../../core/services/bot.service';
+import { PositionService } from '../../core/services/position.service';
+import { StoreService } from '../../core/services/store.service';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-risk',
@@ -24,7 +28,10 @@ export class RiskComponent implements OnInit {
 
   constructor(
     private riskSvc: RiskService,
-    private notify: NotificationService
+    private notify: NotificationService,
+    private botService: BotService,
+    private positionService: PositionService,
+    private store: StoreService
   ) {}
 
   ngOnInit() {
@@ -42,7 +49,15 @@ export class RiskComponent implements OnInit {
       this.riskSvc.triggerEmergencyStop().subscribe({
         next: () => {
           this.notify.error('Emergency Stop', 'All positions closed. Bot stopped.');
-          this.loadRiskData();
+          forkJoin({
+            risk: this.riskSvc.getStatus(),
+            correlation: this.riskSvc.getCorrelationMatrix(),
+            positions: this.positionService.getOpenPositions(),
+            bot: this.botService.fetchStatus()
+          }).subscribe(() => {
+            this.store.setMode(false);
+            this.loadRiskData();
+          });
         },
         error: (err: any) => this.notify.error('Action Failed', err.message)
       });

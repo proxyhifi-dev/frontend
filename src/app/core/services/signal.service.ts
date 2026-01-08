@@ -29,4 +29,8 @@ export class SignalService {
   setMode(paperMode: boolean): Observable<any> {
     return this.http.post(`${this.apiUrl}/mode?paperMode=${paperMode}`, {});
   }
+
+  executeSignal(signalId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/execute`, { signalId });
+  }
 }
