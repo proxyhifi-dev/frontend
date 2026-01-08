@@ -30,12 +30,13 @@ export class SettingsService {
         if (cached) {
           return of(JSON.parse(cached) as TradingSettings);
         }
-        return of({
+        const fallback: TradingSettings = {
           mode: 'paper',
           risk: { perTrade: 1.0, dailyLimit: 5, weeklyLimit: 10 },
           trading: { maxPositions: 3, sectorLimit: 2, correlation: 0.7 },
           api: { appId: '' }
-        });
+        };
+        return of(fallback);
       })
     );
   }
