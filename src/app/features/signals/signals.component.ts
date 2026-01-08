@@ -31,13 +31,15 @@ export class SignalsComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadSignals();
-    this.loadMode();
     this.store.state$
       .pipe(takeUntil(this.destroy$))
       .subscribe((state) => {
         this.searchTerm = state.searchSymbol ?? '';
+        this.isPaperMode = !state.isLiveMode;
         this.applySearch();
       });
+
+    this.loadMode();
   }
 
   ngOnDestroy(): void {
@@ -64,14 +66,20 @@ export class SignalsComponent implements OnInit, OnDestroy {
 
   loadMode() {
     this.signalSvc.getMode().subscribe({
-      next: (data) => { this.isPaperMode = data.paperMode; },
+      next: (data) => {
+        this.isPaperMode = data.paperMode;
+        this.store.setMode(!data.paperMode);
+      },
       error: () => { this.isPaperMode = true; }
     });
   }
 
   toggleMode() {
-    this.signalSvc.setMode(this.isPaperMode).subscribe({
-      next: () => this.notify.success('Mode Updated', this.isPaperMode ? 'Paper mode enabled.' : 'Live mode enabled.'),
+    this.store.toggleMode();
+    const paperMode = !this.store.snapshot.isLiveMode;
+    this.isPaperMode = paperMode;
+    this.signalSvc.setMode(paperMode).subscribe({
+      next: () => this.notify.success('Mode Updated', paperMode ? 'Paper mode enabled.' : 'Live mode enabled.'),
       error: (err: any) => this.notify.error('Mode Update Failed', err.message)
     });
   }
@@ -116,5 +124,20 @@ export class SignalsComponent implements OnInit, OnDestroy {
 
   getStatusLabel(signal: Signal): string {
     return signal.hasEntrySignal ? 'ENTRY READY' : 'MONITOR';
+  }
+
+  executeSignal(signal: Signal): void {
+    if (!signal.hasEntrySignal) {
+      return;
+    }
+    this.signalSvc.executeSignal(signal.id).subscribe({
+      next: () => {
+        this.notify.success('Order Placed', `Trade executed for ${signal.symbol}.`);
+        this.loadSignals();
+      },
+      error: (err: any) => {
+        this.notify.error('Execution Failed', err?.message || 'Unable to execute trade.');
+      }
+    });
   }
 }

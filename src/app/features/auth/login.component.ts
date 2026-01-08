@@ -1,6 +1,6 @@
 // src/app/features/auth/login.component.ts
 
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -27,6 +27,7 @@ export class LoginComponent implements OnInit {
     private readonly fyersService: FyersOAuthService,
     private readonly notificationService: NotificationService,
     private readonly loadingService: LoadingService,
+    private readonly cdr: ChangeDetectorRef,
     private readonly route: ActivatedRoute,
     private readonly router: Router
   ) {}
@@ -37,8 +38,11 @@ export class LoginComponent implements OnInit {
 
     if (!authCode) return;
 
-    this.loading = true;
-    this.loadingService.show();
+    queueMicrotask(() => {
+      this.loading = true;
+      this.loadingService.show();
+      this.cdr.detectChanges();
+    });
 
     this.authService
       .handleFyersCallback(authCode, state)

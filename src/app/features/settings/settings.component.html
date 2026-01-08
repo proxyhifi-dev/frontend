@@ -34,6 +34,55 @@
       </div>
     </div>
 
+    <div *ngIf="activeTab==='risk'" class="panel">
+      <h2>Risk Management</h2>
+
+      <div class="setting-group">
+        <label>Risk per Trade (%)</label>
+        <input type="number" [(ngModel)]="config.risk.perTrade" min="0.1" step="0.1" class="dark-input">
+      </div>
+
+      <div class="setting-group">
+        <label>Daily Loss Limit (%)</label>
+        <input type="number" [(ngModel)]="config.risk.dailyLimit" min="1" step="0.5" class="dark-input">
+      </div>
+
+      <div class="setting-group">
+        <label>Weekly Loss Limit (%)</label>
+        <input type="number" [(ngModel)]="config.risk.weeklyLimit" min="1" step="0.5" class="dark-input">
+      </div>
+    </div>
+
+    <div *ngIf="activeTab==='api'" class="panel">
+      <h2>Broker API</h2>
+
+      <div class="setting-group">
+        <label>App ID</label>
+        <input type="text" [(ngModel)]="config.api.appId" class="dark-input" placeholder="Enter broker App ID">
+        <small>Secrets are managed server-side and are not stored in the UI.</small>
+      </div>
+
+      <div class="setting-group">
+        <label>Connection Status</label>
+        <div class="status-row">
+          <span [class.text-green]="brokerStatus === 'CONNECTED'"
+                [class.text-red]="brokerStatus === 'DISCONNECTED'">
+            {{ brokerStatus === 'CONNECTED' ? '🟢 CONNECTED' : brokerStatus === 'LOADING' ? '⏳ CHECKING' : '🔴 DISCONNECTED' }}
+          </span>
+          <button class="btn btn-outline btn-sm" type="button" (click)="refreshBrokerStatus()">Refresh</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <button class="btn btn-primary" type="button" (click)="connectBroker()" [disabled]="brokerStatus === 'CONNECTED'">
+          Connect Broker
+        </button>
+        <button class="btn btn-danger-outline" type="button" (click)="disconnectBroker()" [disabled]="brokerStatus !== 'CONNECTED'">
+          Disconnect Broker
+        </button>
+      </div>
+    </div>
+
     <div *ngIf="activeTab==='danger'" class="panel danger-panel">
       <h2>⚠️ DANGER ZONE</h2>
       <p>Irreversible actions. Proceed with caution.</p>
@@ -56,7 +105,9 @@
     </div>
 
     <div class="panel-footer">
-      <button class="btn btn-primary" (click)="save()">Save Changes</button>
+      <button class="btn btn-primary" (click)="save()" [disabled]="isSaving">
+        {{ isSaving ? 'Saving...' : 'Save Changes' }}
+      </button>
     </div>
   </div>
 </div>

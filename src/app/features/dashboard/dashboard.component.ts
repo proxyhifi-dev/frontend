@@ -6,7 +6,9 @@ import { PositionService } from '../../core/services/position.service';
 import { WebSocketService } from '../../core/services/websocket.service';
 import { BotService } from '../../core/services/bot.service';
 import { StoreService } from '../../core/services/store.service';
-import { forkJoin, Subscription, Subject } from 'rxjs';
+import { NotificationService } from '../../core/services/notification.service';
+import { forkJoin, Subscription, Subject, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { takeUntil } from 'rxjs/operators';
 import { PositionView, Signal } from '../../core/models/domain.model';
 
@@ -85,6 +87,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   equityData: any[] = [];
   isLoading: boolean = true;
   loadingMessage: string = 'Initializing Dashboard...';
+  dataWarnings: string[] = [];
 
   currentTime: string = '--:--:--';
   isMarketOpen: boolean = false;
@@ -102,7 +105,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private positionService: PositionService,
     private wsService: WebSocketService,
     private botService: BotService,
-    private store: StoreService
+    private store: StoreService,
+    private notify: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -110,6 +114,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.setupWebSocketSubscriptions();
     this.startClock();
     this.startScanCountdown();
+    this.store.state$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(state => {
+        if (this.stats.isLiveMode !== state.isLiveMode) {
+          this.stats.isLiveMode = state.isLiveMode;
+          this.loadDashboardData();
+        }
+      });
   }
 
   get todayPnlPercent(): number {
@@ -143,17 +155,72 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadDashboardData(): void {
     this.isLoading = true;
+    this.dataWarnings = [];
     const mode = this.store.snapshot.isLiveMode ? 'LIVE' : 'PAPER';
     this.stats.isLiveMode = this.store.snapshot.isLiveMode;
 
     const sub = forkJoin({
-      summary: this.dashboardService.getSummary(mode),
-      today: this.dashboardService.getTodayPnL(),
-      unrealized: this.dashboardService.getUnrealizedPnL(),
-      metrics: this.dashboardService.getPerformanceMetrics(),
-      equity: this.dashboardService.getEquityCurve(mode),
-      signals: this.dashboardService.getSignals(),
-      positions: this.positionService.getOpenPositions()
+      summary: this.dashboardService.getSummary(mode).pipe(
+        catchError(() => {
+          this.dataWarnings.push('Account summary unavailable.');
+          return of({
+            name: 'Trader',
+            availableFunds: 0,
+            availableRealFunds: 0,
+            availablePaperFunds: 0,
+            totalInvested: 0,
+            currentValue: 0,
+            todaysPnl: 0,
+            holdings: []
+          });
+        })
+      ),
+      today: this.dashboardService.getTodayPnL().pipe(
+        catchError(() => {
+          this.dataWarnings.push('Today P&L unavailable.');
+          return of({ todayPnL: 0, tradesCount: 0 });
+        })
+      ),
+      unrealized: this.dashboardService.getUnrealizedPnL().pipe(
+        catchError(() => {
+          this.dataWarnings.push('Unrealized P&L unavailable.');
+          return of({ unrealizedPnL: 0, openPositions: 0 });
+        })
+      ),
+      metrics: this.dashboardService.getPerformanceMetrics().pipe(
+        catchError(() => {
+          this.dataWarnings.push('Performance metrics unavailable.');
+          return of({
+            totalTrades: 0,
+            winningTrades: 0,
+            losingTrades: 0,
+            winRate: 0,
+            netProfit: 0,
+            profitFactor: 0,
+            averageWin: 0,
+            averageLoss: 0,
+            maxDrawdown: 0
+          });
+        })
+      ),
+      equity: this.dashboardService.getEquityCurve(mode).pipe(
+        catchError(() => {
+          this.dataWarnings.push('Equity curve unavailable.');
+          return of({ type: mode, curve: [] });
+        })
+      ),
+      signals: this.dashboardService.getSignals().pipe(
+        catchError(() => {
+          this.dataWarnings.push('Signals unavailable.');
+          return of([]);
+        })
+      ),
+      positions: this.positionService.getOpenPositions().pipe(
+        catchError(() => {
+          this.dataWarnings.push('Positions unavailable.');
+          return of([]);
+        })
+      )
     }).pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ summary, today, unrealized, metrics, equity, signals, positions }) => {
@@ -249,6 +316,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     const progress = ((position.currentPrice - position.entryPrice) / (target - position.entryPrice)) * 100;
     return Math.min(100, Math.max(0, progress));
+  }
+
+  closeActivePosition(position: PositionView): void {
+    if (!position.id) {
+      this.notify.warning('Action Unavailable', `No position ID for ${position.symbol}.`);
+      return;
+    }
+    this.positionService.closePosition(position.id).subscribe({
+      next: () => {
+        this.notify.success('Position Closed', `${position.symbol} has been closed.`);
+        this.loadDashboardData();
+      },
+      error: (err: any) => {
+        this.notify.error('Close Failed', err?.message || 'Unable to close position.');
+      }
+    });
   }
 
   navigateToDashboard(): void {}

@@ -42,6 +42,20 @@ export class PositionService {
     );
   }
 
+  closePosition(positionId: number | undefined): Observable<any> {
+    if (!positionId) {
+      return new Observable(observer => {
+        observer.error(new Error('Position id missing'));
+        observer.complete();
+      });
+    }
+    const isLive = this.store.snapshot.isLiveMode;
+    const url = isLive
+      ? `${this.baseUrl}/trades/close`
+      : `${this.baseUrl}/paper/positions/close`;
+    return this.http.post(url, { id: positionId });
+  }
+
   private toViewFromTrade(trade: Trade): PositionView {
     const currentPrice = trade.currentPrice ?? trade.entryPrice;
     const pnl = trade.pnl ?? (currentPrice - trade.entryPrice) * trade.quantity;

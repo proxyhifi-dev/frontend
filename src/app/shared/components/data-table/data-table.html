@@ -1,1 +1,19 @@
-<p>data-table works!</p>
+<div class="data-table-wrapper">
+  <div class="data-table-loading" *ngIf="loading">Loading...</div>
+
+  <table class="data-table" *ngIf="!loading">
+    <thead>
+      <tr>
+        <th *ngFor="let column of columns">{{ column.label }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of rows">
+        <td *ngFor="let column of columns">{{ row[column.key] }}</td>
+      </tr>
+      <tr *ngIf="rows.length === 0">
+        <td [attr.colspan]="columns.length">{{ emptyMessage }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
