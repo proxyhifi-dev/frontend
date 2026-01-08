@@ -16,8 +16,11 @@
           <span>Total Equity</span>
           <span class="val">{{ capital.total | currencyInr }}</span>
         </div>
+        <p class="helper-text" *ngIf="capital.total === 0">
+          Seeing ₹0.00? This usually means the bot hasn’t loaded live/paper account data yet.
+        </p>
         <div class="progress-bar">
-          <div class="fill" [style.width.%]="(capital.used/capital.total)*100"></div>
+          <div class="fill" [style.width.%]="capital.total ? (capital.used / capital.total) * 100 : 0"></div>
         </div>
         <div class="legend">
           <span>🔵 Used: {{ capital.used | currencyInr }}</span>
@@ -43,7 +46,25 @@
             <label>API Key</label>
             <span>••••••••••</span>
           </div>
-          <button class="btn-primary mt-16">Connect Fyers API</button>
+          <button class="btn-primary mt-16" (click)="connectFyers()">Connect Fyers API</button>
+          <p class="helper-text mt-12" *ngIf="broker.status !== 'CONNECTED'">
+            Connection is disconnected. You’ll need to authenticate with Fyers to load real equity and margin data.
+          </p>
+        </div>
+      </div>
+
+      <div class="glass-card help-card mt-24" *ngIf="broker.status !== 'CONNECTED'">
+        <h3>FIX ₹0.00 / DISCONNECTED</h3>
+        <ol class="step-list">
+          <li>Verify your Fyers credentials in <span class="mono">application.properties</span>.</li>
+          <li>Click <strong>Connect Fyers API</strong> and complete the login prompt.</li>
+          <li>Confirm the redirect URL matches your Fyers app settings.</li>
+          <li>Check backend logs for “Access token generated”.</li>
+        </ol>
+        <div class="checklist">
+          <span>✅ App ID, Secret Key, Client ID set</span>
+          <span>✅ Redirect URL matches exactly</span>
+          <span>✅ Backend running during login</span>
         </div>
       </div>
 
