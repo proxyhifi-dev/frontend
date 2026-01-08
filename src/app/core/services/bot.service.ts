@@ -43,7 +43,7 @@ export class BotService {
 
   fetchStatus(): Observable<BotStatus> {
     return this.http.get<BotStatus>(`${this.apiUrl}/status`).pipe(
-      catchError(() => of<BotStatus>({
+      catchError(() => of({
         isActive: false,
         status: 'Stopped',
         nextScanTime: new Date(),

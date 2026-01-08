@@ -30,7 +30,7 @@ export class SettingsService {
         if (cached) {
           return of(JSON.parse(cached) as TradingSettings);
         }
-        return of<TradingSettings>({
+        return of({
           mode: 'paper',
           risk: { perTrade: 1.0, dailyLimit: 5, weeklyLimit: 10 },
           trading: { maxPositions: 3, sectorLimit: 2, correlation: 0.7 },
@@ -47,7 +47,7 @@ export class SettingsService {
       }),
       catchError(() => {
         localStorage.setItem(this.cacheKey, JSON.stringify(settings));
-        return of<TradingSettings>(settings);
+        return of(settings);
       })
     );
   }
