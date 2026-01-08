@@ -54,16 +54,10 @@ export class LoginComponent implements OnInit {
         next: (response: any) => {
           const token = response?.accessToken || response?.token;
 
-          if (token) {
-            localStorage.setItem('token', token);
-          }
           if (response?.refreshToken) {
             localStorage.setItem('refreshToken', response.refreshToken);
           }
-          if (response?.user) {
-            localStorage.setItem('user', JSON.stringify(response.user));
-            this.authService.updateAuthState(response.user, token ?? '');
-          }
+          this.authService.updateAuthState(response?.user ?? null, token ?? '');
 
           if (token) {
             this.notificationService.success('✅ Fyers account connected successfully!');
@@ -94,17 +88,23 @@ export class LoginComponent implements OnInit {
     }
 
     this.loading = true;
-    this.authService.login(this.form.username, this.form.password).subscribe({
-      next: () => {
-        this.loading = false;
-        this.notificationService.success('Login successful!');
-        this.router.navigate(['/dashboard']);
-      },
-      error: (err: any) => {
-        this.loading = false;
-        this.notificationService.error(err?.error?.error || 'Login failed');
-      },
-    });
+    this.authService.login(this.form.username, this.form.password)
+      .pipe(
+        finalize(() => {
+          queueMicrotask(() => {
+            this.loading = false;
+          });
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.notificationService.success('Login successful!');
+          this.router.navigate(['/dashboard']);
+        },
+        error: (err: any) => {
+          this.notificationService.error(err?.error?.error || 'Login failed');
+        },
+      });
   }
 
   loginWithFyers(): void {

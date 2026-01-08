@@ -47,19 +47,7 @@ export class BotService {
         ...status,
         nextScanTime: status?.nextScanTime ? new Date(status.nextScanTime) : new Date(),
         lastScanTime: status?.lastScanTime ? new Date(status.lastScanTime) : new Date()
-      })),
-      catchError(() => {
-        const fallback: BotStatus = {
-          isActive: false,
-          status: 'Stopped',
-          nextScanTime: new Date(),
-          scannedStocks: 0,
-          totalStocks: 0,
-          lastScanTime: new Date(),
-          currentStrategy: 'Unknown'
-        };
-        return of(fallback);
-      })
+      }))
     );
   }
 }

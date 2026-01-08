@@ -57,12 +57,7 @@ export class FyersCallbackComponent implements OnInit {
             if (response.accessToken || response.token) {
               // Save JWT token and user profile
               const token = response.accessToken || response.token;
-              localStorage.setItem('token', token);
-              
-              if (response.user) {
-                localStorage.setItem('user', JSON.stringify(response.user));
-              }
-              
+
               // Update auth service state
               this.authService.updateAuthState(response.user, token);
               

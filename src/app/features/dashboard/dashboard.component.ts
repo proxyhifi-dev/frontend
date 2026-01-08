@@ -7,8 +7,8 @@ import { WebSocketService } from '../../core/services/websocket.service';
 import { BotService } from '../../core/services/bot.service';
 import { StoreService } from '../../core/services/store.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { forkJoin, Subscription, Subject, of, timer } from 'rxjs';
-import { catchError, map, shareReplay, takeUntil } from 'rxjs/operators';
+import { forkJoin, Subscription, Subject, timer } from 'rxjs';
+import { map, scan, shareReplay, startWith, takeUntil } from 'rxjs/operators';
 import { PositionView, Signal } from '../../core/models/domain.model';
 
 export interface DashboardStats {
@@ -86,7 +86,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   equityData: any[] = [];
   isLoading: boolean = true;
   loadingMessage: string = 'Initializing Dashboard...';
-  dataWarnings: string[] = [];
+  backendUnavailable = false;
 
   currentTime$ = timer(0, 1000).pipe(
     map(() => new Date()),
@@ -99,14 +99,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return (hours > 9 && hours < 15) || (hours === 9 && minutes >= 15) || (hours === 15 && minutes <= 30);
     })
   );
-  scanCountdown: number = 45;
+  scanCountdown$ = timer(0, 1000).pipe(
+    startWith(0),
+    scan((countdown) => {
+      if (this.stats.isPaused) {
+        return countdown;
+      }
+      return countdown > 0 ? countdown - 1 : this.scanInterval;
+    }, this.scanInterval),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
+  scanProgress$ = this.scanCountdown$.pipe(
+    map((countdown) => ((this.scanInterval - countdown) / this.scanInterval) * 100)
+  );
   scanInterval: number = 45;
   maxPositions: number = 3;
   supportsClose = false;
 
   private destroy$ = new Subject<void>();
   private subscriptions: Subscription[] = [];
-  private scanIntervalId?: number;
 
   constructor(
     private dashboardService: DashboardService,
@@ -120,7 +131,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadDashboardData();
     this.setupWebSocketSubscriptions();
-    this.startScanCountdown();
     this.store.state$
       .pipe(takeUntil(this.destroy$))
       .subscribe(state => {
@@ -156,78 +166,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return 'Safe';
   }
 
-  get scanProgress(): number {
-    return ((this.scanInterval - this.scanCountdown) / this.scanInterval) * 100;
-  }
-
   loadDashboardData(): void {
     this.isLoading = true;
-    this.dataWarnings = [];
+    this.backendUnavailable = false;
     const mode = this.store.snapshot.isLiveMode ? 'LIVE' : 'PAPER';
     this.stats.isLiveMode = this.store.snapshot.isLiveMode;
 
     const sub = forkJoin({
-      summary: this.dashboardService.getSummary(mode).pipe(
-        catchError(() => {
-          this.dataWarnings.push('Account summary unavailable.');
-          return of({
-            name: 'Trader',
-            availableFunds: 0,
-            availableRealFunds: 0,
-            availablePaperFunds: 0,
-            totalInvested: 0,
-            currentValue: 0,
-            todaysPnl: 0,
-            holdings: []
-          });
-        })
-      ),
-      today: this.dashboardService.getTodayPnL().pipe(
-        catchError(() => {
-          this.dataWarnings.push('Today P&L unavailable.');
-          return of({ todayPnL: 0, tradesCount: 0 });
-        })
-      ),
-      unrealized: this.dashboardService.getUnrealizedPnL().pipe(
-        catchError(() => {
-          this.dataWarnings.push('Unrealized P&L unavailable.');
-          return of({ unrealizedPnL: 0, openPositions: 0 });
-        })
-      ),
-      metrics: this.dashboardService.getPerformanceMetrics().pipe(
-        catchError(() => {
-          this.dataWarnings.push('Performance metrics unavailable.');
-          return of({
-            totalTrades: 0,
-            winningTrades: 0,
-            losingTrades: 0,
-            winRate: 0,
-            netProfit: 0,
-            profitFactor: 0,
-            averageWin: 0,
-            averageLoss: 0,
-            maxDrawdown: 0
-          });
-        })
-      ),
-      equity: this.dashboardService.getEquityCurve(mode).pipe(
-        catchError(() => {
-          this.dataWarnings.push('Equity curve unavailable.');
-          return of({ type: mode, curve: [] });
-        })
-      ),
-      signals: this.dashboardService.getSignals().pipe(
-        catchError(() => {
-          this.dataWarnings.push('Signals unavailable.');
-          return of([]);
-        })
-      ),
-      positions: this.positionService.getOpenPositions().pipe(
-        catchError(() => {
-          this.dataWarnings.push('Positions unavailable.');
-          return of([]);
-        })
-      )
+      summary: this.dashboardService.getSummary(mode),
+      today: this.dashboardService.getTodayPnL(),
+      unrealized: this.dashboardService.getUnrealizedPnL(),
+      metrics: this.dashboardService.getPerformanceMetrics(),
+      equity: this.dashboardService.getEquityCurve(mode),
+      signals: this.dashboardService.getSignals(),
+      positions: this.positionService.getOpenPositions()
     }).pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ summary, today, unrealized, metrics, equity, signals, positions }) => {
@@ -260,7 +212,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.error('Failed to load dashboard stats', error);
           queueMicrotask(() => {
             this.isLoading = false;
-            this.loadingMessage = 'Failed to load data.';
+            this.backendUnavailable = true;
+            this.loadingMessage = 'Backend unavailable.';
           });
         }
       });
@@ -272,15 +225,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe();
     this.subscriptions.push(sub);
-  }
-
-  startScanCountdown(): void {
-    this.scanIntervalId = window.setInterval(() => {
-      if (this.stats.isPaused) {
-        return;
-      }
-      this.scanCountdown = this.scanCountdown > 0 ? this.scanCountdown - 1 : this.scanInterval;
-    }, 1000);
   }
 
   toggleMode(): void {
@@ -337,8 +281,5 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    if (this.scanIntervalId) {
-      window.clearInterval(this.scanIntervalId);
-    }
   }
 }
