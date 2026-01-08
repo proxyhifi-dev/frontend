@@ -88,6 +88,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadingMessage: string = 'Initializing Dashboard...';
   backendUnavailable = false;
 
+  scanInterval: number = 45;
   currentTime$ = timer(0, 1000).pipe(
     map(() => new Date()),
     shareReplay({ bufferSize: 1, refCount: true })
@@ -112,7 +113,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   scanProgress$ = this.scanCountdown$.pipe(
     map((countdown) => ((this.scanInterval - countdown) / this.scanInterval) * 100)
   );
-  scanInterval: number = 45;
   maxPositions: number = 3;
   supportsClose = false;
 
