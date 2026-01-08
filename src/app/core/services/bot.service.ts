@@ -43,15 +43,18 @@ export class BotService {
 
   fetchStatus(): Observable<BotStatus> {
     return this.http.get<BotStatus>(`${this.apiUrl}/status`).pipe(
-      catchError(() => of({
-        isActive: false,
-        status: 'Stopped',
-        nextScanTime: new Date(),
-        scannedStocks: 0,
-        totalStocks: 0,
-        lastScanTime: new Date(),
-        currentStrategy: 'Unknown'
-      }))
+      catchError(() => {
+        const fallback: BotStatus = {
+          isActive: false,
+          status: 'Stopped',
+          nextScanTime: new Date(),
+          scannedStocks: 0,
+          totalStocks: 0,
+          lastScanTime: new Date(),
+          currentStrategy: 'Unknown'
+        };
+        return of(fallback);
+      })
     );
   }
 }
