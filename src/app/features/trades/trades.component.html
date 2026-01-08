@@ -7,17 +7,36 @@
   <div class="filters-bar glass-card">
     <div class="filter-group">
       <label>Date Range</label>
-      <input type="date" class="dark-input">
+      <input type="date" class="dark-input" [(ngModel)]="filters.startDate" (change)="applyFilters()">
+    </div>
+    <div class="filter-group">
+      <label>End Date</label>
+      <input type="date" class="dark-input" [(ngModel)]="filters.endDate" (change)="applyFilters()">
     </div>
     <div class="filter-group">
       <label>Symbol</label>
-      <input type="text" placeholder="Search..." class="dark-input">
+      <input type="text" placeholder="Search..." class="dark-input" [(ngModel)]="filters.symbol" (input)="applyFilters()">
     </div>
     <div class="filter-group">
       <label>Grade</label>
-      <select class="dark-input"><option>All Grades</option><option>A+++</option></select>
+      <select class="dark-input" [(ngModel)]="filters.grade" (change)="applyFilters()">
+        <option value="All">All Grades</option>
+        <option value="A+++">A+++</option>
+        <option value="A++">A++</option>
+        <option value="A+">A+</option>
+        <option value="A">A</option>
+      </select>
     </div>
-    <button class="btn btn-primary">Apply Filters</button>
+    <div class="filter-group">
+      <label>Mode</label>
+      <select class="dark-input" [(ngModel)]="filters.mode" (change)="applyFilters()">
+        <option value="All">All</option>
+        <option value="Paper">Paper</option>
+        <option value="Live">Live</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="applyFilters()">Apply Filters</button>
+    <button class="btn btn-outline" type="button" (click)="resetFilters()">Reset</button>
   </div>
 
   <div class="table-wrapper glass-card mt-24">
@@ -33,7 +52,7 @@
       </tr>
       </thead>
       <tbody>
-      <tr *ngFor="let t of tradeHistory">
+      <tr *ngFor="let t of filteredTrades">
         <td>#{{ t.id }}</td>
         <td>
           <div class="symbol-col">

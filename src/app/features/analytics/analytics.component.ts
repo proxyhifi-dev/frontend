@@ -26,6 +26,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     maxDrawdown: 0
   };
   isLoading = true;
+  activeRange: '30d' | '90d' | 'all' = '30d';
 
   // Chart configs required by template
   public pieOptions: any = {
@@ -49,13 +50,29 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   constructor(private analyticsSvc: AnalyticsService) {}
 
   ngOnInit() {
+    this.loadMetrics();
+  }
+
+  loadMetrics() {
+    this.isLoading = true;
     this.sub.add(
-      this.analyticsSvc.getMetrics().subscribe(data => {
-        this.stats = data || this.stats;
-        this.isLoading = false;
-        this.pieOptions.series = [this.stats.winningTrades || 0, this.stats.losingTrades || 0];
+      this.analyticsSvc.getMetrics(this.activeRange).subscribe({
+        next: (data) => {
+          this.stats = data || this.stats;
+          this.pieOptions.series = [this.stats.winningTrades || 0, this.stats.losingTrades || 0];
+          this.isLoading = false;
+        },
+        error: () => {
+          this.isLoading = false;
+        }
       })
     );
+  }
+
+  setRange(range: '30d' | '90d' | 'all') {
+    if (this.activeRange === range) return;
+    this.activeRange = range;
+    this.loadMetrics();
   }
 
   ngOnDestroy() { this.sub.unsubscribe(); }

@@ -44,6 +44,18 @@ export class PositionsComponent implements OnInit {
   }
 
   closePosition(pos: PositionView) {
-    this.notify.warning('Action Unavailable', `Close action for ${pos.symbol} is not exposed by the backend yet.`);
+    if (!pos.id) {
+      this.notify.warning('Action Unavailable', `No position ID for ${pos.symbol}.`);
+      return;
+    }
+    this.positionSvc.closePosition(pos.id).subscribe({
+      next: () => {
+        this.notify.success('Position Closed', `${pos.symbol} has been closed.`);
+        this.refresh();
+      },
+      error: (err: any) => {
+        this.notify.error('Close Failed', err?.message || 'Unable to close position.');
+      }
+    });
   }
 }

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BotService } from '../../../core/services/bot.service';
-import { Subscription, interval, Subject } from 'rxjs';
+import { interval, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 export interface BotStatus {

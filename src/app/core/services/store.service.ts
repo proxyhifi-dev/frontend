@@ -39,6 +39,14 @@ export class StoreService {
     );
   }
 
+  setMode(isLiveMode: boolean) {
+    const current = this.state.value;
+    if (current.isLiveMode === isLiveMode) {
+      return;
+    }
+    this.state.next({ ...current, isLiveMode });
+  }
+
   toggleSidebar() {
     const current = this.state.value;
     this.state.next({ ...current, isSidebarCollapsed: !current.isSidebarCollapsed });
