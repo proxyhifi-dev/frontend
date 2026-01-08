@@ -10,6 +10,7 @@ import { RouterModule } from '@angular/router';
 })
 export class PositionsWidgetComponent {
   @Input() positions: any[] = [];
+  @Input() supportsClose = false;
   @Output() closeRequested = new EventEmitter<any>();
 
   calculatePnL(pos: any): number {
@@ -22,6 +23,9 @@ export class PositionsWidgetComponent {
   }
 
   requestClose(pos: any): void {
+    if (!this.supportsClose) {
+      return;
+    }
     this.closeRequested.emit(pos);
   }
 }

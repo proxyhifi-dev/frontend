@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { PositionService } from '../../core/services/position.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
+import { StoreService } from '../../core/services/store.service';
 
 @Component({
   selector: 'app-trades',
@@ -11,7 +13,7 @@ import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
   templateUrl: './trades.component.html',
   styleUrls: ['./trades.component.scss']
 })
-export class TradesComponent implements OnInit {
+export class TradesComponent implements OnInit, OnDestroy {
   tradeHistory: any[] = [];
   filteredTrades: any[] = [];
   filters = {
@@ -21,11 +23,29 @@ export class TradesComponent implements OnInit {
     startDate: '',
     endDate: ''
   };
+  private lastMode?: boolean;
+  private destroy$ = new Subject<void>();
 
-  constructor(private positionSvc: PositionService) {}
+  constructor(
+    private positionSvc: PositionService,
+    private store: StoreService
+  ) {}
 
   ngOnInit() {
     this.loadHistory();
+    this.store.state$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((state) => {
+        if (this.lastMode !== state.isLiveMode) {
+          this.lastMode = state.isLiveMode;
+          this.loadHistory();
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadHistory() {

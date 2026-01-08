@@ -44,7 +44,7 @@ export class SettingsComponent implements OnInit {
     this.settingsService.saveSettings(this.config)
       .pipe(finalize(() => (this.isSaving = false)))
       .subscribe({
-        next: () => this.notificationService.success('Settings saved successfully.'),
+        next: () => this.notificationService.success('Saved locally (not synced to server).'),
         error: () => this.notificationService.error('Failed to save settings.')
       });
   }

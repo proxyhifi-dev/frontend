@@ -114,7 +114,15 @@
           </div>
 
           <div class="position-actions">
-            <button class="btn-outline" type="button" (click)="closeActivePosition(pos)">Close</button>
+            <button
+              class="btn-outline"
+              type="button"
+              (click)="closeActivePosition(pos)"
+              [disabled]="!supportsClose"
+              [attr.title]="supportsClose ? 'Close position' : 'Not supported yet'"
+            >
+              Close
+            </button>
             <button class="btn-secondary">Modify SL</button>
           </div>
         </div>

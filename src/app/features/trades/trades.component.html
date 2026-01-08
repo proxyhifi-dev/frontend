@@ -57,7 +57,7 @@
         <td>
           <div class="symbol-col">
             <span class="symbol">{{ t.symbol }}</span>
-            <span class="grade-badge">{{ t.grade }}</span>
+            <span class="grade-badge">{{ t.grade || 'N/A' }}</span>
           </div>
         </td>
         <td>
@@ -69,12 +69,15 @@
         <td [class.positive]="t.realizedPnl >= 0" [class.negative]="t.realizedPnl < 0">
           {{ t.realizedPnl | currencyInr }}
         </td>
-        <td class="bold">{{ t.rMultiple > 0 ? '+' : '' }}{{ t.rMultiple }}R</td>
+        <td class="bold">{{ (t.rMultiple ?? 0) > 0 ? '+' : '' }}{{ t.rMultiple ?? 0 }}R</td>
         <td>
             <span class="reason-badge" [ngClass]="getExitClass(t.exitReason)">
               {{ t.exitReason }}
             </span>
         </td>
+      </tr>
+      <tr *ngIf="filteredTrades.length === 0">
+        <td colspan="6" class="empty-state">No results</td>
       </tr>
       </tbody>
     </table>

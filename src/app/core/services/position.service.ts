@@ -71,7 +71,11 @@ export class PositionService {
       exitPrice: trade.exitPrice,
       realizedPnl: trade.realizedPnl,
       exitReason: trade.exitReason,
-      stopLoss: trade.currentStopLoss ?? trade.stopLoss
+      stopLoss: trade.currentStopLoss ?? trade.stopLoss,
+      grade: trade.grade,
+      exitTime: trade.exitTime,
+      isPaperTrade: trade.isPaperTrade ?? false,
+      rMultiple: trade.rMultiple ?? 0
     };
   }
 
@@ -84,7 +88,10 @@ export class PositionService {
       pnl: position.pnl,
       pnlPercent: position.pnlPercent,
       exitPrice: position.ltp,
-      realizedPnl: position.pnl
+      realizedPnl: position.pnl,
+      grade: 'N/A',
+      isPaperTrade: true,
+      rMultiple: 0
     };
   }
 }

@@ -94,6 +94,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   scanCountdown: number = 45;
   scanInterval: number = 45;
   maxPositions: number = 3;
+  supportsClose = false;
 
   private destroy$ = new Subject<void>();
   private subscriptions: Subscription[] = [];
@@ -319,6 +320,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   closeActivePosition(position: PositionView): void {
+    if (!this.supportsClose) {
+      this.notify.warning('Action Unavailable', 'Not supported yet.');
+      return;
+    }
     if (!position.id) {
       this.notify.warning('Action Unavailable', `No position ID for ${position.symbol}.`);
       return;
