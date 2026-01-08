@@ -5,6 +5,8 @@ import { StoreService } from '../../core/services/store.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { Subscription, forkJoin, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
+import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-account',
@@ -23,7 +25,12 @@ export class AccountComponent implements OnInit, OnDestroy {
   private sub = new Subscription();
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient, private store: StoreService) {}
+  constructor(
+    private http: HttpClient,
+    private store: StoreService,
+    private fyersService: FyersOAuthService,
+    private notificationService: NotificationService
+  ) {}
 
   ngOnInit() {
     this.sub.add(
@@ -63,4 +70,17 @@ export class AccountComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() { this.sub.unsubscribe(); }
+
+  connectFyers(): void {
+    this.fyersService.getAuthUrl().subscribe({
+      next: (response) => {
+        if (response?.authUrl) {
+          window.location.href = response.authUrl;
+        } else {
+          this.notificationService.error('Fyers auth URL is missing. Check backend configuration.');
+        }
+      },
+      error: () => this.notificationService.error('Failed to initiate Fyers connection.')
+    });
+  }
 }
