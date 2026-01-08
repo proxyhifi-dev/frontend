@@ -33,12 +33,13 @@
   <span>{{ stats.isLiveMode ? 'LIVE MODE - REAL FUNDS' : 'PAPER MODE' }}</span>
 </div>
 
-<div class="mode-banner warning" *ngIf="dataWarnings.length">
+<div class="mode-banner warning" *ngIf="backendUnavailable">
   <span class="banner-icon">⚠️</span>
-  <span>Some data failed to load: {{ dataWarnings.join(' ') }}</span>
+  <span>Backend unavailable</span>
+  <button class="btn-retry" type="button" (click)="loadDashboardData()">Retry</button>
 </div>
 
-<div class="dashboard-shell" *ngIf="!isLoading">
+<div class="dashboard-shell" *ngIf="!isLoading && !backendUnavailable">
   <div class="stat-grid">
     <div class="stat-card">
       <div class="stat-title">Today P&amp;L</div>
@@ -140,10 +141,10 @@
           <span class="dot-group">•••</span>
         </div>
         <div class="scan-card">
-          <div class="scan-count">{{ scanCountdown }}</div>
+          <div class="scan-count">{{ scanCountdown$ | async }}</div>
           <div class="scan-label">seconds</div>
           <div class="scan-bar">
-            <span [style.width.%]="scanProgress"></span>
+            <span [style.width.%]="(scanProgress$ | async) ?? 0"></span>
           </div>
           <div class="scan-meta">
             <div>

@@ -10,10 +10,9 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
-    const currentUser = this.auth.currentUserValue;
+    const token = this.auth.token;
 
-    // Check if user exists and has a token (using the new getter or the object)
-    if (currentUser && this.auth.token) {
+    if (token) {
       return true;
     }
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface TradingSettings {
@@ -20,29 +20,21 @@ export class SettingsService {
 
   loadSettings(): Observable<TradingSettings> {
     return this.http.get<TradingSettings>(this.apiUrl).pipe(
-      tap(settings => {
+      tap((settings) => {
         if (settings) {
           localStorage.setItem(this.cacheKey, JSON.stringify(settings));
         }
-      }),
-      catchError(() => {
-        const cached = localStorage.getItem(this.cacheKey);
-        if (cached) {
-          return of(JSON.parse(cached) as TradingSettings);
-        }
-        const fallback: TradingSettings = {
-          mode: 'paper',
-          risk: { perTrade: 1.0, dailyLimit: 5, weeklyLimit: 10 },
-          trading: { maxPositions: 3, sectorLimit: 2, correlation: 0.7 },
-          api: { appId: '' }
-        };
-        return of(fallback);
       })
     );
   }
 
   saveSettings(settings: TradingSettings): Observable<TradingSettings> {
-    localStorage.setItem(this.cacheKey, JSON.stringify(settings));
-    return of(settings);
+    return this.http.put<TradingSettings>(this.apiUrl, settings).pipe(
+      tap((saved) => {
+        if (saved) {
+          localStorage.setItem(this.cacheKey, JSON.stringify(saved));
+        }
+      })
+    );
   }
 }

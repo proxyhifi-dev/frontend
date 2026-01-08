@@ -154,6 +154,18 @@
   background: rgba(14, 116, 144, 0.15);
   color: #38bdf8;
   border-color: rgba(56, 189, 248, 0.4);
+  gap: 12px;
+}
+
+.btn-retry {
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  background: transparent;
+  color: #38bdf8;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .dashboard-shell {

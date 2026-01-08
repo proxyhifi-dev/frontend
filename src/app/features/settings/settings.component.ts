@@ -33,8 +33,13 @@ export class SettingsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.settingsService.loadSettings().subscribe(settings => {
-      this.config = settings;
+    this.settingsService.loadSettings().subscribe({
+      next: (settings) => {
+        this.config = settings;
+      },
+      error: () => {
+        this.notificationService.error('Backend unavailable. Unable to load settings.');
+      }
     });
     this.refreshBrokerStatus();
   }
@@ -44,8 +49,8 @@ export class SettingsComponent implements OnInit {
     this.settingsService.saveSettings(this.config)
       .pipe(finalize(() => (this.isSaving = false)))
       .subscribe({
-        next: () => this.notificationService.success('Saved locally (not synced to server).'),
-        error: () => this.notificationService.error('Failed to save settings.')
+        next: () => this.notificationService.success('Saved to server.'),
+        error: () => this.notificationService.error('Failed to save settings to server.')
       });
   }
 
