@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subject, takeUntil } from 'rxjs';
 import { PositionService } from '../../core/services/position.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PositionView } from '../../core/models/domain.model';
+import { StoreService } from '../../core/services/store.service';
 
 @Component({
   selector: 'app-positions',
@@ -12,19 +14,36 @@ import { PositionView } from '../../core/models/domain.model';
   templateUrl: './positions.component.html',
   styleUrls: ['./positions.component.scss']
 })
-export class PositionsComponent implements OnInit {
+export class PositionsComponent implements OnInit, OnDestroy {
   activeTab: 'open' | 'closed' = 'open';
   openPositions: PositionView[] = [];
   closedPositions: PositionView[] = [];
   isLoading = false;
+  supportsClose = false;
+  private lastMode?: boolean;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private positionSvc: PositionService,
-    private notify: NotificationService
+    private notify: NotificationService,
+    private store: StoreService
   ) {}
 
   ngOnInit() {
     this.refresh();
+    this.store.state$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((state) => {
+        if (this.lastMode !== state.isLiveMode) {
+          this.lastMode = state.isLiveMode;
+          this.refresh();
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   refresh() {
@@ -44,6 +63,10 @@ export class PositionsComponent implements OnInit {
   }
 
   closePosition(pos: PositionView) {
+    if (!this.supportsClose) {
+      this.notify.warning('Action Unavailable', 'Not supported yet.');
+      return;
+    }
     if (!pos.id) {
       this.notify.warning('Action Unavailable', `No position ID for ${pos.symbol}.`);
       return;

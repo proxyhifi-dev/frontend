@@ -44,7 +44,15 @@
           <span class="amount">{{ pos.pnl | currency:'INR' }}</span>
           <span class="pct">({{ pos.pnlPercent | number:'1.2-2' }}%)</span>
         </div>
-        <button class="btn-close" type="button" (click)="requestClose(pos)">Close</button>
+        <button
+          class="btn-close"
+          type="button"
+          (click)="requestClose(pos)"
+          [disabled]="!supportsClose"
+          [attr.title]="supportsClose ? 'Close position' : 'Not supported yet'"
+        >
+          Close
+        </button>
       </div>
     </div>
   </div>

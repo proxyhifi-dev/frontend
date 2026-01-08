@@ -34,6 +34,8 @@ export interface Trade {
   isPaperTrade?: boolean;
   status?: string;
   exitReason?: string;
+  grade?: string;
+  rMultiple?: number;
   breakevenMoved?: boolean;
   realizedPnl?: number;
   currentPrice?: number;
@@ -63,6 +65,10 @@ export interface PositionView {
   exitReason?: string;
   sector?: string;
   stopLoss?: number;
+  grade?: string;
+  exitTime?: string;
+  isPaperTrade?: boolean;
+  rMultiple?: number;
 }
 
 export interface Signal {

@@ -42,14 +42,7 @@ export class SettingsService {
   }
 
   saveSettings(settings: TradingSettings): Observable<TradingSettings> {
-    return this.http.post<TradingSettings>(this.apiUrl, settings).pipe(
-      tap(saved => {
-        localStorage.setItem(this.cacheKey, JSON.stringify(saved));
-      }),
-      catchError(() => {
-        localStorage.setItem(this.cacheKey, JSON.stringify(settings));
-        return of(settings);
-      })
-    );
+    localStorage.setItem(this.cacheKey, JSON.stringify(settings));
+    return of(settings);
   }
 }

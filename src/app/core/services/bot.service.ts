@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface BotStatus {
@@ -43,6 +43,11 @@ export class BotService {
 
   fetchStatus(): Observable<BotStatus> {
     return this.http.get<BotStatus>(`${this.apiUrl}/status`).pipe(
+      map((status) => ({
+        ...status,
+        nextScanTime: status?.nextScanTime ? new Date(status.nextScanTime) : new Date(),
+        lastScanTime: status?.lastScanTime ? new Date(status.lastScanTime) : new Date()
+      })),
       catchError(() => {
         const fallback: BotStatus = {
           isActive: false,

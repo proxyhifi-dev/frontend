@@ -41,7 +41,15 @@
           {{ pos.pnl | currencyInr }}
         </td>
         <td>
-          <button class="btn btn-danger btn-sm" (click)="closePosition(pos)">Close</button>
+          <button
+            class="btn btn-danger btn-sm"
+            type="button"
+            (click)="closePosition(pos)"
+            [disabled]="!supportsClose"
+            [attr.title]="supportsClose ? 'Close position' : 'Not supported yet'"
+          >
+            Close
+          </button>
         </td>
       </tr>
       <tr *ngIf="openPositions.length === 0">

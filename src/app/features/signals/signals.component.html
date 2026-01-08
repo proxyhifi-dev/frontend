@@ -19,10 +19,6 @@
           Clear
         </button>
       </div>
-      <div class="toggle-group">
-        <label>Paper Mode</label>
-        <input type="checkbox" [(ngModel)]="isPaperMode" (change)="toggleMode()">
-      </div>
       <div class="filter-group">
         <button class="btn-outline" [class.active]="activeFilter === 'all'" (click)="updateFilter('all')">All</button>
         <button class="btn-outline" [class.active]="activeFilter === 'pending'" (click)="updateFilter('pending')">Entry Ready</button>

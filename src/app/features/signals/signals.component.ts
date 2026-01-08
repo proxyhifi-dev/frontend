@@ -17,10 +17,10 @@ import { StoreService } from '../../core/services/store.service';
 export class SignalsComponent implements OnInit, OnDestroy {
   signals: (Signal & { expanded?: boolean })[] = [];
   allSignals: (Signal & { expanded?: boolean })[] = [];
-  isPaperMode = true;
   activeFilter: 'all' | 'pending' = 'all';
   lastScanLabel = 'N/A';
   searchTerm = '';
+  private lastMode?: boolean;
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -35,11 +35,13 @@ export class SignalsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((state) => {
         this.searchTerm = state.searchSymbol ?? '';
-        this.isPaperMode = !state.isLiveMode;
-        this.applySearch();
+        if (this.lastMode !== state.isLiveMode) {
+          this.lastMode = state.isLiveMode;
+          this.loadSignals();
+        } else {
+          this.applySearch();
+        }
       });
-
-    this.loadMode();
   }
 
   ngOnDestroy(): void {
@@ -61,26 +63,6 @@ export class SignalsComponent implements OnInit, OnDestroy {
         this.lastScanLabel = latest.scanTime ? new Date(latest.scanTime).toLocaleString() : 'N/A';
       }
       this.applySearch();
-    });
-  }
-
-  loadMode() {
-    this.signalSvc.getMode().subscribe({
-      next: (data) => {
-        this.isPaperMode = data.paperMode;
-        this.store.setMode(!data.paperMode);
-      },
-      error: () => { this.isPaperMode = true; }
-    });
-  }
-
-  toggleMode() {
-    this.store.toggleMode();
-    const paperMode = !this.store.snapshot.isLiveMode;
-    this.isPaperMode = paperMode;
-    this.signalSvc.setMode(paperMode).subscribe({
-      next: () => this.notify.success('Mode Updated', paperMode ? 'Paper mode enabled.' : 'Live mode enabled.'),
-      error: (err: any) => this.notify.error('Mode Update Failed', err.message)
     });
   }
 

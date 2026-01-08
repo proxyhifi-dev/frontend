@@ -12,7 +12,7 @@ export const baseUrlInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  // Otherwise, prepend the backend URL (e.g., /api/account -> http://localhost:8080/api/account)
+  // Otherwise, prepend the backend URL (e.g., /api/account -> http://127.0.0.1:8080/api/account)
   const apiReq = req.clone({
     url: `${environment.apiUrl}${req.url.replace('/api', '')}`
   });
