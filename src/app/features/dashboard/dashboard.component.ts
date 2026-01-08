@@ -7,9 +7,8 @@ import { WebSocketService } from '../../core/services/websocket.service';
 import { BotService } from '../../core/services/bot.service';
 import { StoreService } from '../../core/services/store.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { forkJoin, Subscription, Subject, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { takeUntil } from 'rxjs/operators';
+import { forkJoin, Subscription, Subject, of, timer } from 'rxjs';
+import { catchError, map, shareReplay, takeUntil } from 'rxjs/operators';
 import { PositionView, Signal } from '../../core/models/domain.model';
 
 export interface DashboardStats {
@@ -89,8 +88,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadingMessage: string = 'Initializing Dashboard...';
   dataWarnings: string[] = [];
 
-  currentTime: string = '--:--:--';
-  isMarketOpen: boolean = false;
+  currentTime$ = timer(0, 1000).pipe(
+    map(() => new Date()),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
+  isMarketOpen$ = this.currentTime$.pipe(
+    map((now) => {
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      return (hours > 9 && hours < 15) || (hours === 9 && minutes >= 15) || (hours === 15 && minutes <= 30);
+    })
+  );
   scanCountdown: number = 45;
   scanInterval: number = 45;
   maxPositions: number = 3;
@@ -98,7 +106,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
   private subscriptions: Subscription[] = [];
-  private clockIntervalId?: number;
   private scanIntervalId?: number;
 
   constructor(
@@ -113,7 +120,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadDashboardData();
     this.setupWebSocketSubscriptions();
-    this.startClock();
     this.startScanCountdown();
     this.store.state$
       .pipe(takeUntil(this.destroy$))
@@ -268,20 +274,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subscriptions.push(sub);
   }
 
-  startClock(): void {
-    this.updateClock();
-    this.clockIntervalId = window.setInterval(() => this.updateClock(), 1000);
-  }
-
-  updateClock(): void {
-    const now = new Date();
-    this.currentTime = now.toLocaleTimeString('en-US', { hour12: true });
-
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    this.isMarketOpen = (hours > 9 && hours < 15) || (hours === 9 && minutes >= 15) || (hours === 15 && minutes <= 30);
-  }
-
   startScanCountdown(): void {
     this.scanIntervalId = window.setInterval(() => {
       if (this.stats.isPaused) {
@@ -345,9 +337,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    if (this.clockIntervalId) {
-      window.clearInterval(this.clockIntervalId);
-    }
     if (this.scanIntervalId) {
       window.clearInterval(this.scanIntervalId);
     }

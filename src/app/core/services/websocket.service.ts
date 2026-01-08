@@ -20,6 +20,7 @@ export class WebSocketService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 5000;
+  private readonly wsUrl = this.getWebSocketUrl();
   private toastService = inject(ToastService);
 
   connectionStatus = signal<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
@@ -31,10 +32,8 @@ export class WebSocketService {
   }
 
   private initializeWebSocket() {
-    const wsUrl = this.getWebSocketUrl();
-    
     this.client = new Client({
-      brokerURL: wsUrl,
+      brokerURL: this.wsUrl,
       connectHeaders: {
         // Add auth token if needed
         // 'Authorization': `Bearer ${token}`
@@ -122,7 +121,7 @@ export class WebSocketService {
   }
 
   private onConnected() {
-    console.log('WebSocket connected successfully');
+    console.log(`WebSocket connected: ${this.wsUrl}`);
     this.connectionStatus.set('connected');
     this.reconnectAttempts = 0;
     this.toastService.showSuccess('Real-time connection established');
