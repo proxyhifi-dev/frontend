@@ -44,7 +44,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
             router.navigate(['/login']);
             break;
           case 403:
-            errorMessage = 'Access denied. You do not have permission.';
+            errorMessage = 'Access denied. Please login again.';
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('refreshToken');
+            router.navigate(['/login']);
             break;
           case 404:
             errorMessage = 'Resource not found';

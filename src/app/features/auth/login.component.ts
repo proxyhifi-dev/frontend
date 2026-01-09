@@ -20,7 +20,7 @@ import { TradingModeService } from '../../core/services/trading-mode.service';
   styleUrls: ['./login.component.scss'],
 })
 export class LoginComponent implements OnInit {
-  form = { username: '', password: '' };
+  form = { email: '', password: '' };
   loading = false;
 
   constructor(
@@ -86,13 +86,13 @@ export class LoginComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (!this.form.username || !this.form.password) {
-      this.notificationService.error('Please enter username and password');
+    if (!this.form.email || !this.form.password) {
+      this.notificationService.error('Please enter email and password');
       return;
     }
 
     this.loading = true;
-    this.authService.login(this.form.username, this.form.password)
+    this.authService.login(this.form.email, this.form.password)
       .pipe(
         finalize(() => {
           setTimeout(() => {

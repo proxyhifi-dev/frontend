@@ -98,7 +98,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   }
 
   toggleMode(): void {
-    const nextMode = !this.store.snapshot.isLiveMode;
+    const nextMode = this.store.snapshot.isLiveMode ? 'PAPER' : 'LIVE';
     this.tradingModeService.setMode(nextMode).subscribe();
   }
 

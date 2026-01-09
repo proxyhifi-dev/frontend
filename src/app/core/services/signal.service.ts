@@ -22,12 +22,12 @@ export class SignalService {
     return this.http.post(`${this.apiUrl}/scan-now`, {});
   }
 
-  getMode(): Observable<{ paperMode: boolean }> {
-    return this.http.get<{ paperMode: boolean }>(`${this.apiUrl}/mode`);
+  getMode(): Observable<{ mode: 'PAPER' | 'LIVE' }> {
+    return this.http.get<{ mode: 'PAPER' | 'LIVE' }>(`${this.apiUrl}/mode`);
   }
 
-  setMode(paperMode: boolean): Observable<any> {
-    return this.http.post(`${this.apiUrl}/mode?paperMode=${paperMode}`, {});
+  setMode(mode: 'PAPER' | 'LIVE'): Observable<any> {
+    return this.http.post(`${this.apiUrl}/mode?mode=${mode}`, {});
   }
 
   executeSignal(signalId: number): Observable<any> {
