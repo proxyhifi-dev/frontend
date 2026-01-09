@@ -7,9 +7,8 @@ import { StoreService } from '../../core/services/store.service';
 import { SidebarComponent } from '../sidebar/sidebar.component'; // Ensure this file exists
 import { MobileNavComponent } from '../mobile-nav/mobile-nav.component';
 import { CommandPaletteComponent } from '../../shared/components/command-palette/command-palette.component';
-import { SignalService } from '../../core/services/signal.service';
-import { DashboardService } from '../../core/services/dashboard.service';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
+import { TradingModeService } from '../../core/services/trading-mode.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -48,9 +47,8 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   constructor(
     public store: StoreService,
     private router: Router,
-    private signalService: SignalService,
-    private dashboardService: DashboardService,
-    private fyersOAuthService: FyersOAuthService
+    private fyersOAuthService: FyersOAuthService,
+    private tradingModeService: TradingModeService
   ) {}
 
   ngOnInit(): void {
@@ -68,8 +66,6 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
         this.searchQuery = state.searchSymbol ?? '';
         if (this.lastMode !== state.isLiveMode) {
           this.lastMode = state.isLiveMode;
-          this.dashboardService.toggleMode(state.isLiveMode).subscribe();
-          this.signalService.setMode(!state.isLiveMode).subscribe();
           this.dataSource = state.isLiveMode ? 'Fyers' : 'Paper Ledger';
           this.refreshConnectionStatus(state.isLiveMode);
         }
@@ -99,6 +95,11 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
     if (!this.isConnected) {
       this.router.navigate(['/settings']);
     }
+  }
+
+  toggleMode(): void {
+    const nextMode = !this.store.snapshot.isLiveMode;
+    this.tradingModeService.setMode(nextMode).subscribe();
   }
 
   private updatePageMeta(url: string): void {

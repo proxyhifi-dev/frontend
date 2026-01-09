@@ -16,7 +16,7 @@ export class FyersOAuthService {
   }
 
   handleCallback(authCode: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auth/fyers/callback`, { authCode });
+    return this.http.post(`${this.apiUrl}/auth/fyers/callback`, { auth_code: authCode });
   }
 
   disconnectFyers(): Observable<void> {

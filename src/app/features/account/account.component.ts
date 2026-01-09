@@ -37,11 +37,10 @@ export class AccountComponent implements OnInit, OnDestroy {
       this.store.state$.pipe(
         switchMap(() => {
           this.isLiveMode = this.store.snapshot.isLiveMode;
-          const mode = this.isLiveMode ? 'LIVE' : 'PAPER';
           return forkJoin({
             profile: this.http.get<any>(`${this.apiUrl}/account/profile`),
             capital: this.http.get<any>(`${this.apiUrl}/account/capital`),
-            summary: this.http.get<any>(`${this.apiUrl}/account/summary?type=${mode}`)
+            summary: this.http.get<any>(`${this.apiUrl}/account/summary`)
           });
         })
       ).subscribe(({ profile, capital, summary }) => {

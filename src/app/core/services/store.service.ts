@@ -11,7 +11,6 @@ export interface AppState {
 
 @Injectable({ providedIn: 'root' })
 export class StoreService {
-  private readonly modeStorageKey = 'apex.mode';
   private initialState: AppState = {
     isLiveMode: false, // Default to Paper Trading
     isSidebarCollapsed: false,
@@ -20,25 +19,12 @@ export class StoreService {
     searchSymbol: ''
   };
 
-  private state = new BehaviorSubject<AppState>(this.loadInitialState());
+  private state = new BehaviorSubject<AppState>(this.initialState);
   state$ = this.state.asObservable();
 
   // ✅ Expose snapshot for services to check mode synchronously
   get snapshot(): AppState {
     return this.state.getValue();
-  }
-
-  toggleMode() {
-    const current = this.state.value;
-    const newMode = !current.isLiveMode;
-    this.state.next({ ...current, isLiveMode: newMode });
-    this.persistMode(newMode);
-
-    this.notify(
-      newMode ? 'Live Mode Enabled' : 'Paper Mode Active',
-      newMode ? 'Real orders will be sent to broker.' : 'Simulated trading environment.',
-      newMode ? 'warning' : 'info'
-    );
   }
 
   setMode(isLiveMode: boolean) {
@@ -47,7 +33,6 @@ export class StoreService {
       return;
     }
     this.state.next({ ...current, isLiveMode });
-    this.persistMode(isLiveMode);
   }
 
   toggleSidebar() {
@@ -64,15 +49,5 @@ export class StoreService {
     const current = this.state.value;
     const note = { id: Date.now().toString(), title, message, type, timestamp: new Date() };
     this.state.next({ ...current, notifications: [note, ...current.notifications] });
-  }
-
-  private loadInitialState(): AppState {
-    const savedMode = localStorage.getItem(this.modeStorageKey);
-    const isLiveMode = savedMode === 'true';
-    return { ...this.initialState, isLiveMode };
-  }
-
-  private persistMode(isLiveMode: boolean) {
-    localStorage.setItem(this.modeStorageKey, String(isLiveMode));
   }
 }

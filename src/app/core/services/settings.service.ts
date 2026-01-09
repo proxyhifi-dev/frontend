@@ -5,10 +5,12 @@ import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface TradingSettings {
-  mode: 'paper' | 'live';
-  risk: { perTrade: number; dailyLimit: number; weeklyLimit: number };
-  trading: { maxPositions: number; sectorLimit: number; correlation: number };
-  api: { appId: string };
+  mode: 'LIVE' | 'PAPER';
+  maxPositions: number;
+  riskLimits: {
+    maxRiskPerTradePercent: number;
+    maxDailyLossPercent: number;
+  };
 }
 
 @Injectable({ providedIn: 'root' })

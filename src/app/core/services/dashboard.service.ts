@@ -26,13 +26,8 @@ export class DashboardService {
     return this.getSummary();
   }
 
-  getSummary(type: 'PAPER' | 'LIVE' = 'PAPER'): Observable<any> {
-    return this.http.get(`${this.apiUrl}/account/summary?type=${type}`);
-  }
-
-  // Added methods
-  toggleMode(isLive: boolean): Observable<any> {
-    return this.http.post(`${this.apiUrl}/strategy/mode?paperMode=${!isLive}`, {});
+  getSummary(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/account/summary`);
   }
 
   // Existing methods

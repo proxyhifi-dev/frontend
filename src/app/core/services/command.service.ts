@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { StoreService } from './store.service';
+import { TradingModeService } from './trading-mode.service';
 
 export interface Command {
   id: string;
@@ -22,12 +23,16 @@ export class CommandService {
     { id: '3', title: 'Go to Signals', icon: '⚡', category: 'Navigation', action: () => this.router.navigate(['/signals']) },
     { id: '4', title: 'Go to Risk Monitor', icon: '🛡️', category: 'Navigation', action: () => this.router.navigate(['/risk']) },
     { id: '5', title: 'Go to Settings', icon: '⚙️', category: 'Navigation', action: () => this.router.navigate(['/settings']) },
-    { id: '6', title: 'Toggle Paper/Live Mode', icon: '🔄', category: 'Action', action: () => this.store.toggleMode() },
+    { id: '6', title: 'Toggle Paper/Live Mode', icon: '🔄', category: 'Action', action: () => this.toggleMode() },
     { id: '7', title: 'Trigger Manual Scan', icon: '▶', category: 'Action', action: () => console.log('Scanning...') },
     { id: '8', title: 'Emergency Stop', icon: '🚨', category: 'Action', action: () => alert('Emergency Stop Triggered!') }
   ];
 
-  constructor(private router: Router, private store: StoreService) {}
+  constructor(
+    private router: Router,
+    private store: StoreService,
+    private tradingModeService: TradingModeService
+  ) {}
 
   toggle() {
     this.isOpen.next(!this.isOpen.value);
@@ -35,5 +40,10 @@ export class CommandService {
 
   close() {
     this.isOpen.next(false);
+  }
+
+  private toggleMode(): void {
+    const nextMode = !this.store.snapshot.isLiveMode;
+    this.tradingModeService.setMode(nextMode).subscribe();
   }
 }

@@ -169,15 +169,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadDashboardData(): void {
     this.isLoading = true;
     this.backendUnavailable = false;
-    const mode = this.store.snapshot.isLiveMode ? 'LIVE' : 'PAPER';
     this.stats.isLiveMode = this.store.snapshot.isLiveMode;
 
     const sub = forkJoin({
-      summary: this.dashboardService.getSummary(mode),
+      summary: this.dashboardService.getSummary(),
       today: this.dashboardService.getTodayPnL(),
       unrealized: this.dashboardService.getUnrealizedPnL(),
       metrics: this.dashboardService.getPerformanceMetrics(),
-      equity: this.dashboardService.getEquityCurve(mode),
+      equity: this.dashboardService.getEquityCurve(this.stats.isLiveMode ? 'LIVE' : 'PAPER'),
       signals: this.dashboardService.getSignals(),
       positions: this.positionService.getOpenPositions()
     }).pipe(takeUntil(this.destroy$))
@@ -225,13 +224,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe();
     this.subscriptions.push(sub);
-  }
-
-  toggleMode(): void {
-    this.store.toggleMode();
-    this.stats.isLiveMode = this.store.snapshot.isLiveMode;
-    this.dashboardService.toggleMode(this.stats.isLiveMode).subscribe();
-    this.loadDashboardData();
   }
 
   pauseBot(): void {

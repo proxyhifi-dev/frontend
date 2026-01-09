@@ -20,10 +20,9 @@ export class SettingsComponent implements OnInit {
 
   // Settings Config Model
   config: TradingSettings = {
-    mode: 'paper',
-    risk: { perTrade: 1.0, dailyLimit: 5, weeklyLimit: 10 },
-    trading: { maxPositions: 3, sectorLimit: 2, correlation: 0.7 },
-    api: { appId: '' }
+    mode: 'PAPER',
+    maxPositions: 3,
+    riskLimits: { maxRiskPerTradePercent: 1.0, maxDailyLossPercent: 5 }
   };
 
   constructor(

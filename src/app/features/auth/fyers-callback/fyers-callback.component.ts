@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { TradingModeService } from '../../../core/services/trading-mode.service';
 
 @Component({
   selector: 'app-fyers-callback',
@@ -42,7 +43,8 @@ export class FyersCallbackComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private authService: AuthService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private tradingModeService: TradingModeService
   ) {}
 
   ngOnInit(): void {
@@ -60,6 +62,7 @@ export class FyersCallbackComponent implements OnInit {
 
               // Update auth service state
               this.authService.updateAuthState(response.user, token);
+              this.tradingModeService.syncModeFromBackend().subscribe();
               
               this.notificationService.success('✅ Fyers account connected successfully!');
               
