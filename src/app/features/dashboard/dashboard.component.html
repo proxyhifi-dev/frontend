@@ -1,38 +1,3 @@
-<nav class="apex-navbar">
-  <div class="navbar-left" (click)="navigateToDashboard()">
-    <span class="logo-icon">⚡</span>
-    <span class="logo-text">APEX</span>
-  </div>
-
-  <div class="navbar-links">
-    <a class="nav-link active" routerLink="/dashboard">Dashboard</a>
-    <a class="nav-link" routerLink="/account">Account</a>
-    <a class="nav-link" routerLink="/history">History</a>
-    <a class="nav-link" routerLink="/settings">Settings</a>
-  </div>
-
-  <div class="navbar-actions">
-    <div class="market-time">
-      <span class="market-dot" [class.active]="(isMarketOpen$ | async) ?? false"></span>
-      <span>{{ (currentTime$ | async) | date:'shortTime' }}</span>
-    </div>
-    <div class="bot-status" [class.paused]="stats.isPaused">
-      <span class="status-dot"></span>
-      <span>{{ stats.isPaused ? 'Paused' : 'Active' }}</span>
-    </div>
-    <button class="icon-btn" (click)="pauseBot()">{{ stats.isPaused ? '▶' : '⏸' }}</button>
-    <button class="icon-btn primary" (click)="scanNow()">▶</button>
-    <button class="icon-btn ghost" (click)="toggleMode()">
-      {{ stats.isLiveMode ? '💰' : '📄' }}
-    </button>
-  </div>
-</nav>
-
-<div class="mode-banner" [class.live]="stats.isLiveMode">
-  <span class="banner-icon">{{ stats.isLiveMode ? '💰' : '📄' }}</span>
-  <span>{{ stats.isLiveMode ? 'LIVE MODE - REAL FUNDS' : 'PAPER MODE' }}</span>
-</div>
-
 <div class="mode-banner warning" *ngIf="backendUnavailable">
   <span class="banner-icon">⚠️</span>
   <span>Backend unavailable</span>

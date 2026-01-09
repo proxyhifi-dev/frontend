@@ -4,7 +4,10 @@
 
   <header class="top-bar glass-card">
     <div class="left-section">
-      <div class="logo-text">APEX <span class="bolt">⚡</span></div>
+      <div class="page-meta">
+        <div class="page-title">{{ pageTitle }}</div>
+        <div class="breadcrumb">{{ breadcrumb }}</div>
+      </div>
     </div>
 
     <div class="center-section">
@@ -26,21 +29,30 @@
       </form>
     </div>
 
-    <button
-      type="button"
-      class="mode-toggle"
-      (click)="store.toggleMode()"
-      [attr.aria-pressed]="(store.state$ | async)?.isLiveMode"
-      aria-label="Toggle paper or live mode"
-    >
-      <div class="toggle-pill">
-        <span class="label paper">PAPER</span>
-        <span class="label live">LIVE</span>
-        <div class="slider"></div>
-      </div>
-    </button>
-
     <div class="right-section desktop-only">
+      <button
+        type="button"
+        class="mode-toggle"
+        (click)="store.toggleMode()"
+        [attr.aria-pressed]="(store.state$ | async)?.isLiveMode"
+        aria-label="Toggle paper or live mode"
+      >
+        <div class="toggle-pill">
+          <span class="label paper">PAPER</span>
+          <span class="label live">LIVE</span>
+          <div class="slider"></div>
+        </div>
+      </button>
+      <button
+        type="button"
+        class="status-chip"
+        [class.connected]="isConnected"
+        (click)="handleConnectionClick()"
+        aria-label="Broker connection status"
+      >
+        <span class="dot"></span>
+        {{ isConnected ? 'Connected' : 'Disconnected' }}
+      </button>
       <button class="icon-btn notification" type="button" aria-label="Notifications">
         🔔
         <span class="dot" *ngIf="unreadCount > 0" aria-hidden="true"></span>
@@ -54,9 +66,32 @@
   </app-sidebar>
 
   <main class="content-area">
-    <div *ngIf="!((store.state$ | async)?.isLiveMode)" class="paper-banner fade-in">
-      ⚠️ PAPER TRADING MODE
-    </div>
+    <section class="status-banner">
+      <div class="status-item">
+        <span class="label">Mode</span>
+        <span class="value">{{ (store.state$ | async)?.isLiveMode ? 'LIVE' : 'PAPER' }}</span>
+      </div>
+      <div class="status-item">
+        <span class="label">Data Source</span>
+        <span class="value">{{ dataSource }}</span>
+      </div>
+      <div class="status-item">
+        <span class="label">Last Updated</span>
+        <span class="value">{{ lastUpdated ? (lastUpdated | date:'short') : '—' }}</span>
+      </div>
+      <div class="status-item">
+        <span class="label">Connection</span>
+        <button
+          type="button"
+          class="status-chip"
+          [class.connected]="isConnected"
+          (click)="handleConnectionClick()"
+        >
+          <span class="dot"></span>
+          {{ isConnected ? 'Connected' : 'Disconnected' }}
+        </button>
+      </div>
+    </section>
     <router-outlet></router-outlet>
   </main>
 
