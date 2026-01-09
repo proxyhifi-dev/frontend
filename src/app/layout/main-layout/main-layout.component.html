@@ -33,7 +33,7 @@
       <button
         type="button"
         class="mode-toggle"
-        (click)="store.toggleMode()"
+        (click)="toggleMode()"
         [attr.aria-pressed]="(store.state$ | async)?.isLiveMode"
         aria-label="Toggle paper or live mode"
       >

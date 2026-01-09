@@ -2,9 +2,11 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, retry, throwError, timer } from 'rxjs';
 import { ToastService } from '../services/toast.service';
+import { Router } from '@angular/router';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const toastService = inject(ToastService);
+  const router = inject(Router);
 
   return next(req).pipe(
     retry({
@@ -36,7 +38,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
             break;
           case 401:
             errorMessage = 'Session expired. Please login again.';
-            // Optionally redirect to login
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('refreshToken');
+            router.navigate(['/login']);
             break;
           case 403:
             errorMessage = 'Access denied. You do not have permission.';

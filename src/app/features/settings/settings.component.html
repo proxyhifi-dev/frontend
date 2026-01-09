@@ -17,20 +17,14 @@
       <div class="setting-group">
         <label>Trading Mode</label>
         <div class="toggle-row">
-          <button class="tab-btn" [class.active]="config.mode==='paper'" (click)="config.mode='paper'">📄 Paper</button>
-          <button class="tab-btn" [class.active]="config.mode==='live'" (click)="config.mode='live'">💰 Live</button>
+          <button class="tab-btn" [class.active]="config.mode==='PAPER'" (click)="config.mode='PAPER'">📄 Paper</button>
+          <button class="tab-btn" [class.active]="config.mode==='LIVE'" (click)="config.mode='LIVE'">💰 Live</button>
         </div>
       </div>
 
       <div class="setting-group">
         <label>Max Concurrent Positions</label>
-        <input type="number" [(ngModel)]="config.trading.maxPositions" min="1" max="5" class="dark-input">
-      </div>
-
-      <div class="setting-group">
-        <label>Sector Limit</label>
-        <input type="number" [(ngModel)]="config.trading.sectorLimit" class="dark-input">
-        <small>Max stocks from same sector (IT, Banking, etc.)</small>
+        <input type="number" [(ngModel)]="config.maxPositions" min="1" max="5" class="dark-input">
       </div>
     </div>
 
@@ -39,17 +33,12 @@
 
       <div class="setting-group">
         <label>Risk per Trade (%)</label>
-        <input type="number" [(ngModel)]="config.risk.perTrade" min="0.1" step="0.1" class="dark-input">
+        <input type="number" [(ngModel)]="config.riskLimits.maxRiskPerTradePercent" min="0.1" step="0.1" class="dark-input">
       </div>
 
       <div class="setting-group">
         <label>Daily Loss Limit (%)</label>
-        <input type="number" [(ngModel)]="config.risk.dailyLimit" min="1" step="0.5" class="dark-input">
-      </div>
-
-      <div class="setting-group">
-        <label>Weekly Loss Limit (%)</label>
-        <input type="number" [(ngModel)]="config.risk.weeklyLimit" min="1" step="0.5" class="dark-input">
+        <input type="number" [(ngModel)]="config.riskLimits.maxDailyLossPercent" min="1" step="0.5" class="dark-input">
       </div>
     </div>
 
@@ -57,9 +46,8 @@
       <h2>Broker API</h2>
 
       <div class="setting-group">
-        <label>App ID</label>
-        <input type="text" [(ngModel)]="config.api.appId" class="dark-input" placeholder="Enter broker App ID">
-        <small>Secrets are managed server-side and are not stored in the UI.</small>
+        <label>Broker Settings</label>
+        <small>Broker credentials and API configuration are managed server-side. Coming soon.</small>
       </div>
 
       <div class="setting-group">
@@ -108,7 +96,7 @@
       <button class="btn btn-primary" (click)="save()" [disabled]="isSaving">
         {{ isSaving ? 'Saving...' : 'Save Changes' }}
       </button>
-      <p class="save-note">Saved locally (not synced to server).</p>
+      <p class="save-note">Changes are saved to the server.</p>
     </div>
   </div>
 </div>

@@ -10,6 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoadingService } from '../../core/services/loading.service';
+import { TradingModeService } from '../../core/services/trading-mode.service';
 
 @Component({
   selector: 'app-login',
@@ -27,6 +28,7 @@ export class LoginComponent implements OnInit {
     private readonly fyersService: FyersOAuthService,
     private readonly notificationService: NotificationService,
     private readonly loadingService: LoadingService,
+    private readonly tradingModeService: TradingModeService,
     private readonly route: ActivatedRoute,
     private readonly router: Router
   ) {}
@@ -44,7 +46,7 @@ export class LoginComponent implements OnInit {
       .handleFyersCallback(authCode, state)
       .pipe(
         finalize(() => {
-          queueMicrotask(() => {
+          setTimeout(() => {
             this.loading = false;
             this.loadingService.hide();
           });
@@ -60,6 +62,7 @@ export class LoginComponent implements OnInit {
           this.authService.updateAuthState(response?.user ?? null, token ?? '');
 
           if (token) {
+            this.tradingModeService.syncModeFromBackend().subscribe();
             this.notificationService.success('✅ Fyers account connected successfully!');
             this.router.navigate(['/dashboard'], { replaceUrl: true });
             return;
@@ -72,6 +75,7 @@ export class LoginComponent implements OnInit {
           }
 
           this.notificationService.success('✅ Fyers authentication completed');
+          this.tradingModeService.syncModeFromBackend().subscribe();
           this.router.navigate(['/dashboard'], { replaceUrl: true });
         },
         error: () => {
@@ -91,7 +95,7 @@ export class LoginComponent implements OnInit {
     this.authService.login(this.form.username, this.form.password)
       .pipe(
         finalize(() => {
-          queueMicrotask(() => {
+          setTimeout(() => {
             this.loading = false;
           });
         })
@@ -99,6 +103,7 @@ export class LoginComponent implements OnInit {
       .subscribe({
         next: () => {
           this.notificationService.success('Login successful!');
+          this.tradingModeService.syncModeFromBackend().subscribe();
           this.router.navigate(['/dashboard']);
         },
         error: (err: any) => {
