@@ -1,12 +1,21 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { StoreService } from '../../core/services/store.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
-import { Subscription, forkJoin, switchMap } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { finalize, forkJoin, Subscription } from 'rxjs';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { TradingMode, TradingModeService } from '../../core/services/trading-mode.service';
+import { AccountOverview, AccountProfile, LiveAccountService } from '../../core/services/live-account.service';
+import { PaperAccount, PaperAccountService } from '../../core/services/paper-account.service';
+
+interface HoldingRow {
+  symbol: string;
+  quantity: number;
+  avgPrice?: number;
+  pnl?: number;
+  value?: number;
+  raw?: any;
+}
 
 @Component({
   selector: 'app-account',
@@ -16,59 +25,144 @@ import { NotificationService } from '../../core/services/notification.service';
   styleUrls: ['./account.component.scss']
 })
 export class AccountComponent implements OnInit, OnDestroy {
-  // Properties required by template
-  profile = { name: 'Trader', email: 'user@apex.bot' };
-  capital = { total: 0, used: 0, free: 0 };
-  broker = { status: 'DISCONNECTED' };
+  profile?: AccountProfile;
+  overview?: AccountOverview;
+  paperAccount?: PaperAccount;
+  holdings: HoldingRow[] = [];
+  broker = { status: 'DISCONNECTED', clientId: '-', broker: '-' };
   isLiveMode = false;
+  loading = false;
+  modeLoading = false;
 
   private sub = new Subscription();
-  private apiUrl = environment.apiUrl;
 
   constructor(
-    private http: HttpClient,
-    private store: StoreService,
+    private tradingModeService: TradingModeService,
+    private liveAccountService: LiveAccountService,
+    private paperAccountService: PaperAccountService,
     private fyersService: FyersOAuthService,
     private notificationService: NotificationService
   ) {}
 
   ngOnInit() {
+    this.loadMode();
+  }
+
+  ngOnDestroy() { this.sub.unsubscribe(); }
+
+  get totalEquity(): number {
+    if (this.isLiveMode) {
+      return Number(this.overview?.totalEquity ?? this.overview?.equity ?? this.overview?.total ?? 0);
+    }
+    return Number(
+      this.paperAccount?.equity ??
+      this.paperAccount?.totalEquity ??
+      this.paperAccount?.balance ??
+      0
+    );
+  }
+
+  get usedEquity(): number {
+    if (this.isLiveMode) {
+      return Number(this.overview?.used ?? this.overview?.utilized ?? 0);
+    }
+    return Number(this.paperAccount?.used ?? 0);
+  }
+
+  get freeEquity(): number {
+    if (this.isLiveMode) {
+      return Number(this.overview?.free ?? this.overview?.available ?? Math.max(this.totalEquity - this.usedEquity, 0));
+    }
+    return Number(this.paperAccount?.free ?? Math.max(this.totalEquity - this.usedEquity, 0));
+  }
+
+  toggleMode(): void {
+    const nextMode: TradingMode = this.isLiveMode ? 'PAPER' : 'LIVE';
+    this.modeLoading = true;
     this.sub.add(
-      this.store.state$.pipe(
-        switchMap(() => {
-          this.isLiveMode = this.store.snapshot.isLiveMode;
-          return forkJoin({
-            profile: this.http.get<any>(`${this.apiUrl}/account/profile`),
-            capital: this.http.get<any>(`${this.apiUrl}/account/capital`),
-            summary: this.http.get<any>(`${this.apiUrl}/account/summary`)
-          });
+      this.tradingModeService.setMode(nextMode).pipe(
+        finalize(() => {
+          this.modeLoading = false;
         })
-      ).subscribe(({ profile, capital, summary }) => {
-        if (profile) {
-          this.profile = { name: profile.name || 'Trader', email: profile.email || 'user@apex.bot' };
-          this.broker = { status: profile.fyersConnected ? 'CONNECTED' : 'DISCONNECTED' };
-        }
-        if (capital) {
-          this.capital = {
-            total: capital.total || 0,
-            used: capital.used || 0,
-            free: capital.free || Math.max((capital.total || 0) - (capital.used || 0), 0)
-          };
-        }
-        if (summary) {
-          const total = summary.currentValue ?? summary.availableFunds ?? 0;
-          const used = summary.totalInvested ?? 0;
-          this.capital = {
-            total,
-            used,
-            free: Math.max(total - used, 0)
-          };
+      ).subscribe({
+        next: () => {
+          this.isLiveMode = nextMode === 'LIVE';
+          this.loadAccountData();
+        },
+        error: () => {
+          this.notificationService.error('Failed to update trading mode.');
         }
       })
     );
   }
 
-  ngOnDestroy() { this.sub.unsubscribe(); }
+  handleDeposit(): void {
+    const amount = this.promptAmount('Enter deposit amount');
+    if (amount === null) {
+      return;
+    }
+    this.loading = true;
+    this.sub.add(
+      this.paperAccountService.deposit(amount).pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      ).subscribe({
+        next: () => {
+          this.notificationService.success('Deposit successful.');
+          this.loadAccountData();
+        },
+        error: () => {
+          this.notificationService.error('Failed to deposit funds.');
+        }
+      })
+    );
+  }
+
+  handleWithdraw(): void {
+    const amount = this.promptAmount('Enter withdrawal amount');
+    if (amount === null) {
+      return;
+    }
+    this.loading = true;
+    this.sub.add(
+      this.paperAccountService.withdraw(amount).pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      ).subscribe({
+        next: () => {
+          this.notificationService.success('Withdrawal successful.');
+          this.loadAccountData();
+        },
+        error: () => {
+          this.notificationService.error('Failed to withdraw funds.');
+        }
+      })
+    );
+  }
+
+  handleReset(): void {
+    if (!confirm('Reset paper account balance and positions?')) {
+      return;
+    }
+    this.loading = true;
+    this.sub.add(
+      this.paperAccountService.reset().pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      ).subscribe({
+        next: () => {
+          this.notificationService.success('Paper account reset.');
+          this.loadAccountData();
+        },
+        error: () => {
+          this.notificationService.error('Failed to reset paper account.');
+        }
+      })
+    );
+  }
 
   connectFyers(): void {
     this.fyersService.getAuthUrl().subscribe({
@@ -81,5 +175,103 @@ export class AccountComponent implements OnInit, OnDestroy {
       },
       error: () => this.notificationService.error('Failed to initiate Fyers connection.')
     });
+  }
+
+  private loadMode(): void {
+    this.modeLoading = true;
+    this.sub.add(
+      this.tradingModeService.getMode().pipe(
+        finalize(() => {
+          this.modeLoading = false;
+        })
+      ).subscribe({
+        next: (mode) => {
+          this.isLiveMode = mode === 'LIVE';
+          this.loadAccountData();
+        },
+        error: () => {
+          this.notificationService.error('Failed to load trading mode.');
+        }
+      })
+    );
+  }
+
+  private loadAccountData(): void {
+    this.loading = true;
+    if (this.isLiveMode) {
+      this.sub.add(
+        forkJoin({
+          overview: this.liveAccountService.getOverview(),
+          profile: this.liveAccountService.getProfile(),
+          holdings: this.liveAccountService.getHoldings()
+        }).pipe(
+          finalize(() => {
+            this.loading = false;
+          })
+        ).subscribe({
+          next: ({ overview, profile, holdings }) => {
+            this.overview = overview;
+            this.profile = profile;
+            this.holdings = this.normalizeHoldings(holdings || []);
+            this.broker = {
+              status: profile?.connected || profile?.status === 'CONNECTED' ? 'CONNECTED' : 'DISCONNECTED',
+              clientId: profile?.clientId ?? '-',
+              broker: profile?.broker ?? '-'
+            };
+          },
+          error: () => {
+            this.notificationService.error('Failed to load live account data.');
+          }
+        })
+      );
+      return;
+    }
+
+    this.sub.add(
+      this.paperAccountService.getAccount().pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      ).subscribe({
+        next: (account) => {
+          this.paperAccount = account;
+          this.overview = undefined;
+          this.profile = undefined;
+          this.holdings = [];
+        },
+        error: () => {
+          this.notificationService.error('Failed to load paper account data.');
+        }
+      })
+    );
+  }
+
+  private promptAmount(message: string): number | null {
+    const raw = prompt(message);
+    if (raw === null) {
+      return null;
+    }
+    const amount = Number(raw);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      this.notificationService.error('Amount must be greater than 0.');
+      return null;
+    }
+    return amount;
+  }
+
+  private normalizeHoldings(holdings: any[]): HoldingRow[] {
+    return holdings.map((holding) => ({
+      symbol: holding?.symbol ?? holding?.tradingSymbol ?? holding?.ticker ?? holding?.instrument ?? '-',
+      quantity: Number(holding?.qty ?? holding?.quantity ?? holding?.netQty ?? 0),
+      avgPrice: this.numberOrUndefined(holding?.avgPrice ?? holding?.averagePrice ?? holding?.buyAvg),
+      pnl: this.numberOrUndefined(holding?.pnl ?? holding?.profitLoss ?? holding?.unrealizedPnl),
+      value: this.numberOrUndefined(holding?.value ?? holding?.marketValue ?? holding?.currentValue),
+      raw: holding
+    }));
+  }
+
+  private numberOrUndefined(value: any): number | undefined {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : undefined;
   }
 }

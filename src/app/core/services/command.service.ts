@@ -43,7 +43,7 @@ export class CommandService {
   }
 
   private toggleMode(): void {
-    const nextMode = !this.store.snapshot.isLiveMode;
+    const nextMode = this.store.snapshot.isLiveMode ? 'PAPER' : 'LIVE';
     this.tradingModeService.setMode(nextMode).subscribe();
   }
 }

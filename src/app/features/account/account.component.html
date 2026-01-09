@@ -1,11 +1,31 @@
 <div class="account-container fade-in">
-  <div class="grid-split">
+  <div class="header-row">
+    <div>
+      <h2>Account Overview</h2>
+      <p class="helper-text">Manage live or paper trading balances and broker connectivity.</p>
+    </div>
+    <div class="mode-toggle">
+      <span class="mode-label">PAPER</span>
+      <label class="switch">
+        <input type="checkbox" [checked]="isLiveMode" (change)="toggleMode()" [disabled]="modeLoading || loading">
+        <span class="slider"></span>
+      </label>
+      <span class="mode-label">LIVE</span>
+    </div>
+  </div>
+
+  <div class="loading-state" *ngIf="loading || modeLoading">
+    <span class="spinner"></span>
+    <span>Loading account data...</span>
+  </div>
+
+  <div class="grid-split" *ngIf="!(loading || modeLoading)">
     <div class="left-col">
       <div class="glass-card profile-card">
-        <div class="avatar-lg">T</div>
+        <div class="avatar-lg">{{ (profile?.name || profile?.email || 'A')?.charAt(0) }}</div>
         <div class="info">
-          <h3>{{ profile.name }}</h3>
-          <p>{{ profile.email }}</p>
+          <h3>{{ profile?.name || profile?.email || 'Account' }}</h3>
+          <p>{{ profile?.email || '—' }}</p>
           <span class="badge paper">{{ isLiveMode ? 'LIVE TRADING ACCOUNT' : 'PAPER TRADING ACCOUNT' }}</span>
         </div>
       </div>
@@ -14,23 +34,27 @@
         <h3>CAPITAL BREAKDOWN</h3>
         <div class="cap-row">
           <span>Total Equity</span>
-          <span class="val">{{ capital.total | currencyInr }}</span>
+          <span class="val">{{ totalEquity | currencyInr }}</span>
         </div>
-        <p class="helper-text" *ngIf="capital.total === 0">
-          Seeing ₹0.00? This usually means the bot hasn’t loaded live/paper account data yet.
-        </p>
         <div class="progress-bar">
-          <div class="fill" [style.width.%]="capital.total ? (capital.used / capital.total) * 100 : 0"></div>
+          <div class="fill" [style.width.%]="totalEquity ? (usedEquity / totalEquity) * 100 : 0"></div>
         </div>
         <div class="legend">
-          <span>🔵 Used: {{ capital.used | currencyInr }}</span>
-          <span>⚪ Free: {{ capital.free | currencyInr }}</span>
+          <span>🔵 Used: {{ usedEquity | currencyInr }}</span>
+          <span>⚪ Free: {{ freeEquity | currencyInr }}</span>
         </div>
+      </div>
+
+      <div class="glass-card paper-actions mt-24" *ngIf="!isLiveMode">
+        <h3>PAPER ACCOUNT ACTIONS</h3>
+        <button class="btn-row" (click)="handleDeposit()">📥 Deposit Funds</button>
+        <button class="btn-row" (click)="handleWithdraw()">📤 Withdraw Funds</button>
+        <button class="btn-row danger" (click)="handleReset()">🔄 Reset Paper Account</button>
       </div>
     </div>
 
     <div class="right-col">
-      <div class="glass-card broker-card">
+      <div class="glass-card broker-card" *ngIf="isLiveMode">
         <div class="card-header">
           <h3>BROKER INTEGRATION</h3>
           <span class="status-dot" [class.red]="broker.status !== 'CONNECTED'"></span>
@@ -43,36 +67,41 @@
             </span>
           </div>
           <div class="row">
-            <label>API Key</label>
-            <span>••••••••••</span>
+            <label>Broker</label>
+            <span>{{ broker.broker }}</span>
+          </div>
+          <div class="row">
+            <label>Client ID</label>
+            <span>{{ broker.clientId }}</span>
           </div>
           <button class="btn-primary mt-16" (click)="connectFyers()">Connect Fyers API</button>
           <p class="helper-text mt-12" *ngIf="broker.status !== 'CONNECTED'">
-            Connection is disconnected. You’ll need to authenticate with Fyers to load real equity and margin data.
+            Connection is disconnected. Authenticate with your broker to load live equity and margin data.
           </p>
         </div>
       </div>
 
-      <div class="glass-card help-card mt-24" *ngIf="broker.status !== 'CONNECTED'">
-        <h3>FIX ₹0.00 / DISCONNECTED</h3>
-        <ol class="step-list">
-          <li>Verify your Fyers credentials in <span class="mono">application.properties</span>.</li>
-          <li>Click <strong>Connect Fyers API</strong> and complete the login prompt.</li>
-          <li>Confirm the redirect URL matches your Fyers app settings.</li>
-          <li>Check backend logs for “Access token generated”.</li>
-        </ol>
-        <div class="checklist">
-          <span>✅ App ID, Secret Key, Client ID set</span>
-          <span>✅ Redirect URL matches exactly</span>
-          <span>✅ Backend running during login</span>
+      <div class="glass-card holdings-card mt-24" *ngIf="isLiveMode">
+        <h3>HOLDINGS</h3>
+        <div class="table" *ngIf="holdings.length; else emptyHoldings">
+          <div class="table-row header">
+            <span>Symbol</span>
+            <span>Qty</span>
+            <span>Avg Price</span>
+            <span>P&amp;L</span>
+            <span>Value</span>
+          </div>
+          <div class="table-row" *ngFor="let holding of holdings">
+            <span>{{ holding.symbol }}</span>
+            <span>{{ holding.quantity }}</span>
+            <span>{{ (holding.avgPrice ?? 0) | currencyInr }}</span>
+            <span>{{ (holding.pnl ?? 0) | currencyInr }}</span>
+            <span>{{ (holding.value ?? 0) | currencyInr }}</span>
+          </div>
         </div>
-      </div>
-
-      <div class="glass-card actions-card mt-24">
-        <h3>ACCOUNT ACTIONS</h3>
-        <button class="btn-row">📥 Export Trading Report</button>
-        <button class="btn-row">🔄 Reset Paper Account</button>
-        <button class="btn-row danger">🔥 Delete All Data</button>
+        <ng-template #emptyHoldings>
+          <p class="helper-text">No holdings returned for this account.</p>
+        </ng-template>
       </div>
     </div>
   </div>
