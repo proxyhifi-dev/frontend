@@ -52,7 +52,12 @@ export class AccountComponent implements OnInit, OnDestroy {
 
   get totalEquity(): number {
     if (this.isLiveMode) {
-      return Number(this.overview?.totalEquity ?? this.overview?.equity ?? this.overview?.total ?? 0);
+      return Number(
+        this.overview?.totalEquity ??
+        this.overview?.['equity'] ??
+        this.overview?.['total'] ??
+        0
+      );
     }
     return Number(
       this.paperAccount?.equity ??
@@ -64,14 +69,18 @@ export class AccountComponent implements OnInit, OnDestroy {
 
   get usedEquity(): number {
     if (this.isLiveMode) {
-      return Number(this.overview?.used ?? this.overview?.utilized ?? 0);
+      return Number(this.overview?.used ?? this.overview?.['utilized'] ?? 0);
     }
     return Number(this.paperAccount?.used ?? 0);
   }
 
   get freeEquity(): number {
     if (this.isLiveMode) {
-      return Number(this.overview?.free ?? this.overview?.available ?? Math.max(this.totalEquity - this.usedEquity, 0));
+      return Number(
+        this.overview?.free ??
+        this.overview?.['available'] ??
+        Math.max(this.totalEquity - this.usedEquity, 0)
+      );
     }
     return Number(this.paperAccount?.free ?? Math.max(this.totalEquity - this.usedEquity, 0));
   }
