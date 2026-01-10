@@ -5,3 +5,10 @@ export interface User {
   token?: string; // ✅ Ensure this exists
   role?: 'ADMIN' | 'USER';
 }
+
+export interface AuthResponse {
+  accessToken?: string;
+  token?: string;
+  refreshToken?: string;
+  user?: User;
+}

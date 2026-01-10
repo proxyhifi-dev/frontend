@@ -1,6 +1,6 @@
 import { Component, AfterViewInit, Input } from '@angular/core';
 
-declare const TradingView: any;
+declare const TradingView: { widget: (config: Record<string, unknown>) => void };
 
 @Component({
   selector: 'app-tv-chart',

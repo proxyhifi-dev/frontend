@@ -1,18 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { BotService } from '../../../core/services/bot.service';
+import { BotService, BotStatus } from '../../../core/services/bot.service';
 import { interval, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-
-export interface BotStatus {
-  isActive: boolean;
-  status: 'Running' | 'Paused' | 'Stopped';
-  nextScanTime: Date;
-  scannedStocks: number;
-  totalStocks: number;
-  lastScanTime: Date;
-  currentStrategy: string;
-}
 
 @Component({
   selector: 'app-bot-status-widget',
@@ -234,20 +224,22 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
     this.botService.getBotStatus()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (status: any) => {
-          if(status) this.botStatus = { ...this.botStatus, ...status };
+        next: (status: BotStatus) => {
+          if (status) {
+            this.botStatus = { ...this.botStatus, ...status };
+          }
         }
       });
   }
 
   toggleBotStatus(): void {
-    const newStatus = this.botStatus.isActive ? 'Paused' : 'Running';
+    const newStatus: BotStatus['status'] = this.botStatus.isActive ? 'Paused' : 'Running';
     this.botService.setBotStatus(newStatus === 'Running')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.botStatus.isActive = newStatus === 'Running';
-          this.botStatus.status = newStatus as any;
+          this.botStatus.status = newStatus;
         }
       });
   }

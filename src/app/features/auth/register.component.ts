@@ -35,9 +35,10 @@ export class RegisterComponent {
         this.notificationService.success('Registration successful! Please login.');
         this.router.navigate(['/login']);
       },
-      error: (err: any) => {
+      error: (err: unknown) => {
         this.loading = false;
-        this.notificationService.error(err.error?.error || 'Registration failed');
+        const message = err instanceof Error ? err.message : 'Registration failed';
+        this.notificationService.error(message);
       }
     });
   }

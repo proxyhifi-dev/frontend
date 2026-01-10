@@ -1,8 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Params, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { TradingModeService } from '../../../core/services/trading-mode.service';
+import { ModeStore } from '../../../core/services/mode-store.service';
+import { AuthResponse } from '../../../core/models/auth.model';
+
+type FyersCallbackResponse = AuthResponse & { message?: string; requiresLogin?: boolean };
 
 @Component({
   selector: 'app-fyers-callback',
@@ -44,25 +47,25 @@ export class FyersCallbackComponent implements OnInit {
     private router: Router,
     private authService: AuthService,
     private notificationService: NotificationService,
-    private tradingModeService: TradingModeService
+    private modeStore: ModeStore
   ) {}
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((params: any) => {
+    this.route.queryParams.subscribe((params: Params) => {
       const authCode = params['auth_code'];
       const state = params['state'];
       
       if (authCode) {
         this.authService.handleFyersCallback(authCode, state).subscribe({
-          next: (response: any) => {
+          next: (response: FyersCallbackResponse) => {
             // Check if response contains JWT token (new flow)
             if (response.accessToken || response.token) {
               // Save JWT token and user profile
               const token = response.accessToken || response.token;
 
               // Update auth service state
-              this.authService.updateAuthState(response.user, token);
-              this.tradingModeService.syncModeFromBackend().subscribe();
+              this.authService.updateAuthState(response.user ?? null, token ?? '', response.refreshToken);
+              this.modeStore.syncFromBackend().subscribe();
               
               this.notificationService.success('✅ Fyers account connected successfully!');
               

@@ -10,6 +10,15 @@
     <button class="btn-retry" type="button" (click)="reloadDashboard()">Retry</button>
   </div>
 
+  <div class="warning-banner" *ngIf="vm.connectionStatus !== 'connected'">
+    <span class="banner-icon">🔌</span>
+    <div class="banner-content">
+      <strong>Broker disconnected</strong>
+      <span>Real-time updates are paused. Reconnect in Settings to restore live data.</span>
+    </div>
+    <a class="btn-retry" routerLink="/settings">Open Settings</a>
+  </div>
+
   <section class="dashboard-shell">
     <header class="terminal-header">
       <div class="header-left">
@@ -31,7 +40,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="mode-toggle" type="button" (click)="toggleMode(vm.isLiveMode)">
+        <button class="mode-toggle" type="button" (click)="toggleMode(vm.isLiveMode)" [attr.aria-label]="vm.isLiveMode ? 'Switch to paper mode' : 'Switch to live mode'">
           <span>{{ vm.isLiveMode ? 'Switch to Paper' : 'Switch to Live' }}</span>
         </button>
         <button
@@ -40,6 +49,7 @@
           [class.active]="vm.strategyHealth.isPaused"
           (click)="toggleKillSwitch(vm.strategyHealth.isPaused)"
           [disabled]="!vm.strategyHealth.canManage"
+          [attr.aria-label]="vm.strategyHealth.isPaused ? 'Resume trading' : 'Pause trading'"
         >
           {{ vm.strategyHealth.isPaused ? 'Resume Trading' : 'Kill Switch' }}
         </button>

@@ -57,7 +57,7 @@
                 [class.text-red]="brokerStatus === 'DISCONNECTED'">
             {{ brokerStatus === 'CONNECTED' ? '🟢 CONNECTED' : brokerStatus === 'LOADING' ? '⏳ CHECKING' : '🔴 DISCONNECTED' }}
           </span>
-          <button class="btn btn-outline btn-sm" type="button" (click)="refreshBrokerStatus()">Refresh</button>
+          <button class="btn btn-outline btn-sm" type="button" (click)="refreshBrokerStatus()" aria-label="Refresh broker connection status">Refresh</button>
         </div>
         <div class="helper-text text-red" *ngIf="brokerErrorMessage">{{ brokerErrorMessage }}</div>
       </div>
@@ -97,10 +97,10 @@
       </div>
 
       <div class="setting-group">
-        <button class="btn btn-primary" type="button" (click)="connectBroker()" [disabled]="brokerStatus === 'CONNECTED'">
+        <button class="btn btn-primary" type="button" (click)="connectBroker()" [disabled]="brokerStatus === 'CONNECTED'" aria-label="Connect broker">
           Connect Broker
         </button>
-        <button class="btn btn-danger-outline" type="button" (click)="disconnectBroker()" [disabled]="brokerStatus !== 'CONNECTED'">
+        <button class="btn btn-danger-outline" type="button" (click)="disconnectBroker()" [disabled]="brokerStatus !== 'CONNECTED'" aria-label="Disconnect broker">
           Disconnect Broker
         </button>
       </div>

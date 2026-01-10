@@ -22,19 +22,19 @@ export class SignalService {
     return this.http.get<SignalDetail>(`${this.apiUrl}/signals/${signalId}`);
   }
 
-  scanNow(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/scan-now`, {});
+  scanNow(): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/scan-now`, {});
   }
 
   getMode(): Observable<{ mode: 'PAPER' | 'LIVE' }> {
     return this.http.get<{ mode: 'PAPER' | 'LIVE' }>(`${this.apiUrl}/mode`);
   }
 
-  setMode(mode: 'PAPER' | 'LIVE'): Observable<any> {
-    return this.http.post(`${this.apiUrl}/mode?mode=${mode}`, {});
+  setMode(mode: 'PAPER' | 'LIVE'): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/mode?mode=${mode}`, {});
   }
 
-  executeSignal(signalId: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/execute`, { signalId });
+  executeSignal(signalId: number): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/execute`, { signalId });
   }
 }

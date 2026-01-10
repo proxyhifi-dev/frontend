@@ -22,8 +22,8 @@ export class RiskService {
     return this.http.get<CircuitBreakerStatus>(`${this.apiUrl}/circuit-breaker`);
   }
 
-  triggerEmergencyStop(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/emergency-stop`, {});
+  triggerEmergencyStop(): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/emergency-stop`, {});
   }
 }
 

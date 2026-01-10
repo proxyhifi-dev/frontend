@@ -9,7 +9,7 @@ export interface BacktestRun {
   status?: string;
   startedAt?: string;
   completedAt?: string;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
 }
 
 export interface BacktestMetrics {
@@ -48,7 +48,7 @@ export class BacktestService {
     return this.http.get<BacktestRun[]>(`${this.apiUrl}/runs`);
   }
 
-  runBacktest(payload: Record<string, any>): Observable<BacktestRun> {
+  runBacktest(payload: Record<string, unknown>): Observable<BacktestRun> {
     return this.http.post<BacktestRun>(`${this.apiUrl}/run`, payload);
   }
 

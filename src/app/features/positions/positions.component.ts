@@ -5,7 +5,7 @@ import { PositionService } from '../../core/services/position.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PositionView } from '../../core/models/domain.model';
-import { StoreService } from '../../core/services/store.service';
+import { ModeStore } from '../../core/services/mode-store.service';
 import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
 import { RiskService } from '../../core/services/risk.service';
 
@@ -26,24 +26,24 @@ export class PositionsComponent implements OnInit, OnDestroy {
   supportsClose = false;
   safeMode = false;
   safeModeReason = '';
-  private lastMode?: boolean;
+  private lastMode?: string;
   private destroy$ = new Subject<void>();
 
   constructor(
     private positionSvc: PositionService,
     private notify: NotificationService,
-    private store: StoreService,
+    private modeStore: ModeStore,
     private riskService: RiskService
   ) {}
 
   ngOnInit() {
     this.refresh();
     this.loadCircuitBreaker();
-    this.store.state$
+    this.modeStore.mode$
       .pipe(takeUntil(this.destroy$))
-      .subscribe((state) => {
-        if (this.lastMode !== state.isLiveMode) {
-          this.lastMode = state.isLiveMode;
+      .subscribe((mode) => {
+        if (this.lastMode !== mode) {
+          this.lastMode = mode;
           this.refresh();
         }
       });
@@ -96,8 +96,9 @@ export class PositionsComponent implements OnInit, OnDestroy {
         this.notify.success('Position Closed', `${pos.symbol} has been closed.`);
         this.refresh();
       },
-      error: (err: any) => {
-        this.notify.error('Close Failed', err?.message || 'Unable to close position.');
+      error: (err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Unable to close position.';
+        this.notify.error('Close Failed', message);
       }
     });
   }

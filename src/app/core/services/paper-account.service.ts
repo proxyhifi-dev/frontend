@@ -2,15 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
-export interface PaperAccount {
-  balance?: number;
-  free?: number;
-  used?: number;
-  equity?: number;
-  totalEquity?: number;
-  [key: string]: any;
-}
+import { PaperAccountDTO } from '../models/account.dto';
 
 @Injectable({ providedIn: 'root' })
 export class PaperAccountService {
@@ -18,8 +10,8 @@ export class PaperAccountService {
 
   constructor(private http: HttpClient) {}
 
-  getAccount(): Observable<PaperAccount> {
-    return this.http.get<PaperAccount>(`${this.apiUrl}/paper/account`);
+  getAccount(): Observable<PaperAccountDTO> {
+    return this.http.get<PaperAccountDTO>(`${this.apiUrl}/paper/account`);
   }
 
   deposit(amount: number): Observable<void> {

@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common';
 })
 export class DataTable {
   @Input() columns: { key: string; label: string }[] = [];
-  @Input() rows: any[] = [];
+  @Input() rows: Array<Record<string, unknown>> = [];
   @Input() loading = false;
   @Input() emptyMessage = 'No data available.';
 }

@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { Notification } from './notification.service';
 
 export interface AppState {
-  isLiveMode: boolean;
   isSidebarCollapsed: boolean;
-  notifications: any[];
+  notifications: Notification[];
   user: { name: string; capital: number };
   searchSymbol: string;
 }
@@ -12,7 +12,6 @@ export interface AppState {
 @Injectable({ providedIn: 'root' })
 export class StoreService {
   private initialState: AppState = {
-    isLiveMode: false, // Default to Paper Trading
     isSidebarCollapsed: false,
     notifications: [],
     user: { name: 'Trader', capital: 100000 },
@@ -22,17 +21,9 @@ export class StoreService {
   private state = new BehaviorSubject<AppState>(this.initialState);
   state$ = this.state.asObservable();
 
-  // ✅ Expose snapshot for services to check mode synchronously
+  // ✅ Expose snapshot for synchronous state access
   get snapshot(): AppState {
     return this.state.getValue();
-  }
-
-  setMode(isLiveMode: boolean) {
-    const current = this.state.value;
-    if (current.isLiveMode === isLiveMode) {
-      return;
-    }
-    this.state.next({ ...current, isLiveMode });
   }
 
   toggleSidebar() {
@@ -47,7 +38,13 @@ export class StoreService {
 
   notify(title: string, message: string, type: 'success' | 'warning' | 'error' | 'info' = 'info') {
     const current = this.state.value;
-    const note = { id: Date.now().toString(), title, message, type, timestamp: new Date() };
+    const note: Notification = {
+      id: Date.now().toString(),
+      type,
+      message: `${title}: ${message}`,
+      timestamp: new Date().toISOString(),
+      read: false
+    };
     this.state.next({ ...current, notifications: [note, ...current.notifications] });
   }
 }

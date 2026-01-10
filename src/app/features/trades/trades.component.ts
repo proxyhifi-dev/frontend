@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { finalize, Subject, takeUntil } from 'rxjs';
 import { PositionService } from '../../core/services/position.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
-import { StoreService } from '../../core/services/store.service';
+import { ModeStore } from '../../core/services/mode-store.service';
 import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
+import { PositionView } from '../../core/models/domain.model';
 
 @Component({
   selector: 'app-trades',
@@ -15,8 +16,8 @@ import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
   styleUrls: ['./trades.component.scss']
 })
 export class TradesComponent implements OnInit, OnDestroy {
-  tradeHistory: any[] = [];
-  filteredTrades: any[] = [];
+  tradeHistory: PositionView[] = [];
+  filteredTrades: PositionView[] = [];
   isLoading = false;
   errorMessage = '';
   filters = {
@@ -26,21 +27,21 @@ export class TradesComponent implements OnInit, OnDestroy {
     startDate: '',
     endDate: ''
   };
-  private lastMode?: boolean;
+  private lastMode?: string;
   private destroy$ = new Subject<void>();
 
   constructor(
     private positionSvc: PositionService,
-    private store: StoreService
+    private modeStore: ModeStore
   ) {}
 
   ngOnInit() {
     this.loadHistory();
-    this.store.state$
+    this.modeStore.mode$
       .pipe(takeUntil(this.destroy$))
-      .subscribe((state) => {
-        if (this.lastMode !== state.isLiveMode) {
-          this.lastMode = state.isLiveMode;
+      .subscribe((mode) => {
+        if (this.lastMode !== mode) {
+          this.lastMode = mode;
           this.loadHistory();
         }
       });

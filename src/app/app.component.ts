@@ -3,7 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { ToastContainerComponent } from './shared/components/toast-container/toast-container.component';
 import { GlobalLoadingComponent } from './shared/components/global-loading/global-loading.component';
 import { AuthService } from './core/services/auth.service';
-import { TradingModeService } from './core/services/trading-mode.service';
+import { ModeStore } from './core/services/mode-store.service';
 
 @Component({
   selector: 'app-root',
@@ -21,12 +21,12 @@ export class AppComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
-    private tradingModeService: TradingModeService
+    private modeStore: ModeStore
   ) {}
 
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
-      this.tradingModeService.syncModeFromBackend().subscribe();
+      this.modeStore.syncFromBackend().subscribe();
     }
   }
 }

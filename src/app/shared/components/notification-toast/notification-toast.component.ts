@@ -1,9 +1,9 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { NotificationService } from '../../../core/services/notification.service';
+import { NotificationService, Notification } from '../../../core/services/notification.service';
 
-interface Notification {
+interface ToastNotification {
   id: number;
   message: string;
   type: 'success' | 'error' | 'warning' | 'info';
@@ -62,19 +62,20 @@ interface Notification {
   `]
 })
 export class NotificationToastComponent implements OnInit, OnDestroy {
-  notifications: Notification[] = [];
+  notifications: ToastNotification[] = [];
   private subscription?: Subscription;
   private idCounter = 0;
 
   constructor(private notificationService: NotificationService) {}
 
   ngOnInit(): void {
-    this.subscription = this.notificationService.notifications$.subscribe((notification: any) => {
-      if (notification && notification.message) {
-        const notif: Notification = {
+    this.subscription = this.notificationService.notifications$.subscribe((notification: Notification[] | Notification | null) => {
+      const latest = Array.isArray(notification) ? notification[0] : notification;
+      if (latest && latest.message) {
+        const notif: ToastNotification = {
           id: this.idCounter++,
-          message: notification.message,
-          type: notification.type || 'info'
+          message: latest.message,
+          type: latest.type || 'info'
         };
         this.notifications.push(notif);
         

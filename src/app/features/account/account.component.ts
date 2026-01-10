@@ -4,9 +4,12 @@ import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { finalize, forkJoin, Subscription } from 'rxjs';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { TradingMode, TradingModeService } from '../../core/services/trading-mode.service';
-import { AccountOverview, AccountProfile, LiveAccountService } from '../../core/services/live-account.service';
-import { PaperAccount, PaperAccountService } from '../../core/services/paper-account.service';
+import { AccountProfile, LiveAccountService } from '../../core/services/live-account.service';
+import { PaperAccountService } from '../../core/services/paper-account.service';
+import { ModeStore } from '../../core/services/mode-store.service';
+import { AccountOverviewDTO, PaperAccountDTO } from '../../core/models/account.dto';
+import { HoldingDTO } from '../../core/models/holding.dto';
+import { TradingMode } from '../../core/services/trading-mode.service';
 
 interface HoldingRow {
   symbol: string;
@@ -14,7 +17,7 @@ interface HoldingRow {
   avgPrice?: number;
   pnl?: number;
   value?: number;
-  raw?: any;
+  raw?: HoldingDTO;
 }
 
 @Component({
@@ -26,8 +29,8 @@ interface HoldingRow {
 })
 export class AccountComponent implements OnInit, OnDestroy {
   profile?: AccountProfile;
-  overview?: AccountOverview;
-  paperAccount?: PaperAccount;
+  overview?: AccountOverviewDTO;
+  paperAccount?: PaperAccountDTO;
   holdings: HoldingRow[] = [];
   broker = { status: 'DISCONNECTED', clientId: '-', broker: '-' };
   isLiveMode = false;
@@ -38,14 +41,20 @@ export class AccountComponent implements OnInit, OnDestroy {
   private sub = new Subscription();
 
   constructor(
-    private tradingModeService: TradingModeService,
     private liveAccountService: LiveAccountService,
     private paperAccountService: PaperAccountService,
     private fyersService: FyersOAuthService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private modeStore: ModeStore
   ) {}
 
   ngOnInit() {
+    this.sub.add(
+      this.modeStore.mode$.subscribe((mode) => {
+        this.isLiveMode = mode === 'LIVE';
+        this.loadAccountData();
+      })
+    );
     this.loadMode();
   }
 
@@ -90,7 +99,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     const nextMode: TradingMode = this.isLiveMode ? 'PAPER' : 'LIVE';
     this.modeLoading = true;
     this.sub.add(
-      this.tradingModeService.setMode(nextMode).pipe(
+      this.modeStore.setMode(nextMode).pipe(
         finalize(() => {
           this.modeLoading = false;
         })
@@ -190,14 +199,13 @@ export class AccountComponent implements OnInit, OnDestroy {
   private loadMode(): void {
     this.modeLoading = true;
     this.sub.add(
-      this.tradingModeService.getMode().pipe(
+      this.modeStore.syncFromBackend().pipe(
         finalize(() => {
           this.modeLoading = false;
         })
       ).subscribe({
-        next: (mode) => {
-          this.isLiveMode = mode === 'LIVE';
-          this.loadAccountData();
+        next: () => {
+          return;
         },
         error: () => {
           this.notificationService.error('Failed to load trading mode.');
@@ -272,7 +280,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     return amount;
   }
 
-  private normalizeHoldings(holdings: any[]): HoldingRow[] {
+  private normalizeHoldings(holdings: HoldingDTO[]): HoldingRow[] {
     return holdings.map((holding) => ({
       symbol: holding?.symbol ?? holding?.tradingSymbol ?? holding?.ticker ?? holding?.instrument ?? '-',
       quantity: Number(holding?.qty ?? holding?.quantity ?? holding?.netQty ?? 0),
@@ -283,7 +291,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     }));
   }
 
-  private numberOrUndefined(value: any): number | undefined {
+  private numberOrUndefined(value: unknown): number | undefined {
     const num = Number(value);
     return Number.isFinite(num) ? num : undefined;
   }
