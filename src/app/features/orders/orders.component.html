@@ -5,8 +5,8 @@
       <p class="text-muted">Working orders and history in one place.</p>
     </div>
     <div class="tabs">
-      <button class="tab-btn active" type="button">Open Orders</button>
-      <button class="tab-btn" type="button">Order History</button>
+      <button class="tab-btn" type="button" [class.active]="activeTab === 'open'" (click)="setTab('open')">Open Orders</button>
+      <button class="tab-btn" type="button" [class.active]="activeTab === 'history'" (click)="setTab('history')">Order History</button>
     </div>
   </header>
 
@@ -15,8 +15,54 @@
       <h3>Orders Table</h3>
       <span class="text-muted">Click a row to open the order drawer.</span>
     </div>
-    <div class="empty-state">
-      No orders found. Place a trade or connect your broker to sync orders.
-    </div>
+    <table class="data-table">
+      <thead>
+      <tr>
+        <th>Order ID</th>
+        <th>Symbol</th>
+        <th>Side</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Status</th>
+        <th>Updated</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngIf="isLoading">
+        <td colspan="7" class="empty-state">Loading orders...</td>
+      </tr>
+      <tr *ngIf="!isLoading && errorMessage">
+        <td colspan="7" class="empty-state text-red">{{ errorMessage }}</td>
+      </tr>
+      <ng-container *ngIf="activeTab === 'open'">
+        <tr *ngFor="let order of openOrders">
+          <td>#{{ order.id }}</td>
+          <td>{{ order.symbol || '—' }}</td>
+          <td>{{ order.side || '—' }}</td>
+          <td>{{ order.quantity ?? '—' }}</td>
+          <td>{{ order.price | currencyInr }}</td>
+          <td>{{ order.status || '—' }}</td>
+          <td>{{ order.updatedAt ? (order.updatedAt | date:'short') : '—' }}</td>
+        </tr>
+        <tr *ngIf="!isLoading && !errorMessage && openOrders.length === 0">
+          <td colspan="7" class="empty-state">No open orders found.</td>
+        </tr>
+      </ng-container>
+      <ng-container *ngIf="activeTab === 'history'">
+        <tr *ngFor="let order of historyOrders">
+          <td>#{{ order.id }}</td>
+          <td>{{ order.symbol || '—' }}</td>
+          <td>{{ order.side || '—' }}</td>
+          <td>{{ order.quantity ?? '—' }}</td>
+          <td>{{ order.price | currencyInr }}</td>
+          <td>{{ order.status || '—' }}</td>
+          <td>{{ order.updatedAt ? (order.updatedAt | date:'short') : '—' }}</td>
+        </tr>
+        <tr *ngIf="!isLoading && !errorMessage && historyOrders.length === 0">
+          <td colspan="7" class="empty-state">No order history found.</td>
+        </tr>
+      </ng-container>
+      </tbody>
+    </table>
   </div>
 </section>

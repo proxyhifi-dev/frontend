@@ -1,16 +1,20 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { finalize, Subject, takeUntil } from 'rxjs';
 import { SignalService } from '../../core/services/signal.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Signal } from '../../core/models/domain.model';
+import { Signal, SignalDetail } from '../../core/models/domain.model';
 import { StoreService } from '../../core/services/store.service';
+import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
+import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
+import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
+import { RiskService } from '../../core/services/risk.service';
 
 @Component({
   selector: 'app-signals',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CurrencyInrPipe, PercentFormatPipe, RMultiplePipe],
   templateUrl: './signals.component.html',
   styleUrls: ['./signals.component.scss']
 })
@@ -20,17 +24,27 @@ export class SignalsComponent implements OnInit, OnDestroy {
   activeFilter: 'all' | 'pending' = 'all';
   lastScanLabel = 'N/A';
   searchTerm = '';
+  isLoading = false;
+  errorMessage = '';
+  safeMode = false;
+  safeModeReason = '';
+  selectedSignal?: SignalDetail;
+  isDrawerOpen = false;
+  detailLoading = false;
+  detailError = '';
   private lastMode?: boolean;
   private destroy$ = new Subject<void>();
 
   constructor(
     private signalSvc: SignalService,
     private notify: NotificationService,
-    private store: StoreService
+    private store: StoreService,
+    private riskService: RiskService
   ) {}
 
   ngOnInit() {
     this.loadSignals();
+    this.loadCircuitBreaker();
     this.store.state$
       .pipe(takeUntil(this.destroy$))
       .subscribe((state) => {
@@ -50,23 +64,39 @@ export class SignalsComponent implements OnInit, OnDestroy {
   }
 
   loadSignals() {
+    this.isLoading = true;
+    this.errorMessage = '';
     const source$ = this.activeFilter === 'pending'
       ? this.signalSvc.getPendingSignals()
       : this.signalSvc.getSignals();
-    source$.subscribe(data => {
-      this.allSignals = data
-        .slice()
-        .sort((a, b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime())
-        .map(s => ({ ...s, expanded: false }));
-      if (this.allSignals.length > 0) {
-        const latest = this.allSignals[0];
-        this.lastScanLabel = latest.scanTime ? new Date(latest.scanTime).toLocaleString() : 'N/A';
-      }
-      this.applySearch();
-    });
+    source$.pipe(
+      takeUntil(this.destroy$),
+      finalize(() => (this.isLoading = false))
+    )
+      .subscribe({
+        next: (data) => {
+          this.allSignals = data
+            .slice()
+            .sort((a, b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime())
+            .map(s => ({ ...s, expanded: false }));
+          if (this.allSignals.length > 0) {
+            const latest = this.allSignals[0];
+            this.lastScanLabel = latest.scanTime ? new Date(latest.scanTime).toLocaleString() : 'N/A';
+          }
+          this.applySearch();
+        },
+        error: () => {
+          this.errorMessage = 'Unable to load signals right now.';
+          this.signals = [];
+        }
+      });
   }
 
   scanNow() {
+    if (this.safeMode) {
+      this.notify.warning('Safe Mode', this.safeModeReason || 'Risk circuit breaker triggered.');
+      return;
+    }
     this.signalSvc.scanNow().subscribe({
       next: () => {
         this.notify.success('Scan Started', 'Manual scan triggered.');
@@ -109,6 +139,10 @@ export class SignalsComponent implements OnInit, OnDestroy {
   }
 
   executeSignal(signal: Signal): void {
+    if (this.safeMode) {
+      this.notify.warning('Safe Mode', this.safeModeReason || 'Risk circuit breaker triggered.');
+      return;
+    }
     if (!signal.hasEntrySignal) {
       return;
     }
@@ -119,6 +153,42 @@ export class SignalsComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.notify.error('Execution Failed', err?.message || 'Unable to execute trade.');
+      }
+    });
+  }
+
+  openWhyDrawer(signal: Signal): void {
+    this.detailLoading = true;
+    this.detailError = '';
+    this.isDrawerOpen = true;
+    this.selectedSignal = undefined;
+    this.signalSvc.getSignalDetail(signal.id).pipe(
+      takeUntil(this.destroy$),
+      finalize(() => (this.detailLoading = false))
+    ).subscribe({
+      next: (detail) => {
+        this.selectedSignal = detail;
+      },
+      error: () => {
+        this.detailError = 'Unable to load trade rationale.';
+      }
+    });
+  }
+
+  closeDrawer(): void {
+    this.isDrawerOpen = false;
+    this.selectedSignal = undefined;
+  }
+
+  private loadCircuitBreaker(): void {
+    this.riskService.getCircuitBreakerStatus().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (status) => {
+        this.safeMode = !!status?.triggered;
+        this.safeModeReason = status?.reason ?? '';
+      },
+      error: () => {
+        this.safeMode = false;
+        this.safeModeReason = '';
       }
     });
   }

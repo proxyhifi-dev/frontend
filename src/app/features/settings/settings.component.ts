@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService, TradingSettings } from '../../core/services/settings.service';
-import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
+import { BrokerErrorLog, BrokerStatus, FyersOAuthService } from '../../core/services/fyers-oauth.service';
 
 @Component({
   selector: 'app-settings',
@@ -17,6 +17,11 @@ export class SettingsComponent implements OnInit {
   activeTab = 'trading';
   isSaving = false;
   brokerStatus: 'CONNECTED' | 'DISCONNECTED' | 'LOADING' = 'LOADING';
+  brokerDetails?: BrokerStatus;
+  brokerErrors: BrokerErrorLog[] = [];
+  brokerLoading = false;
+  brokerLogsLoading = false;
+  brokerErrorMessage = '';
 
   // Settings Config Model
   config: TradingSettings = {
@@ -76,12 +81,35 @@ export class SettingsComponent implements OnInit {
 
   refreshBrokerStatus(): void {
     this.brokerStatus = 'LOADING';
-    this.fyersService.getFyersStatus().subscribe({
+    this.brokerLoading = true;
+    this.brokerErrorMessage = '';
+    this.fyersService.getFyersStatus().pipe(finalize(() => (this.brokerLoading = false))).subscribe({
       next: (status) => {
+        this.brokerDetails = status;
         this.brokerStatus = status.connected ? 'CONNECTED' : 'DISCONNECTED';
+        if (status.errorLogs) {
+          this.brokerErrors = status.errorLogs;
+        } else {
+          this.loadBrokerErrors();
+        }
       },
       error: () => {
         this.brokerStatus = 'DISCONNECTED';
+        this.brokerErrorMessage = 'Unable to load broker status.';
+      }
+    });
+  }
+
+  loadBrokerErrors(): void {
+    this.brokerLogsLoading = true;
+    this.fyersService.getFyersErrors().subscribe({
+      next: (logs) => {
+        this.brokerErrors = logs ?? [];
+        this.brokerLogsLoading = false;
+      },
+      error: () => {
+        this.brokerErrors = [];
+        this.brokerLogsLoading = false;
       }
     });
   }

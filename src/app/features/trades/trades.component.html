@@ -52,6 +52,12 @@
       </tr>
       </thead>
       <tbody>
+      <tr *ngIf="isLoading">
+        <td colspan="6" class="empty-state">Loading trades...</td>
+      </tr>
+      <tr *ngIf="!isLoading && errorMessage">
+        <td colspan="6" class="empty-state text-red">{{ errorMessage }}</td>
+      </tr>
       <tr *ngFor="let t of filteredTrades">
         <td>#{{ t.id }}</td>
         <td>
@@ -69,14 +75,14 @@
         <td [class.positive]="t.realizedPnl >= 0" [class.negative]="t.realizedPnl < 0">
           {{ t.realizedPnl | currencyInr }}
         </td>
-        <td class="bold">{{ (t.rMultiple ?? 0) > 0 ? '+' : '' }}{{ t.rMultiple ?? 0 }}R</td>
+        <td class="bold">{{ t.rMultiple | rMultiple }}</td>
         <td>
             <span class="reason-badge" [ngClass]="getExitClass(t.exitReason)">
               {{ t.exitReason }}
             </span>
         </td>
       </tr>
-      <tr *ngIf="filteredTrades.length === 0">
+      <tr *ngIf="!isLoading && !errorMessage && filteredTrades.length === 0">
         <td colspan="6" class="empty-state">No results</td>
       </tr>
       </tbody>

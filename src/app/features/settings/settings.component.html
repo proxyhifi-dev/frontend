@@ -47,7 +47,7 @@
 
       <div class="setting-group">
         <label>Broker Settings</label>
-        <small>Broker credentials and API configuration are managed server-side. Coming soon.</small>
+        <small>Broker credentials and API configuration are managed server-side.</small>
       </div>
 
       <div class="setting-group">
@@ -59,6 +59,41 @@
           </span>
           <button class="btn btn-outline btn-sm" type="button" (click)="refreshBrokerStatus()">Refresh</button>
         </div>
+        <div class="helper-text text-red" *ngIf="brokerErrorMessage">{{ brokerErrorMessage }}</div>
+      </div>
+
+      <div class="setting-group">
+        <label>Token Freshness</label>
+        <div class="status-row">
+          <span>{{ brokerDetails?.tokenStatus || '—' }}</span>
+          <span>{{ brokerDetails?.tokenExpiresAt ? (brokerDetails?.tokenExpiresAt | date:'short') : '—' }}</span>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <label>Error Logs</label>
+        <table class="data-table">
+          <thead>
+          <tr>
+            <th>Time</th>
+            <th>Code</th>
+            <th>Message</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngIf="brokerLogsLoading">
+            <td colspan="3" class="empty-state">Loading broker logs...</td>
+          </tr>
+          <tr *ngIf="!brokerLogsLoading && brokerErrors.length === 0">
+            <td colspan="3" class="empty-state">No broker errors reported.</td>
+          </tr>
+          <tr *ngFor="let log of brokerErrors">
+            <td>{{ log.time ? (log.time | date:'short') : '—' }}</td>
+            <td>{{ log.code || '—' }}</td>
+            <td>{{ log.message || '—' }}</td>
+          </tr>
+          </tbody>
+        </table>
       </div>
 
       <div class="setting-group">

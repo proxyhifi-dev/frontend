@@ -1,16 +1,18 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
+import { finalize, Subject, takeUntil } from 'rxjs';
 import { PositionService } from '../../core/services/position.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PositionView } from '../../core/models/domain.model';
 import { StoreService } from '../../core/services/store.service';
+import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
+import { RiskService } from '../../core/services/risk.service';
 
 @Component({
   selector: 'app-positions',
   standalone: true,
-  imports: [CommonModule, CurrencyInrPipe],
+  imports: [CommonModule, CurrencyInrPipe, RMultiplePipe],
   templateUrl: './positions.component.html',
   styleUrls: ['./positions.component.scss']
 })
@@ -19,18 +21,24 @@ export class PositionsComponent implements OnInit, OnDestroy {
   openPositions: PositionView[] = [];
   closedPositions: PositionView[] = [];
   isLoading = false;
+  openError = '';
+  closedError = '';
   supportsClose = false;
+  safeMode = false;
+  safeModeReason = '';
   private lastMode?: boolean;
   private destroy$ = new Subject<void>();
 
   constructor(
     private positionSvc: PositionService,
     private notify: NotificationService,
-    private store: StoreService
+    private store: StoreService,
+    private riskService: RiskService
   ) {}
 
   ngOnInit() {
     this.refresh();
+    this.loadCircuitBreaker();
     this.store.state$
       .pipe(takeUntil(this.destroy$))
       .subscribe((state) => {
@@ -48,21 +56,33 @@ export class PositionsComponent implements OnInit, OnDestroy {
 
   refresh() {
     this.isLoading = true;
+    this.openError = '';
+    this.closedError = '';
     this.positionSvc.getOpenPositions().subscribe({
       next: (data) => this.openPositions = data,
-      error: () => this.notify.error('Error', 'Failed to load open positions')
+      error: () => {
+        this.openError = 'Failed to load open positions.';
+        this.notify.error('Error', 'Failed to load open positions');
+      }
     });
 
-    this.positionSvc.getClosedPositions().subscribe({
+    this.positionSvc.getClosedPositions().pipe(
+      finalize(() => (this.isLoading = false))
+    ).subscribe({
       next: (data) => {
         this.closedPositions = data;
-        this.isLoading = false;
       },
-      error: () => this.isLoading = false
+      error: () => {
+        this.closedError = 'Failed to load closed positions.';
+      }
     });
   }
 
   closePosition(pos: PositionView) {
+    if (this.safeMode) {
+      this.notify.warning('Safe Mode', this.safeModeReason || 'Risk circuit breaker triggered.');
+      return;
+    }
     if (!this.supportsClose) {
       this.notify.warning('Action Unavailable', 'Not supported yet.');
       return;
@@ -78,6 +98,19 @@ export class PositionsComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.notify.error('Close Failed', err?.message || 'Unable to close position.');
+      }
+    });
+  }
+
+  private loadCircuitBreaker(): void {
+    this.riskService.getCircuitBreakerStatus().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (status) => {
+        this.safeMode = !!status?.triggered;
+        this.safeModeReason = status?.reason ?? '';
+      },
+      error: () => {
+        this.safeMode = false;
+        this.safeModeReason = '';
       }
     });
   }

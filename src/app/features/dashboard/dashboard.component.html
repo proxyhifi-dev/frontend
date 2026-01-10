@@ -4,21 +4,26 @@
   <button class="btn-retry" type="button" (click)="loadDashboardData()">Retry</button>
 </div>
 
+<div class="mode-banner danger" *ngIf="safeMode">
+  <span class="banner-icon">⛔</span>
+  <span>Safe mode enabled. {{ safeModeReason || 'Risk circuit breaker triggered.' }}</span>
+</div>
+
 <div class="dashboard-shell" *ngIf="!isLoading && !backendUnavailable">
   <div class="stat-grid">
     <div class="stat-card">
       <div class="stat-title">Today P&amp;L</div>
-      <div class="stat-value">₹{{ stats.todayPnL | number }}</div>
+      <div class="stat-value">{{ stats.todayPnL | currencyInr }}</div>
       <div class="stat-change" [class.positive]="stats.todayPnL >= 0" [class.negative]="stats.todayPnL < 0">
-        {{ stats.todayPnL >= 0 ? '+' : '' }}{{ todayPnlPercent | number:'1.2-2' }}%
+        {{ todayPnlPercent | percentFormat:2:true }}
       </div>
     </div>
 
     <div class="stat-card">
       <div class="stat-title">Weekly P&amp;L</div>
-      <div class="stat-value">₹{{ stats.weeklyPnL | number }}</div>
+      <div class="stat-value">{{ stats.weeklyPnL | currencyInr }}</div>
       <div class="stat-change" [class.positive]="stats.weeklyPnL >= 0" [class.negative]="stats.weeklyPnL < 0">
-        {{ stats.weeklyPnL >= 0 ? '+' : '' }}{{ weeklyPnlPercent | number:'1.2-2' }}%
+        {{ weeklyPnlPercent | percentFormat:2:true }}
       </div>
     </div>
 
@@ -30,7 +35,7 @@
 
     <div class="stat-card">
       <div class="stat-title">Circuit Breaker</div>
-      <div class="stat-value">{{ circuitUsage | number:'1.0-0' }}%</div>
+      <div class="stat-value">{{ circuitUsage | percentFormat:0 }}</div>
       <div class="stat-sub" [class.positive]="circuitUsage < 70" [class.warning]="circuitUsage >= 70 && circuitUsage < 90" [class.negative]="circuitUsage >= 90">
         {{ circuitStatus }}
       </div>
@@ -41,7 +46,7 @@
     <section class="panel">
       <div class="panel-header">
         <h2>Active Positions</h2>
-        <button class="btn-danger" [disabled]="activePositions.length === 0">Close All</button>
+        <button class="btn-danger" [disabled]="activePositions.length === 0 || safeMode" [attr.title]="safeMode ? 'Safe mode enabled' : 'Close all positions'">Close All</button>
       </div>
 
       <div class="positions" *ngIf="activePositions.length; else emptyPositions">
@@ -49,10 +54,10 @@
           <div class="position-top">
             <div>
               <div class="position-symbol">{{ pos.symbol }}</div>
-              <div class="position-sector">{{ pos.sector || 'N/A' }}</div>
+              <div class="position-sector">{{ pos.sector || '—' }}</div>
             </div>
             <div class="position-pnl" [class.positive]="pos.pnl >= 0" [class.negative]="pos.pnl < 0">
-              {{ pos.pnl >= 0 ? '+' : '' }}₹{{ pos.pnl | number:'1.0-0' }}
+              {{ pos.pnl >= 0 ? '+' : '' }}{{ pos.pnl | currencyInr:0 }}
             </div>
           </div>
 
@@ -63,19 +68,19 @@
           <div class="position-grid">
             <div>
               <span>Entry</span>
-              <strong>₹{{ pos.entryPrice | number:'1.2-2' }}</strong>
+              <strong>{{ pos.entryPrice | currencyInr }}</strong>
             </div>
             <div>
               <span>Current</span>
-              <strong>₹{{ pos.currentPrice | number:'1.2-2' }}</strong>
+              <strong>{{ pos.currentPrice | currencyInr }}</strong>
             </div>
             <div>
               <span>Target</span>
-              <strong>₹{{ getPositionTarget(pos) | number:'1.2-2' }}</strong>
+              <strong>{{ getPositionTarget(pos) | currencyInr }}</strong>
             </div>
             <div>
               <span>Stop Loss</span>
-              <strong>₹{{ (pos.stopLoss || pos.entryPrice * 0.97) | number:'1.2-2' }}</strong>
+              <strong>{{ (pos.stopLoss || pos.entryPrice * 0.97) | currencyInr }}</strong>
             </div>
           </div>
 
@@ -84,12 +89,12 @@
               class="btn-outline"
               type="button"
               (click)="closeActivePosition(pos)"
-              [disabled]="!supportsClose"
-              [attr.title]="supportsClose ? 'Close position' : 'Not supported yet'"
+              [disabled]="!supportsClose || safeMode"
+              [attr.title]="safeMode ? 'Safe mode enabled' : (supportsClose ? 'Close position' : 'Not supported yet')"
             >
               Close
             </button>
-            <button class="btn-secondary">Modify SL</button>
+            <button class="btn-secondary" [disabled]="safeMode" [attr.title]="safeMode ? 'Safe mode enabled' : 'Modify stop loss'">Modify SL</button>
           </div>
         </div>
       </div>
@@ -152,5 +157,5 @@
 <div class="loading-overlay" *ngIf="isLoading">
   <div class="loading-spinner"></div>
   <p class="loading-text">{{ loadingMessage }}</p>
-  <p class="loading-subtext">Backend: http://127.0.0.1:8080</p>
+  <p class="loading-subtext">Backend: {{ backendUrl }}</p>
 </div>

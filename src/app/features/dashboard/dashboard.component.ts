@@ -7,9 +7,14 @@ import { WebSocketService } from '../../core/services/websocket.service';
 import { BotService } from '../../core/services/bot.service';
 import { StoreService } from '../../core/services/store.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { forkJoin, Subscription, Subject, timer } from 'rxjs';
-import { map, scan, shareReplay, startWith, takeUntil } from 'rxjs/operators';
+import { SettingsService } from '../../core/services/settings.service';
+import { RiskService, CircuitBreakerStatus } from '../../core/services/risk.service';
+import { forkJoin, of, Subscription, Subject, timer } from 'rxjs';
+import { catchError, map, scan, shareReplay, startWith, takeUntil } from 'rxjs/operators';
 import { PositionView, Signal } from '../../core/models/domain.model';
+import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
+import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
+import { environment } from '../../../environments/environment';
 
 export interface DashboardStats {
   todayPnL: number;
@@ -45,7 +50,9 @@ export interface DashboardStats {
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule
+    RouterModule,
+    CurrencyInrPipe,
+    PercentFormatPipe
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
@@ -87,6 +94,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isLoading: boolean = true;
   loadingMessage: string = 'Initializing Dashboard...';
   backendUnavailable = false;
+  safeMode = false;
+  safeModeReason = '';
+  backendUrl = environment.apiUrl;
 
   scanInterval: number = 45;
   currentTime$ = timer(0, 1000).pipe(
@@ -125,7 +135,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private wsService: WebSocketService,
     private botService: BotService,
     private store: StoreService,
-    private notify: NotificationService
+    private notify: NotificationService,
+    private settingsService: SettingsService,
+    private riskService: RiskService
   ) {}
 
   ngOnInit(): void {
@@ -178,11 +190,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       metrics: this.dashboardService.getPerformanceMetrics(),
       equity: this.dashboardService.getEquityCurve(this.stats.isLiveMode ? 'LIVE' : 'PAPER'),
       signals: this.dashboardService.getSignals(),
-      positions: this.positionService.getOpenPositions()
+      positions: this.positionService.getOpenPositions(),
+      settings: this.settingsService.loadSettings().pipe(catchError(() => of(null))),
+      circuit: this.riskService.getCircuitBreakerStatus().pipe(catchError(() => of(null)))
     }).pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ({ summary, today, unrealized, metrics, equity, signals, positions }) => {
+        next: ({ summary, today, unrealized, metrics, equity, signals, positions, settings, circuit }) => {
           const totalCapital = summary.availableFunds ?? summary.availablePaperFunds ?? summary.availableRealFunds ?? summary.currentValue ?? 0;
+          const circuitStatus = (circuit as CircuitBreakerStatus | null) ?? null;
           queueMicrotask(() => {
             this.stats = {
               ...this.stats,
@@ -199,11 +214,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
               accountBalance: summary.availableFunds ?? summary.availablePaperFunds ?? 0,
               activePositions: positions.length,
               lastScan: signals?.[0]?.scanTime ? new Date(signals[0].scanTime).toLocaleString() : 'N/A',
-              signalsFound: signals?.length ?? 0
+              signalsFound: signals?.length ?? 0,
+              dailyLossLimit: settings?.riskLimits?.maxDailyLossPercent && totalCapital
+                ? (settings.riskLimits.maxDailyLossPercent / 100) * totalCapital
+                : this.stats.dailyLossLimit,
+              dailyLossUsed: circuitStatus?.dailyLossUsed ?? this.stats.dailyLossUsed,
+              circuitBreakerStatus: circuitStatus?.triggered ? 'TRIGGERED' : 'SAFE'
             };
+            if (settings?.maxPositions) {
+              this.maxPositions = settings.maxPositions;
+            }
             this.activePositions = positions;
             this.newSignals = signals;
             this.equityData = equity?.curve ?? equity ?? [];
+            this.safeMode = !!circuitStatus?.triggered;
+            this.safeModeReason = circuitStatus?.reason ?? '';
             this.isLoading = false;
           });
         },

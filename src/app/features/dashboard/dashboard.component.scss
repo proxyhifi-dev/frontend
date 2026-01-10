@@ -27,6 +27,12 @@
   gap: 12px;
 }
 
+.mode-banner.danger {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--danger);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
 .btn-retry {
   border: 1px solid rgba(56, 189, 248, 0.6);
   background: transparent;

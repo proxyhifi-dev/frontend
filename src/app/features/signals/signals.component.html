@@ -1,4 +1,7 @@
 <div class="signals-container fade-in">
+  <div class="mode-banner danger" *ngIf="safeMode">
+    <span>⛔ Safe mode enabled. {{ safeModeReason || 'Risk circuit breaker triggered.' }}</span>
+  </div>
   <div class="header-row">
     <div class="title-group">
       <h2>STRATEGY SIGNALS</h2>
@@ -23,7 +26,7 @@
         <button class="btn-outline" [class.active]="activeFilter === 'all'" (click)="updateFilter('all')">All</button>
         <button class="btn-outline" [class.active]="activeFilter === 'pending'" (click)="updateFilter('pending')">Entry Ready</button>
       </div>
-      <button class="btn-primary" (click)="scanNow()">▶ Scan Now</button>
+      <button class="btn-primary" (click)="scanNow()" [disabled]="safeMode">▶ Scan Now</button>
     </div>
   </div>
 
@@ -37,6 +40,10 @@
       <span>Details</span>
     </div>
 
+    <div class="table-state" *ngIf="isLoading">Loading signals...</div>
+    <div class="table-state error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</div>
+    <div class="table-state" *ngIf="!isLoading && !errorMessage && signals.length === 0">No signals found.</div>
+
     <div class="signal-row-wrapper" *ngFor="let s of signals">
       <div class="signal-main-row" (click)="s.expanded = !s.expanded">
         <div class="symbol-info">
@@ -48,15 +55,16 @@
           </div>
           <span class="grade">{{ s.signalScore }} ({{ s.grade }})</span>
         </div>
-        <div class="metric">{{ s.entryPrice ? ('₹' + (s.entryPrice | number:'1.2-2')) : 'N/A' }}</div>
-        <div class="metric">{{ s.scanTime ? (s.scanTime | date:'short') : 'N/A' }}</div>
+        <div class="metric">{{ s.entryPrice ? (s.entryPrice | currencyInr) : '—' }}</div>
+        <div class="metric">{{ s.scanTime ? (s.scanTime | date:'short') : '—' }}</div>
         <div class="status">
           <span class="badge" [class.approved]="s.hasEntrySignal">
             {{ getStatusLabel(s) }}
           </span>
         </div>
         <div class="action-btns">
-          <button class="btn-expand">{{ s.expanded ? '▲' : '▼' }}</button>
+          <button class="btn-expand" type="button">{{ s.expanded ? '▲' : '▼' }}</button>
+          <button class="btn-outline btn-sm" type="button" (click)="openWhyDrawer(s); $event.stopPropagation()">Why this trade?</button>
         </div>
       </div>
 
@@ -81,17 +89,70 @@
           <div class="execution-preview">
             <h4>EXECUTION PREVIEW</h4>
             <div class="preview-stats">
-              <div><label>Entry</label> <span>{{ s.entryPrice ? ('₹' + (s.entryPrice | number:'1.2-2')) : 'N/A' }}</span></div>
-              <div><label>Scan Time</label> <span>{{ s.scanTime ? (s.scanTime | date:'short') : 'N/A' }}</span></div>
+              <div><label>Entry</label> <span>{{ s.entryPrice ? (s.entryPrice | currencyInr) : '—' }}</span></div>
+              <div><label>Scan Time</label> <span>{{ s.scanTime ? (s.scanTime | date:'short') : '—' }}</span></div>
               <div>
                 <label>Has Entry Signal</label>
                 <span>{{ s.hasEntrySignal ? 'Yes' : 'No' }}</span>
               </div>
             </div>
-            <button class="btn-execute-big" (click)="executeSignal(s)" [disabled]="!s.hasEntrySignal">EXECUTE TRADE</button>
+            <button class="btn-execute-big" (click)="executeSignal(s)" [disabled]="!s.hasEntrySignal || safeMode">EXECUTE TRADE</button>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <div class="drawer-backdrop" *ngIf="isDrawerOpen" (click)="closeDrawer()"></div>
+  <aside class="drawer" *ngIf="isDrawerOpen">
+    <div class="drawer-header">
+      <h3>Why this trade?</h3>
+      <button class="btn-icon" type="button" (click)="closeDrawer()">✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="drawer-state" *ngIf="detailLoading">Loading rationale...</div>
+      <div class="drawer-state error" *ngIf="!detailLoading && detailError">{{ detailError }}</div>
+
+      <ng-container *ngIf="!detailLoading && !detailError && selectedSignal">
+        <div class="drawer-section">
+          <h4>Score components</h4>
+          <div class="drawer-row" *ngFor="let component of selectedSignal.scoreComponents || []">
+            <span>{{ component.name }}</span>
+            <span>{{ component.score | number:'1.0-2' }}</span>
+          </div>
+          <div class="drawer-empty" *ngIf="!selectedSignal.scoreComponents?.length">No score breakdown available.</div>
+        </div>
+
+        <div class="drawer-section">
+          <h4>Confirmations</h4>
+          <ul class="drawer-list">
+            <li *ngFor="let confirmation of selectedSignal.confirmations || []">{{ confirmation }}</li>
+          </ul>
+          <div class="drawer-empty" *ngIf="!selectedSignal.confirmations?.length">No confirmations returned.</div>
+        </div>
+
+        <div class="drawer-section">
+          <h4>Pattern &amp; regime</h4>
+          <div class="drawer-row"><span>Pattern</span><span>{{ selectedSignal.patternDetected || '—' }}</span></div>
+          <div class="drawer-row"><span>Regime</span><span>{{ selectedSignal.regime || '—' }}</span></div>
+        </div>
+
+        <div class="drawer-section">
+          <h4>Risk checks</h4>
+          <div class="drawer-row"><span>Liquidity</span><span>{{ selectedSignal.liquidityCheck || '—' }}</span></div>
+          <div class="drawer-row"><span>Correlation</span><span>{{ selectedSignal.correlationCheck || '—' }}</span></div>
+          <div class="drawer-row"><span>Estimated costs</span><span>{{ selectedSignal.estimatedCosts !== undefined ? (selectedSignal.estimatedCosts | currencyInr) : '—' }}</span></div>
+        </div>
+
+        <div class="drawer-section">
+          <h4>Trade summary</h4>
+          <div class="drawer-row"><span>Score</span><span>{{ selectedSignal.signalScore }}</span></div>
+          <div class="drawer-row"><span>Grade</span><span>{{ selectedSignal.grade }}</span></div>
+          <div class="drawer-row"><span>R-multiple</span><span>{{ selectedSignal.rMultiple | rMultiple }}</span></div>
+          <div class="drawer-row"><span>Exit reason</span><span>{{ selectedSignal.exitReason || '—' }}</span></div>
+        </div>
+      </ng-container>
+    </div>
+  </aside>
 </div>

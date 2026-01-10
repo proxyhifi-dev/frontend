@@ -23,7 +23,27 @@ export class FyersOAuthService {
     return this.http.post<void>(`${this.apiUrl}/auth/fyers/disconnect`, {});
   }
 
-  getFyersStatus(): Observable<{ connected: boolean }> {
-    return this.http.get<{ connected: boolean }>(`${this.apiUrl}/auth/fyers/status`);
+  getFyersStatus(): Observable<BrokerStatus> {
+    return this.http.get<BrokerStatus>(`${this.apiUrl}/auth/fyers/status`);
   }
+
+  getFyersErrors(): Observable<BrokerErrorLog[]> {
+    return this.http.get<BrokerErrorLog[]>(`${this.apiUrl}/auth/fyers/errors`);
+  }
+}
+
+export interface BrokerStatus {
+  connected: boolean;
+  broker?: string;
+  clientId?: string;
+  tokenExpiresAt?: string;
+  tokenStatus?: string;
+  lastError?: string;
+  errorLogs?: BrokerErrorLog[];
+}
+
+export interface BrokerErrorLog {
+  message: string;
+  code?: string;
+  time?: string;
 }

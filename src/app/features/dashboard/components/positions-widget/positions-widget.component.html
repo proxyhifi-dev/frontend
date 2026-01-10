@@ -23,11 +23,11 @@
       <div class="pos-body">
         <div class="price-row">
           <span class="label">Entry</span>
-          <span class="val">{{ pos.entryPrice | number:'1.2-2' }}</span>
+          <span class="val">{{ pos.entryPrice | currencyInr }}</span>
         </div>
         <div class="price-row">
           <span class="label">LTP</span>
-          <span class="val">{{ pos.ltp | number:'1.2-2' }}</span>
+          <span class="val">{{ pos.ltp | currencyInr }}</span>
         </div>
 
         <div class="pnl-bar-container">
@@ -41,8 +41,8 @@
 
       <div class="pos-footer">
         <div class="pnl-info" [class.text-green]="pos.pnl > 0" [class.text-red]="pos.pnl < 0">
-          <span class="amount">{{ pos.pnl | currency:'INR' }}</span>
-          <span class="pct">({{ pos.pnlPercent | number:'1.2-2' }}%)</span>
+          <span class="amount">{{ pos.pnl | currencyInr }}</span>
+          <span class="pct">({{ pos.pnlPercent | percentFormat:2 }})</span>
         </div>
         <button
           class="btn-close"

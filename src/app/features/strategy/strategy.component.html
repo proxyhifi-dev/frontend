@@ -13,29 +13,89 @@
   <div class="grid">
     <div class="page-card">
       <h3>Bot Status</h3>
-      <p class="text-muted">Running · Last applied 10:45 AM</p>
+      <p class="text-muted" *ngIf="regimeLoading">Loading regime status...</p>
+      <p class="text-muted text-red" *ngIf="!regimeLoading && regimeError">{{ regimeError }}</p>
+      <div class="metric-row" *ngIf="!regimeLoading && !regimeError">
+        <span>Regime</span>
+        <strong>{{ regime?.regime || '—' }}</strong>
+      </div>
+      <div class="metric-row" *ngIf="!regimeLoading && !regimeError">
+        <span>Confidence</span>
+        <strong>{{ regime?.confidence | percentFormat:2 }}</strong>
+      </div>
+      <div class="metric-row" *ngIf="!regimeLoading && !regimeError">
+        <span>Last Updated</span>
+        <strong>{{ regime?.lastUpdated ? (regime?.lastUpdated | date:'short') : '—' }}</strong>
+      </div>
+      <p class="text-muted mt-12" *ngIf="regime?.notes">{{ regime?.notes }}</p>
     </div>
     <div class="page-card">
       <h3>Strategy Config</h3>
-      <p class="text-muted">Review parameters before applying changes.</p>
+      <div class="table-state" *ngIf="configLoading">Loading configuration...</div>
+      <div class="table-state text-red" *ngIf="!configLoading && configError">{{ configError }}</div>
+      <div class="config-grid" *ngIf="!configLoading && !configError">
+        <div><span>Name</span><strong>{{ config?.name || '—' }}</strong></div>
+        <div><span>Mode</span><strong>{{ config?.mode || '—' }}</strong></div>
+        <div><span>Universe</span><strong>{{ config?.universe || '—' }}</strong></div>
+        <div><span>Max Positions</span><strong>{{ config?.maxPositions ?? '—' }}</strong></div>
+        <div><span>Scan Interval</span><strong>{{ config?.scanIntervalSeconds ? (config?.scanIntervalSeconds + 's') : '—' }}</strong></div>
+        <div><span>Risk / Trade</span><strong>{{ config?.riskPerTradePercent | percentFormat:2 }}</strong></div>
+        <div><span>Daily Loss Limit</span><strong>{{ config?.dailyLossLimitPercent | percentFormat:2 }}</strong></div>
+      </div>
     </div>
     <div class="page-card">
       <h3>Risk Gates</h3>
-      <p class="text-muted">Daily loss limits and max positions.</p>
+      <p class="text-muted">Daily loss limits, max positions, and risk controls.</p>
+      <div class="metric-row">
+        <span>Max Positions</span>
+        <strong>{{ config?.maxPositions ?? '—' }}</strong>
+      </div>
+      <div class="metric-row">
+        <span>Daily Loss Limit</span>
+        <strong>{{ config?.dailyLossLimitPercent | percentFormat:2 }}</strong>
+      </div>
     </div>
     <div class="page-card">
       <h3>Scheduler</h3>
       <p class="text-muted">Scan interval and active windows.</p>
+      <div class="metric-row">
+        <span>Scan Interval</span>
+        <strong>{{ config?.scanIntervalSeconds ? (config?.scanIntervalSeconds + 's') : '—' }}</strong>
+      </div>
     </div>
   </div>
 
   <div class="page-card">
     <div class="card-header">
-      <h3>Activity Stream</h3>
-      <span class="text-muted">Last 20 bot actions.</span>
+      <h3>Signal Scoring Breakdown</h3>
+      <span class="text-muted">Why trades were allowed or rejected.</span>
     </div>
-    <div class="empty-state">
-      No activity yet. Start the bot to generate a live stream.
-    </div>
+    <table class="data-table">
+      <thead>
+      <tr>
+        <th>Signal</th>
+        <th>Decision</th>
+        <th>Score</th>
+        <th>Reason</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngIf="scoringLoading">
+        <td colspan="4" class="empty-state">Loading scoring breakdown...</td>
+      </tr>
+      <tr *ngIf="!scoringLoading && scoringError">
+        <td colspan="4" class="empty-state text-red">{{ scoringError }}</td>
+      </tr>
+      <tr *ngFor="let item of scoring">
+        <td>{{ item.symbol || item.signalId || '—' }}</td>
+        <td>{{ item.decision || '—' }}</td>
+        <td>{{ item.score ?? '—' }}</td>
+        <td>{{ item.reason || '—' }}</td>
+      </tr>
+      <tr *ngIf="!scoringLoading && !scoringError && scoring.length === 0">
+        <td colspan="4" class="empty-state">No scoring breakdown available.</td>
+      </tr>
+      </tbody>
+    </table>
   </div>
 </section>
