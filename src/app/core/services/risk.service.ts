@@ -18,7 +18,19 @@ export class RiskService {
     return this.http.get<CorrelationMatrix>(`${this.apiUrl}/correlation-matrix`);
   }
 
+  getCircuitBreakerStatus(): Observable<CircuitBreakerStatus> {
+    return this.http.get<CircuitBreakerStatus>(`${this.apiUrl}/circuit-breaker`);
+  }
+
   triggerEmergencyStop(): Observable<any> {
     return this.http.post(`${this.apiUrl}/emergency-stop`, {});
   }
+}
+
+export interface CircuitBreakerStatus {
+  triggered: boolean;
+  reason?: string;
+  dailyLossUsed?: number;
+  dailyLossLimit?: number;
+  lastTriggeredAt?: string;
 }

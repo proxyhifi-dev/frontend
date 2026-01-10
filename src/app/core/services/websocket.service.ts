@@ -22,6 +22,7 @@ export class WebSocketService {
   private reconnectDelay = 5000;
   private readonly wsUrl = this.getWebSocketUrl();
   private toastService = inject(ToastService);
+  private topicSubscriptions = new Map<string, { unsubscribe: () => void }>();
 
   connectionStatus = signal<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
   readonly connectionStatus$ = toObservable(this.connectionStatus);
@@ -132,26 +133,27 @@ export class WebSocketService {
 
   private subscribeToTopics() {
     if (!this.client) return;
+    this.clearTopicSubscriptions();
 
-    // Subscribe to market data
-    this.client.subscribe('/topic/market-data', (message: IMessage) => {
-      this.handleMessage('market-data', message);
-    });
+    this.subscribeTopic('/topic/market-data', 'market-data');
+    this.subscribeTopic('/topic/positions', 'positions');
+    this.subscribeTopic('/topic/trades', 'trades');
+    this.subscribeTopic('/topic/bot-status', 'bot-status');
+  }
 
-    // Subscribe to position updates
-    this.client.subscribe('/topic/positions', (message: IMessage) => {
-      this.handleMessage('positions', message);
+  private subscribeTopic(destination: string, type: string) {
+    if (!this.client || this.topicSubscriptions.has(destination)) {
+      return;
+    }
+    const subscription = this.client.subscribe(destination, (message: IMessage) => {
+      this.handleMessage(type, message);
     });
+    this.topicSubscriptions.set(destination, subscription);
+  }
 
-    // Subscribe to trade updates
-    this.client.subscribe('/topic/trades', (message: IMessage) => {
-      this.handleMessage('trades', message);
-    });
-
-    // Subscribe to bot status
-    this.client.subscribe('/topic/bot-status', (message: IMessage) => {
-      this.handleMessage('bot-status', message);
-    });
+  private clearTopicSubscriptions() {
+    this.topicSubscriptions.forEach((subscription) => subscription.unsubscribe());
+    this.topicSubscriptions.clear();
   }
 
   private handleMessage(type: string, message: IMessage) {
@@ -212,6 +214,7 @@ export class WebSocketService {
 
   disconnect() {
     if (this.client) {
+      this.clearTopicSubscriptions();
       this.client.deactivate();
     }
   }

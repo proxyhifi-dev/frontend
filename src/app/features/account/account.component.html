@@ -94,13 +94,15 @@
           <div class="table-row" *ngFor="let holding of holdings">
             <span>{{ holding.symbol }}</span>
             <span>{{ holding.quantity }}</span>
-            <span>{{ (holding.avgPrice ?? 0) | currencyInr }}</span>
-            <span>{{ (holding.pnl ?? 0) | currencyInr }}</span>
-            <span>{{ (holding.value ?? 0) | currencyInr }}</span>
+            <span>{{ holding.avgPrice | currencyInr }}</span>
+            <span>{{ holding.pnl | currencyInr }}</span>
+            <span>{{ holding.value | currencyInr }}</span>
           </div>
         </div>
         <ng-template #emptyHoldings>
-          <p class="helper-text">No holdings returned for this account.</p>
+          <p class="helper-text" *ngIf="loading">Loading holdings...</p>
+          <p class="helper-text text-red" *ngIf="!loading && holdingsError">{{ holdingsError }}</p>
+          <p class="helper-text" *ngIf="!loading && !holdingsError">No holdings returned for this account.</p>
         </ng-template>
       </div>
     </div>

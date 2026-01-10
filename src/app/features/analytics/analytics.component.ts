@@ -5,11 +5,13 @@ import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card';
 import { AnalyticsService } from '../../core/services/analytics.service';
 import { Subscription } from 'rxjs';
 import { PerformanceMetrics } from '../../core/models/domain.model';
+import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
+import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
 
 @Component({
   selector: 'app-analytics',
   standalone: true,
-  imports: [CommonModule, NgApexchartsModule, KpiCardComponent],
+  imports: [CommonModule, NgApexchartsModule, KpiCardComponent, CurrencyInrPipe, PercentFormatPipe],
   templateUrl: './analytics.component.html',
   styleUrls: ['./analytics.component.scss']
 })

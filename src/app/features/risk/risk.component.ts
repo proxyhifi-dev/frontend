@@ -7,7 +7,7 @@ import { CorrelationMatrix, RiskStatus } from '../../core/models/domain.model';
 import { BotService } from '../../core/services/bot.service';
 import { PositionService } from '../../core/services/position.service';
 import { StoreService } from '../../core/services/store.service';
-import { forkJoin } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-risk',
@@ -25,6 +25,8 @@ export class RiskComponent implements OnInit {
     symbols: [],
     matrix: []
   };
+  isLoading = false;
+  errorMessage = '';
 
   constructor(
     private riskSvc: RiskService,
@@ -39,8 +41,21 @@ export class RiskComponent implements OnInit {
   }
 
   loadRiskData() {
-    this.riskSvc.getStatus().subscribe((data: RiskStatus) => this.riskStatus = data);
-    this.riskSvc.getCorrelationMatrix().subscribe((data: CorrelationMatrix) => this.correlation = data);
+    this.isLoading = true;
+    this.errorMessage = '';
+    forkJoin({
+      status: this.riskSvc.getStatus(),
+      correlation: this.riskSvc.getCorrelationMatrix()
+    }).pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: ({ status, correlation }) => {
+          this.riskStatus = status;
+          this.correlation = correlation;
+        },
+        error: () => {
+          this.errorMessage = 'Unable to load risk data.';
+        }
+      });
   }
 
   emergencyStop() {

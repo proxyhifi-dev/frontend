@@ -12,8 +12,41 @@
       <h3>Holdings Table</h3>
       <span class="text-muted">Filter, sort, and inspect holdings.</span>
     </div>
-    <div class="empty-state">
-      No holdings to display yet. Connect your broker or initialize a paper account.
-    </div>
+    <table class="data-table">
+      <thead>
+      <tr>
+        <th>Symbol</th>
+        <th>Qty</th>
+        <th>Avg Price</th>
+        <th>Current</th>
+        <th>P&amp;L</th>
+        <th>P&amp;L %</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngIf="isLoading">
+        <td colspan="6" class="empty-state">Loading holdings...</td>
+      </tr>
+      <tr *ngIf="!isLoading && errorMessage">
+        <td colspan="6" class="empty-state text-red">{{ errorMessage }}</td>
+      </tr>
+      <tr *ngIf="!isLoading && !errorMessage && !isLiveMode">
+        <td colspan="6" class="empty-state">Holdings are available in live mode.</td>
+      </tr>
+      <tr *ngFor="let holding of holdings">
+        <td>{{ holding.symbol }}</td>
+        <td>{{ holding.quantity }}</td>
+        <td>{{ holding.avgPrice | currencyInr }}</td>
+        <td>{{ holding.currentPrice | currencyInr }}</td>
+        <td [class.positive]="(holding.pnl || 0) >= 0" [class.negative]="(holding.pnl || 0) < 0">
+          {{ holding.pnl | currencyInr }}
+        </td>
+        <td>{{ holding.pnlPercent | percentFormat:2:true }}</td>
+      </tr>
+      <tr *ngIf="!isLoading && !errorMessage && isLiveMode && holdings.length === 0">
+        <td colspan="6" class="empty-state">No holdings to display yet.</td>
+      </tr>
+      </tbody>
+    </table>
   </div>
 </section>

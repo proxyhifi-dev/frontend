@@ -81,6 +81,30 @@ export interface Signal {
   hasEntrySignal: boolean;
 }
 
+export interface SignalDetail {
+  id: number;
+  symbol: string;
+  signalScore: number;
+  grade: string;
+  entryPrice?: number;
+  scanTime?: string;
+  hasEntrySignal?: boolean;
+  rMultiple?: number;
+  exitReason?: string;
+  regime?: string;
+  patternDetected?: string;
+  liquidityCheck?: string;
+  correlationCheck?: string;
+  estimatedCosts?: number;
+  confirmations?: string[];
+  scoreComponents?: {
+    name: string;
+    score: number;
+    status?: string;
+    note?: string;
+  }[];
+}
+
 export interface PerformanceMetrics {
   totalTrades: number;
   winningTrades: number;

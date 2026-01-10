@@ -18,12 +18,12 @@ import { TradingModeService } from '../../core/services/trading-mode.service';
   styleUrls: ['./main-layout.component.scss']
 })
 export class MainLayoutComponent implements OnInit, OnDestroy {
-  unreadCount = 3;
+  unreadCount = 0;
   searchQuery = '';
   pageTitle = 'Dashboard';
   breadcrumb = 'Home / Dashboard';
   dataSource = 'Paper Ledger';
-  isConnected = true;
+  isConnected = false;
   lastUpdated?: Date;
   private lastMode?: boolean;
   private destroy$ = new Subject<void>();

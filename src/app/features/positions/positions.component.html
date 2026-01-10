@@ -1,4 +1,7 @@
 <div class="positions-page fade-in">
+  <div class="mode-banner danger" *ngIf="safeMode">
+    ⛔ Safe mode enabled. {{ safeModeReason || 'Risk circuit breaker triggered.' }}
+  </div>
   <div class="header-row">
     <h2>POSITIONS</h2>
     <div class="tabs">
@@ -28,6 +31,12 @@
       </tr>
       </thead>
       <tbody>
+      <tr *ngIf="isLoading">
+        <td colspan="5" class="empty-state">Loading open positions...</td>
+      </tr>
+      <tr *ngIf="!isLoading && openError">
+        <td colspan="5" class="empty-state text-red">{{ openError }}</td>
+      </tr>
       <tr *ngFor="let pos of openPositions">
         <td>
           <div class="symbol-col">
@@ -45,14 +54,14 @@
             class="btn btn-danger btn-sm"
             type="button"
             (click)="closePosition(pos)"
-            [disabled]="!supportsClose"
-            [attr.title]="supportsClose ? 'Close position' : 'Not supported yet'"
+            [disabled]="!supportsClose || safeMode"
+            [attr.title]="safeMode ? 'Safe mode enabled' : (supportsClose ? 'Close position' : 'Not supported yet')"
           >
             Close
           </button>
         </td>
       </tr>
-      <tr *ngIf="openPositions.length === 0">
+      <tr *ngIf="!isLoading && !openError && openPositions.length === 0">
         <td colspan="5" class="empty-state">No open positions</td>
       </tr>
       </tbody>
@@ -67,22 +76,33 @@
         <th>Entry</th>
         <th>Exit</th>
         <th>Realized P&L</th>
+        <th>R-Multiple</th>
         <th>Reason</th>
       </tr>
       </thead>
       <tbody>
+      <tr *ngIf="isLoading">
+        <td colspan="6" class="empty-state">Loading closed positions...</td>
+      </tr>
+      <tr *ngIf="!isLoading && closedError">
+        <td colspan="6" class="empty-state text-red">{{ closedError }}</td>
+      </tr>
       <tr *ngFor="let pos of closedPositions">
         <td><span class="symbol-text">{{ pos.symbol }}</span></td>
         <td>{{ pos.entryPrice | currencyInr }}</td>
 
-        <td>{{ pos.exitPrice || 0 | currencyInr }}</td>
+        <td>{{ pos.exitPrice | currencyInr }}</td>
 
         <td [class.positive]="(pos.realizedPnl || 0) >= 0" [class.negative]="(pos.realizedPnl || 0) < 0">
           {{ pos.realizedPnl | currencyInr }}
         </td>
+        <td>{{ pos.rMultiple | rMultiple }}</td>
         <td>
           <span class="badge">{{ pos.exitReason }}</span>
         </td>
+      </tr>
+      <tr *ngIf="!isLoading && !closedError && closedPositions.length === 0">
+        <td colspan="6" class="empty-state">No closed positions</td>
       </tr>
       </tbody>
     </table>

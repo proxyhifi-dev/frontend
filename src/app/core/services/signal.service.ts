@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Signal } from '../models/domain.model';
+import { Signal, SignalDetail } from '../models/domain.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -16,6 +16,10 @@ export class SignalService {
 
   getPendingSignals(): Observable<Signal[]> {
     return this.http.get<Signal[]>(`${this.apiUrl}/signals/pending`);
+  }
+
+  getSignalDetail(signalId: number): Observable<SignalDetail> {
+    return this.http.get<SignalDetail>(`${this.apiUrl}/signals/${signalId}`);
   }
 
   scanNow(): Observable<any> {

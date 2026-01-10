@@ -33,6 +33,7 @@ export class AccountComponent implements OnInit, OnDestroy {
   isLiveMode = false;
   loading = false;
   modeLoading = false;
+  holdingsError = '';
 
   private sub = new Subscription();
 
@@ -207,6 +208,7 @@ export class AccountComponent implements OnInit, OnDestroy {
 
   private loadAccountData(): void {
     this.loading = true;
+    this.holdingsError = '';
     if (this.isLiveMode) {
       this.sub.add(
         forkJoin({
@@ -230,6 +232,7 @@ export class AccountComponent implements OnInit, OnDestroy {
           },
           error: () => {
             this.notificationService.error('Failed to load live account data.');
+            this.holdingsError = 'Unable to load holdings.';
           }
         })
       );
@@ -247,6 +250,7 @@ export class AccountComponent implements OnInit, OnDestroy {
           this.overview = undefined;
           this.profile = undefined;
           this.holdings = [];
+          this.holdingsError = '';
         },
         error: () => {
           this.notificationService.error('Failed to load paper account data.');

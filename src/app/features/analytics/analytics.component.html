@@ -9,10 +9,10 @@
   </div>
 
   <div class="kpi-grid">
-    <app-kpi-card title="TOTAL TRADES" [value]="stats.totalTrades" prefix=""></app-kpi-card>
-    <app-kpi-card title="WIN RATE" [value]="stats.winRate" prefix="" suffix="%"></app-kpi-card>
-    <app-kpi-card title="PROFIT FACTOR" [value]="stats.profitFactor" prefix=""></app-kpi-card>
-    <app-kpi-card title="NET PROFIT" [value]="stats.netProfit" prefix="₹"></app-kpi-card>
+    <app-kpi-card title="TOTAL TRADES" [value]="stats.totalTrades" format="number"></app-kpi-card>
+    <app-kpi-card title="WIN RATE" [value]="stats.winRate" format="percent"></app-kpi-card>
+    <app-kpi-card title="PROFIT FACTOR" [value]="stats.profitFactor" format="number"></app-kpi-card>
+    <app-kpi-card title="NET PROFIT" [value]="stats.netProfit" format="currency"></app-kpi-card>
   </div>
 
   <div class="chart-main-grid mt-24">
@@ -25,7 +25,7 @@
     <div class="glass-card chart-box">
       <h3>PERFORMANCE SNAPSHOT</h3>
       <apx-chart [series]="histOptions.series" [chart]="histOptions.chart" [xaxis]="histOptions.xaxis" [colors]="histOptions.colors"></apx-chart>
-      <p class="analysis-tag">Expectancy: {{ stats.expectancy || 0 | number:'1.2-2' }}</p>
+      <p class="analysis-tag">Expectancy: {{ (stats.expectancy || 0) | number:'1.2-2' }}</p>
     </div>
   </div>
 
@@ -35,15 +35,15 @@
       <div class="metric-grid">
         <div class="metric-item">
           <span>Average Win</span>
-          <strong>₹{{ stats.averageWin | number:'1.0-2' }}</strong>
+          <strong>{{ stats.averageWin | currencyInr }}</strong>
         </div>
         <div class="metric-item">
           <span>Average Loss</span>
-          <strong>₹{{ stats.averageLoss | number:'1.0-2' }}</strong>
+          <strong>{{ stats.averageLoss | currencyInr }}</strong>
         </div>
         <div class="metric-item">
           <span>Max Drawdown</span>
-          <strong>{{ stats.maxDrawdown | number:'1.2-2' }}%</strong>
+          <strong>{{ stats.maxDrawdown | percentFormat:2 }}</strong>
         </div>
         <div class="metric-item">
           <span>Last Trade</span>

@@ -57,7 +57,9 @@
     <div class="glass-card section">
       <h3>CORRELATION HEATMAP</h3>
       <div class="heatmap-container">
-        <div class="heatmap" *ngIf="correlation.symbols.length > 0; else noCorrelation">
+        <div class="analysis-text" *ngIf="isLoading">Loading correlation matrix...</div>
+        <div class="analysis-text text-red" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</div>
+        <div class="heatmap" *ngIf="!isLoading && !errorMessage && correlation.symbols.length > 0; else noCorrelation">
           <div class="row header" [style.gridTemplateColumns]="'80px repeat(' + correlation.symbols.length + ', 1fr)'">
             <span></span>
             <span *ngFor="let symbol of correlation.symbols">{{ symbol }}</span>
@@ -70,7 +72,7 @@
           </div>
         </div>
         <ng-template #noCorrelation>
-          <p class="analysis-text">No correlation data available yet.</p>
+          <p class="analysis-text" *ngIf="!isLoading && !errorMessage">No correlation data available yet.</p>
         </ng-template>
       </div>
     </div>

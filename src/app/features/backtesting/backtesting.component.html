@@ -4,17 +4,44 @@
       <h2>Backtesting</h2>
       <p class="text-muted">Configure and compare strategy runs from 2020 → today.</p>
     </div>
-    <button class="btn-primary" type="button">Run Backtest</button>
+    <button class="btn-primary" type="button" (click)="runBacktest()" [disabled]="runSubmitting">
+      {{ runSubmitting ? 'Running...' : 'Run Backtest' }}
+    </button>
   </header>
 
   <div class="grid">
     <div class="page-card">
       <h3>Backtest Config</h3>
       <p class="text-muted">Universe, date range, timeframe, and capital.</p>
+      <div class="form-grid">
+        <label>Strategy</label>
+        <input class="dark-input" [(ngModel)]="form.strategy" placeholder="Strategy name">
+
+        <label>Universe</label>
+        <input class="dark-input" [(ngModel)]="form.universe" placeholder="NIFTY100">
+
+        <label>Interval</label>
+        <select class="dark-input" [(ngModel)]="form.interval">
+          <option value="5m">5m</option>
+          <option value="15m">15m</option>
+          <option value="1h">1h</option>
+          <option value="1d">1d</option>
+        </select>
+
+        <label>Start Date</label>
+        <input class="dark-input" type="date" [(ngModel)]="form.startDate">
+
+        <label>End Date</label>
+        <input class="dark-input" type="date" [(ngModel)]="form.endDate">
+
+        <label>Capital</label>
+        <input class="dark-input" type="number" [(ngModel)]="form.capital">
+      </div>
     </div>
     <div class="page-card">
       <h3>Strategy Select</h3>
-      <p class="text-muted">Choose a strategy and review parameters.</p>
+      <p class="text-muted">Select a saved strategy or use the config panel.</p>
+      <div class="table-state" *ngIf="!form.strategy">No strategy selected.</div>
     </div>
   </div>
 
@@ -23,8 +50,134 @@
       <h3>Run History</h3>
       <span class="text-muted">Select a run to load results.</span>
     </div>
-    <div class="empty-state">
-      No backtest runs yet. Start your first run to see results here.
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+        <tr>
+          <th>Run</th>
+          <th>Status</th>
+          <th>Strategy</th>
+          <th>Started</th>
+          <th>Completed</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngIf="runsLoading">
+          <td colspan="5" class="empty-state">Loading runs...</td>
+        </tr>
+        <tr *ngIf="!runsLoading && runsError">
+          <td colspan="5" class="empty-state text-red">{{ runsError }}</td>
+        </tr>
+        <tr *ngFor="let run of runs" (click)="selectRun(run)" [class.active]="selectedRun?.id === run.id">
+          <td>#{{ run.id }}</td>
+          <td>{{ run.status || '—' }}</td>
+          <td>{{ run.strategy || '—' }}</td>
+          <td>{{ run.startedAt ? (run.startedAt | date:'short') : '—' }}</td>
+          <td>{{ run.completedAt ? (run.completedAt | date:'short') : '—' }}</td>
+        </tr>
+        <tr *ngIf="!runsLoading && !runsError && runs.length === 0">
+          <td colspan="5" class="empty-state">No backtest runs yet. Start your first run to see results here.</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid mt-24">
+    <div class="page-card">
+      <div class="card-header">
+        <h3>Metrics</h3>
+        <span class="text-muted">{{ selectedRun ? 'Results for selected run' : 'Select a run to view metrics' }}</span>
+      </div>
+      <table class="data-table">
+        <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngIf="detailLoading">
+          <td colspan="2" class="empty-state">Loading metrics...</td>
+        </tr>
+        <tr *ngIf="!detailLoading && detailError">
+          <td colspan="2" class="empty-state text-red">{{ detailError }}</td>
+        </tr>
+        <tr *ngIf="!detailLoading && !detailError && !metrics">
+          <td colspan="2" class="empty-state">No metrics available.</td>
+        </tr>
+        <tr *ngIf="metrics">
+          <td>Net Profit</td>
+          <td>{{ metrics.netProfit | currencyInr }}</td>
+        </tr>
+        <tr *ngIf="metrics">
+          <td>Total Trades</td>
+          <td>{{ metrics.totalTrades ?? '—' }}</td>
+        </tr>
+        <tr *ngIf="metrics">
+          <td>Win Rate</td>
+          <td>{{ metrics.winRate | percentFormat:2 }}</td>
+        </tr>
+        <tr *ngIf="metrics">
+          <td>Profit Factor</td>
+          <td>{{ metrics.profitFactor ?? '—' }}</td>
+        </tr>
+        <tr *ngIf="metrics">
+          <td>Max Drawdown</td>
+          <td>{{ metrics.maxDrawdown | percentFormat:2 }}</td>
+        </tr>
+        <tr *ngIf="metrics">
+          <td>Expectancy</td>
+          <td>{{ metrics.expectancy ?? '—' }}</td>
+        </tr>
+        <tr *ngIf="metrics">
+          <td>Average Win</td>
+          <td>{{ metrics.averageWin | currencyInr }}</td>
+        </tr>
+        <tr *ngIf="metrics">
+          <td>Average Loss</td>
+          <td>{{ metrics.averageLoss | currencyInr }}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="page-card">
+      <div class="card-header">
+        <h3>Monthly Breakdown</h3>
+        <span class="text-muted">Performance per month.</span>
+      </div>
+      <table class="data-table">
+        <thead>
+        <tr>
+          <th>Month</th>
+          <th>Net Profit</th>
+          <th>Trades</th>
+          <th>Win Rate</th>
+          <th>Max DD</th>
+          <th>R-Multiple</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngIf="detailLoading">
+          <td colspan="6" class="empty-state">Loading breakdown...</td>
+        </tr>
+        <tr *ngIf="!detailLoading && detailError">
+          <td colspan="6" class="empty-state text-red">{{ detailError }}</td>
+        </tr>
+        <tr *ngIf="!detailLoading && !detailError && monthly.length === 0">
+          <td colspan="6" class="empty-state">No monthly breakdown available.</td>
+        </tr>
+        <tr *ngFor="let month of monthly">
+          <td>{{ month.month }}</td>
+          <td>{{ month.netProfit | currencyInr }}</td>
+          <td>{{ month.totalTrades ?? '—' }}</td>
+          <td>{{ month.winRate | percentFormat:2 }}</td>
+          <td>{{ month.maxDrawdown | percentFormat:2 }}</td>
+          <td>{{ month.rMultiple | rMultiple }}</td>
+        </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </section>

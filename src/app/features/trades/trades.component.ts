@@ -1,21 +1,24 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { finalize, Subject, takeUntil } from 'rxjs';
 import { PositionService } from '../../core/services/position.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { StoreService } from '../../core/services/store.service';
+import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
 
 @Component({
   selector: 'app-trades',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyInrPipe],
+  imports: [CommonModule, FormsModule, CurrencyInrPipe, RMultiplePipe],
   templateUrl: './trades.component.html',
   styleUrls: ['./trades.component.scss']
 })
 export class TradesComponent implements OnInit, OnDestroy {
   tradeHistory: any[] = [];
   filteredTrades: any[] = [];
+  isLoading = false;
+  errorMessage = '';
   filters = {
     symbol: '',
     grade: 'All',
@@ -49,9 +52,19 @@ export class TradesComponent implements OnInit, OnDestroy {
   }
 
   loadHistory() {
-    this.positionSvc.getClosedPositions().subscribe(data => {
-      this.tradeHistory = data;
-      this.applyFilters();
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.positionSvc.getClosedPositions().pipe(
+      finalize(() => (this.isLoading = false))
+    ).subscribe({
+      next: (data) => {
+        this.tradeHistory = data;
+        this.applyFilters();
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load trade history.';
+        this.filteredTrades = [];
+      }
     });
   }
 

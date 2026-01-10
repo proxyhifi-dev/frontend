@@ -2,3 +2,13 @@
 .positions-container {
   padding: 20px;
 }
+
+.mode-banner {
+  padding: 10px 14px;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: var(--danger);
+  border-radius: 12px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}

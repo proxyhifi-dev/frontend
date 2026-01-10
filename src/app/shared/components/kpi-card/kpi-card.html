@@ -1,11 +1,15 @@
 <div class="glass-card kpi-container" [class.up]="value >= 0" [class.down]="value < 0">
   <div class="label">{{ title }}</div>
   <div class="main-val">
-    <span class="prefix">{{ prefix }}</span>
-    {{ value | number:'1.0-2' }}
+    <span class="prefix" *ngIf="prefix">{{ prefix }}</span>
+    <ng-container [ngSwitch]="format">
+      <span *ngSwitchCase="'currency'">{{ value | currencyInr }}</span>
+      <span *ngSwitchCase="'percent'">{{ value | percentFormat:2:true }}</span>
+      <span *ngSwitchDefault>{{ value | number:'1.0-2' }}{{ suffix }}</span>
+    </ng-container>
   </div>
-  <div class="footer" *ngIf="percentChange !== undefined">
+  <div class="footer" *ngIf="percentChange !== undefined && percentChange !== null">
     <span class="trend-icon">{{ value >= 0 ? '▲' : '▼' }}</span>
-    {{ percentChange }}%
+    {{ percentChange | percentFormat:2:true }}
   </div>
 </div>
