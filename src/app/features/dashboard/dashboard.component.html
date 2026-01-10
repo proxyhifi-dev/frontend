@@ -1,161 +1,213 @@
-<div class="mode-banner warning" *ngIf="backendUnavailable">
-  <span class="banner-icon">⚠️</span>
-  <span>Backend unavailable</span>
-  <button class="btn-retry" type="button" (click)="loadDashboardData()">Retry</button>
-</div>
+<ng-container *ngIf="vm$ | async as vm">
+  <ng-container *ngIf="reloadSnapshot$ | async"></ng-container>
 
-<div class="mode-banner danger" *ngIf="safeMode">
-  <span class="banner-icon">⛔</span>
-  <span>Safe mode enabled. {{ safeModeReason || 'Risk circuit breaker triggered.' }}</span>
-</div>
-
-<div class="dashboard-shell" *ngIf="!isLoading && !backendUnavailable">
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-title">Today P&amp;L</div>
-      <div class="stat-value">{{ stats.todayPnL | currencyInr }}</div>
-      <div class="stat-change" [class.positive]="stats.todayPnL >= 0" [class.negative]="stats.todayPnL < 0">
-        {{ todayPnlPercent | percentFormat:2:true }}
-      </div>
+  <div class="error-banner" *ngIf="vm.error">
+    <span class="banner-icon">⚠️</span>
+    <div class="banner-content">
+      <strong>Data pipeline degraded</strong>
+      <span>{{ vm.error }}</span>
     </div>
-
-    <div class="stat-card">
-      <div class="stat-title">Weekly P&amp;L</div>
-      <div class="stat-value">{{ stats.weeklyPnL | currencyInr }}</div>
-      <div class="stat-change" [class.positive]="stats.weeklyPnL >= 0" [class.negative]="stats.weeklyPnL < 0">
-        {{ weeklyPnlPercent | percentFormat:2:true }}
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-title">Positions</div>
-      <div class="stat-value">{{ stats.activePositions }}/{{ maxPositions }}</div>
-      <div class="stat-sub">{{ stats.activePositions >= maxPositions ? 'Full' : 'Available' }}</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-title">Circuit Breaker</div>
-      <div class="stat-value">{{ circuitUsage | percentFormat:0 }}</div>
-      <div class="stat-sub" [class.positive]="circuitUsage < 70" [class.warning]="circuitUsage >= 70 && circuitUsage < 90" [class.negative]="circuitUsage >= 90">
-        {{ circuitStatus }}
-      </div>
-    </div>
+    <button class="btn-retry" type="button" (click)="reloadDashboard()">Retry</button>
   </div>
 
-  <div class="content-grid">
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Active Positions</h2>
-        <button class="btn-danger" [disabled]="activePositions.length === 0 || safeMode" [attr.title]="safeMode ? 'Safe mode enabled' : 'Close all positions'">Close All</button>
-      </div>
-
-      <div class="positions" *ngIf="activePositions.length; else emptyPositions">
-        <div class="position-card" *ngFor="let pos of activePositions.slice(0, 2)">
-          <div class="position-top">
-            <div>
-              <div class="position-symbol">{{ pos.symbol }}</div>
-              <div class="position-sector">{{ pos.sector || '—' }}</div>
-            </div>
-            <div class="position-pnl" [class.positive]="pos.pnl >= 0" [class.negative]="pos.pnl < 0">
-              {{ pos.pnl >= 0 ? '+' : '' }}{{ pos.pnl | currencyInr:0 }}
-            </div>
-          </div>
-
-          <div class="sparkline">
-            <span class="sparkline-fill" [style.width.%]="getPositionProgress(pos)"></span>
-          </div>
-
-          <div class="position-grid">
-            <div>
-              <span>Entry</span>
-              <strong>{{ pos.entryPrice | currencyInr }}</strong>
-            </div>
-            <div>
-              <span>Current</span>
-              <strong>{{ pos.currentPrice | currencyInr }}</strong>
-            </div>
-            <div>
-              <span>Target</span>
-              <strong>{{ getPositionTarget(pos) | currencyInr }}</strong>
-            </div>
-            <div>
-              <span>Stop Loss</span>
-              <strong>{{ (pos.stopLoss || pos.entryPrice * 0.97) | currencyInr }}</strong>
-            </div>
-          </div>
-
-          <div class="position-actions">
-            <button
-              class="btn-outline"
-              type="button"
-              (click)="closeActivePosition(pos)"
-              [disabled]="!supportsClose || safeMode"
-              [attr.title]="safeMode ? 'Safe mode enabled' : (supportsClose ? 'Close position' : 'Not supported yet')"
-            >
-              Close
-            </button>
-            <button class="btn-secondary" [disabled]="safeMode" [attr.title]="safeMode ? 'Safe mode enabled' : 'Modify stop loss'">Modify SL</button>
+  <section class="dashboard-shell">
+    <header class="terminal-header">
+      <div class="header-left">
+        <div class="user-block">
+          <span class="label">Trader</span>
+          <strong>{{ vm.user?.name || 'Operator' }}</strong>
+          <span class="subtext">Capital: {{ vm.account.totalCapital | currencyInr }}</span>
+        </div>
+        <div class="connection-pill" [class.connected]="vm.connectionStatus === 'connected'" [class.error]="vm.connectionStatus === 'error'">
+          <span class="status-dot"></span>
+          <div class="connection-info">
+            <span class="label">Broker</span>
+            <strong>{{ vm.isLiveMode ? 'Fyers Live' : 'Paper Relay' }}</strong>
+            <span class="subtext">{{ vm.connectionStatus | titlecase }}</span>
           </div>
         </div>
+        <div class="mode-pill" [class.live]="vm.isLiveMode">
+          <span>{{ vm.isLiveMode ? 'LIVE MODE' : 'PAPER MODE' }}</span>
+        </div>
       </div>
+      <div class="header-actions">
+        <button class="mode-toggle" type="button" (click)="toggleMode(vm.isLiveMode)">
+          <span>{{ vm.isLiveMode ? 'Switch to Paper' : 'Switch to Live' }}</span>
+        </button>
+        <button
+          class="kill-switch"
+          type="button"
+          [class.active]="vm.strategyHealth.isPaused"
+          (click)="toggleKillSwitch(vm.strategyHealth.isPaused)"
+          [disabled]="!vm.strategyHealth.canManage"
+        >
+          {{ vm.strategyHealth.isPaused ? 'Resume Trading' : 'Kill Switch' }}
+        </button>
+        <div class="last-update">
+          <span class="label">Last Update</span>
+          <strong>{{ vm.lastUpdate }}</strong>
+        </div>
+      </div>
+    </header>
 
-      <ng-template #emptyPositions>
-        <div class="empty-state">No positions yet</div>
-      </ng-template>
-    </section>
-
-    <aside class="side-stack">
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Next Scan</h2>
-          <span class="dot-group">•••</span>
+    <section class="account-panel" [class.loading]="vm.loading">
+      <div class="panel-header">
+        <div>
+          <h2>Account Overview</h2>
+          <p>Live observability across margin, drawdown, and strategy health.</p>
         </div>
         <div class="scan-card">
-          <div class="scan-count">{{ scanCountdown$ | async }}</div>
-          <div class="scan-label">seconds</div>
+          <span class="scan-count">{{ scanCountdown$ | async }}</span>
+          <span class="scan-label">sec to next scan</span>
           <div class="scan-bar">
             <span [style.width.%]="(scanProgress$ | async) ?? 0"></span>
           </div>
-          <div class="scan-meta">
-            <div>
-              <span>Last Scan</span>
-              <strong>{{ stats.lastScan }}</strong>
-            </div>
-            <div>
-              <span>Signals</span>
-              <strong>{{ stats.signalsFound }}</strong>
-            </div>
-          </div>
         </div>
-      </section>
+      </div>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Recent Signals</h2>
-          <span class="dot-group">•••</span>
+      <div class="account-grid" *ngIf="!vm.loading; else accountSkeleton">
+        <div class="account-card">
+          <span class="label">Equity</span>
+          <strong>{{ vm.account.equity | currencyInr }}</strong>
+          <span class="subtext">Daily P&amp;L: {{ vm.account.dailyPnl | currencyInr }} ({{ vm.dailyPnlPercent | percentFormat:2:true }})</span>
         </div>
-        <div class="signals" *ngIf="newSignals.length; else emptySignals">
-          <div class="signal-row" *ngFor="let signal of newSignals.slice(0, 3)">
-            <span class="signal-status" [class.approved]="signal.hasEntrySignal" [class.rejected]="!signal.hasEntrySignal">
-              {{ signal.hasEntrySignal ? '✓' : '✗' }}
-            </span>
-            <div class="signal-info">
-              <strong>{{ signal.symbol }}</strong>
-              <span>{{ signal.grade }}</span>
-            </div>
-            <div class="signal-score">{{ signal.signalScore }}</div>
+        <div class="account-card">
+          <span class="label">Margin</span>
+          <strong>{{ vm.account.usedMargin | currencyInr }}</strong>
+          <span class="subtext">Free: {{ vm.account.freeMargin | currencyInr }}</span>
+        </div>
+        <div class="account-card">
+          <span class="label">Monthly P&amp;L</span>
+          <strong>{{ vm.account.monthlyPnl | currencyInr }}</strong>
+          <span class="subtext">{{ vm.monthlyPnlPercent | percentFormat:2:true }}</span>
+        </div>
+        <div class="account-card">
+          <span class="label">Drawdown</span>
+          <strong>{{ vm.account.drawdown | percentFormat:2:true }}</strong>
+          <span class="subtext">Circuit usage: {{ vm.circuitUsage | percentFormat:0 }}</span>
+        </div>
+        <app-strategy-health-widget
+          class="strategy-widget"
+          [health]="vm.strategyHealth"
+          (pause)="toggleKillSwitch(false)"
+          (resume)="toggleKillSwitch(true)"
+        ></app-strategy-health-widget>
+      </div>
+      <ng-template #accountSkeleton>
+        <div class="account-grid skeleton-grid">
+          <div class="skeleton-card" *ngFor="let item of [1,2,3,4,5]"></div>
+        </div>
+      </ng-template>
+    </section>
+
+    <div class="dashboard-grid">
+      <section class="panel positions-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Positions</h2>
+            <p>Sortable risk table with live R multiple and stop distance.</p>
+          </div>
+          <div class="panel-actions">
+            <input class="filter-input" type="text" [formControl]="filterControl" placeholder="Filter symbol..." />
+            <button class="btn-retry" type="button" (click)="reloadDashboard()">Refresh</button>
           </div>
         </div>
-        <ng-template #emptySignals>
-          <div class="empty-state">No signals yet</div>
+
+        <div *ngIf="!vm.loading; else positionsSkeleton">
+          <div class="table-wrapper" *ngIf="(positionsView$ | async) as positions">
+            <table *ngIf="positions.length; else emptyPositions">
+              <thead>
+                <tr>
+                  <th (click)="setSort('symbol')">Symbol</th>
+                  <th>Qty</th>
+                  <th>Entry</th>
+                  <th>Last</th>
+                  <th (click)="setSort('pnl')">P&amp;L</th>
+                  <th (click)="setSort('rMultiple')">R Multiple</th>
+                  <th (click)="setSort('stopDistance')">Stop Dist.</th>
+                  <th (click)="setSort('timeHeld')">Time Held</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let position of positions; trackBy: trackBySymbol">
+                  <td>
+                    <div class="symbol-cell">
+                      <strong>{{ position.symbol }}</strong>
+                      <span>{{ position.sector || '—' }}</span>
+                    </div>
+                  </td>
+                  <td>{{ position.quantity }}</td>
+                  <td>{{ position.entryPrice | currencyInr }}</td>
+                  <td>{{ position.currentPrice | currencyInr }}</td>
+                  <td [class.positive]="position.pnl >= 0" [class.negative]="position.pnl < 0">
+                    {{ position.pnl | currencyInr }}
+                  </td>
+                  <td>{{ position.rMultiple | number:'1.1-2' }}R</td>
+                  <td>{{ position.stopDistance !== null ? (position.stopDistance | number:'1.1-1') + '%' : '—' }}</td>
+                  <td>{{ position.timeHeldLabel }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <ng-template #emptyPositions>
+              <div class="empty-state">No active positions. Monitoring for opportunities.</div>
+            </ng-template>
+          </div>
+        </div>
+        <ng-template #positionsSkeleton>
+          <div class="skeleton-table">
+            <div class="skeleton-row" *ngFor="let item of [1,2,3,4]"></div>
+          </div>
         </ng-template>
       </section>
-    </aside>
-  </div>
-</div>
 
-<div class="loading-overlay" *ngIf="isLoading">
-  <div class="loading-spinner"></div>
-  <p class="loading-text">{{ loadingMessage }}</p>
-  <p class="loading-subtext">Backend: {{ backendUrl }}</p>
-</div>
+      <section class="panel feed-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Trades &amp; Alerts</h2>
+            <p>Recent executions, strategy alerts, and error boundaries.</p>
+          </div>
+        </div>
+
+        <div class="feed-grid" *ngIf="!vm.loading; else feedSkeleton">
+          <div class="feed-column">
+            <h3>Recent Trades</h3>
+            <div class="feed-list" *ngIf="vm.trades.length; else emptyTrades">
+              <div class="feed-item" *ngFor="let trade of vm.trades.slice(0, 6)">
+                <div>
+                  <strong>{{ trade.symbol }}</strong>
+                  <span>{{ trade.exitReason || 'Closed' }}</span>
+                </div>
+                <span [class.positive]="trade.pnl >= 0" [class.negative]="trade.pnl < 0">
+                  {{ trade.pnl | currencyInr }}
+                </span>
+              </div>
+            </div>
+            <ng-template #emptyTrades>
+              <div class="empty-state">No trades yet. Waiting for confirmations.</div>
+            </ng-template>
+          </div>
+
+          <div class="feed-column">
+            <h3>Alert Timeline</h3>
+            <div class="feed-list" *ngIf="vm.alerts.length; else emptyAlerts">
+              <div class="feed-item" *ngFor="let alert of vm.alerts; trackBy: trackByAlert" [class]="'alert-' + alert.type">
+                <div>
+                  <strong>{{ alert.message }}</strong>
+                  <span>{{ alert.timestamp | date:'shortTime' }}</span>
+                </div>
+              </div>
+            </div>
+            <ng-template #emptyAlerts>
+              <div class="empty-state">No alerts. Systems nominal.</div>
+            </ng-template>
+          </div>
+        </div>
+        <ng-template #feedSkeleton>
+          <div class="feed-skeleton">
+            <div class="skeleton-row" *ngFor="let item of [1,2,3]"></div>
+          </div>
+        </ng-template>
+      </section>
+    </div>
+  </section>
+</ng-container>

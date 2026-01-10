@@ -1,10 +1,9 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Client, IMessage } from '@stomp/stompjs';
-import { ToastService } from './toast.service';
-import { inject } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { ToastService } from './toast.service';
+import { TradingStoreService } from './trading-store.service';
 
 export interface WebSocketMessage {
   type: string;
@@ -18,15 +17,15 @@ export interface WebSocketMessage {
 export class WebSocketService {
   private client: Client | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 5000;
+  private reconnectTimeout?: number;
+  private readonly maxReconnectAttempts = 6;
+  private readonly reconnectBaseDelay = 1000;
+  private readonly reconnectMaxDelay = 30000;
   private readonly wsUrl = this.getWebSocketUrl();
   private toastService = inject(ToastService);
+  private store = inject(TradingStoreService);
   private topicSubscriptions = new Map<string, { unsubscribe: () => void }>();
-
-  connectionStatus = signal<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
-  readonly connectionStatus$ = toObservable(this.connectionStatus);
-  messages = signal<WebSocketMessage[]>([]);
+  private recentToastEvents = new Map<string, number>();
 
   constructor() {
     this.initializeWebSocket();
@@ -35,14 +34,11 @@ export class WebSocketService {
   private initializeWebSocket() {
     this.client = new Client({
       brokerURL: this.wsUrl,
-      connectHeaders: {
-        // Add auth token if needed
-        // 'Authorization': `Bearer ${token}`
-      },
+      connectHeaders: {},
       debug: (str) => {
         console.log('STOMP Debug:', str);
       },
-      reconnectDelay: this.reconnectDelay,
+      reconnectDelay: 0,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
       onConnect: () => {
@@ -56,15 +52,16 @@ export class WebSocketService {
       }
     });
 
-    this.connectionStatus.set('connecting');
+    this.store.setConnectionStatus('connecting');
     this.client.activate();
   }
 
   connect(): Observable<'connected' | 'disconnected' | 'connecting' | 'error'> {
     if (this.client && !this.client.active) {
+      this.store.setConnectionStatus('connecting');
       this.client.activate();
     }
-    return this.connectionStatus$;
+    return this.store.connectionStatus$;
   }
 
   subscribe<T>(destination: string): Observable<T> {
@@ -117,17 +114,19 @@ export class WebSocketService {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
-    const port = '8080'; // Your backend port
+    const port = '8080';
     return `${protocol}//${host}:${port}/ws`;
   }
 
   private onConnected() {
     console.log(`WebSocket connected: ${this.wsUrl}`);
-    this.connectionStatus.set('connected');
+    this.store.setConnectionStatus('connected');
     this.reconnectAttempts = 0;
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = undefined;
+    }
     this.toastService.showSuccess('Real-time connection established');
-
-    // Subscribe to topics
     this.subscribeToTopics();
   }
 
@@ -139,6 +138,7 @@ export class WebSocketService {
     this.subscribeTopic('/topic/positions', 'positions');
     this.subscribeTopic('/topic/trades', 'trades');
     this.subscribeTopic('/topic/bot-status', 'bot-status');
+    this.subscribeTopic('/topic/alerts', 'alerts');
   }
 
   private subscribeTopic(destination: string, type: string) {
@@ -164,23 +164,51 @@ export class WebSocketService {
         data,
         timestamp: Date.now()
       };
-      
-      this.messages.update(msgs => [...msgs.slice(-99), wsMessage]); // Keep last 100 messages
+
+      this.store.handleWebsocketMessage(wsMessage.type, wsMessage.data);
+      this.maybeToastBotEvent(wsMessage);
     } catch (error) {
       console.error('Error parsing WebSocket message:', error);
     }
   }
 
+  private maybeToastBotEvent(message: WebSocketMessage) {
+    if (message.type !== 'bot-status') {
+      return;
+    }
+    const statusMessage: string | undefined = message.data?.message ?? message.data?.statusMessage;
+    if (!statusMessage) {
+      return;
+    }
+
+    if (statusMessage.toLowerCase().includes('scan started')) {
+      const toastKey = 'scan-started';
+      if (this.shouldShowToast(toastKey, 5000)) {
+        this.toastService.showInfo(statusMessage, 3000);
+      }
+    }
+  }
+
+  private shouldShowToast(key: string, cooldownMs: number): boolean {
+    const now = Date.now();
+    const last = this.recentToastEvents.get(key) ?? 0;
+    if (now - last < cooldownMs) {
+      return false;
+    }
+    this.recentToastEvents.set(key, now);
+    return true;
+  }
+
   private onError(frame: any) {
     console.error('WebSocket error:', frame);
-    this.connectionStatus.set('error');
+    this.store.setConnectionStatus('error');
     this.toastService.showError('Real-time connection error. Retrying...');
     this.attemptReconnect();
   }
 
   private onDisconnected() {
     console.log('WebSocket disconnected');
-    this.connectionStatus.set('disconnected');
+    this.store.setConnectionStatus('disconnected');
     this.attemptReconnect();
   }
 
@@ -191,14 +219,19 @@ export class WebSocketService {
     }
 
     this.reconnectAttempts++;
-    console.log(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-    
-    setTimeout(() => {
+    const delay = Math.min(
+      this.reconnectBaseDelay * Math.pow(2, this.reconnectAttempts - 1),
+      this.reconnectMaxDelay
+    );
+
+    console.log(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+
+    this.reconnectTimeout = window.setTimeout(() => {
       if (this.client && !this.client.active) {
-        this.connectionStatus.set('connecting');
+        this.store.setConnectionStatus('connecting');
         this.client.activate();
       }
-    }, this.reconnectDelay * this.reconnectAttempts);
+    }, delay);
   }
 
   sendMessage(destination: string, body: any) {

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 interface RiskHealth {
@@ -244,6 +244,8 @@ interface RiskHealth {
       50% { opacity: 0.5; }
     }
   `]
+  ,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RiskHealthWidgetComponent implements OnInit {
   riskHealth: RiskHealth = {

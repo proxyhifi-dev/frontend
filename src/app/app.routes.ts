@@ -60,6 +60,12 @@ export const routes: Routes = [
           .then(m => m.RiskComponent)
       },
       {
+        path: 'risk-correlation',
+        canActivate: [AuthGuard],
+        loadComponent: () => import('./features/risk-correlation/risk-correlation.component')
+          .then(m => m.RiskCorrelationComponent)
+      },
+      {
         path: 'trades',
         canActivate: [AuthGuard],
         loadComponent: () => import('./features/trades/trades.component')
@@ -70,6 +76,12 @@ export const routes: Routes = [
         canActivate: [AuthGuard],
         loadComponent: () => import('./features/backtesting/backtesting.component')
           .then(m => m.BacktestingComponent)
+      },
+      {
+        path: 'backtest-validation',
+        canActivate: [AuthGuard],
+        loadComponent: () => import('./features/backtest-validation/backtest-validation.component')
+          .then(m => m.BacktestValidationComponent)
       },
       {
         path: 'strategy',
