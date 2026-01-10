@@ -1,48 +1,28 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { DashboardService } from '../../core/services/dashboard.service';
-import { PositionService } from '../../core/services/position.service';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { BehaviorSubject, combineLatest, Subject, timer } from 'rxjs';
+import { map, scan, shareReplay, startWith, switchMap, withLatestFrom } from 'rxjs/operators';
 import { WebSocketService } from '../../core/services/websocket.service';
 import { BotService } from '../../core/services/bot.service';
 import { StoreService } from '../../core/services/store.service';
-import { NotificationService } from '../../core/services/notification.service';
-import { SettingsService } from '../../core/services/settings.service';
-import { RiskService, CircuitBreakerStatus } from '../../core/services/risk.service';
-import { forkJoin, of, Subscription, Subject, timer } from 'rxjs';
-import { catchError, map, scan, shareReplay, startWith, takeUntil } from 'rxjs/operators';
-import { PositionView, Signal } from '../../core/models/domain.model';
+import { TradingModeService } from '../../core/services/trading-mode.service';
+import { TradingStoreService } from '../../core/services/trading-store.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
-import { environment } from '../../../environments/environment';
+import { PositionView } from '../../core/models/domain.model';
+import { StrategyHealthWidgetComponent } from './components/strategy-health-widget.component';
 
-export interface DashboardStats {
-  todayPnL: number;
-  weeklyPnL: number;
-  unrealizedPnL: number;
-  winRate: number;
-  totalTrades: number;
-  portfolioValue: number;
-  accountBalance: number;
-  equityUsed: number;
-  equityAvailable: number;
-  isLiveMode: boolean;
-  botStatus: string;
-  activePositions: number;
-  circuitBreakerStatus: string;
-  lastScan: string;
-  nextScan: string;
-  scannedStocks: number;
-  totalStocks: number;
-  signalsFound: number;
-  roi: number;
-  totalCapital: number;
-  dailyLossLimit: number;
-  dailyLossUsed: number;
-  dailyBuffer: number;
-  consecutiveLosses: number;
-  maxDrawdown: number;
-  isPaused: boolean;
+interface SortState {
+  key: 'symbol' | 'pnl' | 'rMultiple' | 'stopDistance' | 'timeHeld';
+  direction: 'asc' | 'desc';
+}
+
+interface PositionRow extends PositionView {
+  stopDistance: number | null;
+  timeHeldLabel: string;
+  rMultiple: number;
 }
 
 @Component({
@@ -51,252 +31,186 @@ export interface DashboardStats {
   imports: [
     CommonModule,
     RouterModule,
+    ReactiveFormsModule,
     CurrencyInrPipe,
-    PercentFormatPipe
+    PercentFormatPipe,
+    StrategyHealthWidgetComponent
   ],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  styleUrls: ['./dashboard.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DashboardComponent implements OnInit, OnDestroy {
-  stats: DashboardStats = {
-    todayPnL: 0,
-    weeklyPnL: 0,
-    unrealizedPnL: 0,
-    winRate: 0,
-    totalTrades: 0,
-    portfolioValue: 0,
-    accountBalance: 0,
-    equityUsed: 0,
-    equityAvailable: 0,
-    isLiveMode: false,
-    botStatus: 'IDLE',
-    activePositions: 0,
-    circuitBreakerStatus: 'SAFE',
-    lastScan: 'N/A',
-    nextScan: 'N/A',
-    scannedStocks: 0,
-    totalStocks: 0,
-    signalsFound: 0,
-    roi: 0,
-    totalCapital: 0,
-    dailyLossLimit: 5000,
-    dailyLossUsed: 0,
-    dailyBuffer: 5000,
-    consecutiveLosses: 0,
-    maxDrawdown: 0,
-    isPaused: false
-  };
+export class DashboardComponent {
+  private readonly refreshTrigger$ = new Subject<void>();
+  private readonly sortState$ = new BehaviorSubject<SortState>({ key: 'pnl', direction: 'desc' });
+  private readonly tick$ = timer(0, 1000);
 
-  activePositions: PositionView[] = [];
-  newSignals: Signal[] = [];
-  notifications: any[] = [];
-  equityData: any[] = [];
-  isLoading: boolean = true;
-  loadingMessage: string = 'Initializing Dashboard...';
-  backendUnavailable = false;
-  safeMode = false;
-  safeModeReason = '';
-  backendUrl = environment.apiUrl;
+  readonly filterControl = new FormControl('', { nonNullable: true });
+  readonly connectionStatus$ = this.wsService.connect();
 
-  scanInterval: number = 45;
-  currentTime$ = timer(0, 1000).pipe(
-    map(() => new Date()),
+  readonly reloadSnapshot$ = this.refreshTrigger$.pipe(
+    withLatestFrom(this.store.state$),
+    switchMap(([, state]) => this.tradingStore.refreshSnapshot(state.isLiveMode ? 'LIVE' : 'PAPER'))
+  );
+
+  readonly scanCountdown$ = this.tick$.pipe(
+    withLatestFrom(this.tradingStore.botStatus$),
+    map(([, bot]) => bot),
+    scan((countdown, bot) => {
+      if (bot.isPaused) {
+        return countdown || bot.scanInterval;
+      }
+      const interval = bot.scanInterval || 45;
+      return countdown > 0 ? countdown - 1 : interval;
+    }, 0),
+    startWith(0),
     shareReplay({ bufferSize: 1, refCount: true })
   );
-  isMarketOpen$ = this.currentTime$.pipe(
-    map((now) => {
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      return (hours > 9 && hours < 15) || (hours === 9 && minutes >= 15) || (hours === 15 && minutes <= 30);
+
+  readonly scanProgress$ = combineLatest([this.scanCountdown$, this.tradingStore.botStatus$]).pipe(
+    map(([countdown, bot]) => {
+      const interval = bot.scanInterval || 45;
+      return interval ? ((interval - countdown) / interval) * 100 : 0;
     })
   );
-  scanCountdown$ = timer(0, 1000).pipe(
-    startWith(0),
-    scan((countdown) => {
-      if (this.stats.isPaused) {
-        return countdown;
-      }
-      return countdown > 0 ? countdown - 1 : this.scanInterval;
-    }, this.scanInterval),
+
+  readonly positionsView$ = combineLatest([
+    this.tradingStore.positions$,
+    this.filterControl.valueChanges.pipe(startWith('')),
+    this.sortState$
+  ]).pipe(
+    map(([positions, filter, sort]) => {
+      const term = filter.trim().toLowerCase();
+      const filtered = term
+        ? positions.filter((position) => position.symbol.toLowerCase().includes(term))
+        : positions;
+
+      const rows = filtered.map((position) => this.toPositionRow(position));
+
+      const sorted = [...rows].sort((a, b) => {
+        const multiplier = sort.direction === 'asc' ? 1 : -1;
+        switch (sort.key) {
+          case 'symbol':
+            return a.symbol.localeCompare(b.symbol) * multiplier;
+          case 'rMultiple':
+            return (a.rMultiple - b.rMultiple) * multiplier;
+          case 'stopDistance':
+            return ((a.stopDistance ?? 0) - (b.stopDistance ?? 0)) * multiplier;
+          case 'timeHeld':
+            return a.timeHeldLabel.localeCompare(b.timeHeldLabel) * multiplier;
+          case 'pnl':
+          default:
+            return (a.pnl - b.pnl) * multiplier;
+        }
+      });
+
+      return sorted;
+    })
+  );
+
+  readonly vm$ = combineLatest({
+    connectionStatus: this.connectionStatus$,
+    account: this.tradingStore.accountOverview$,
+    botStatus: this.tradingStore.botStatus$,
+    riskSummary: this.tradingStore.riskSummary$,
+    strategyHealth: this.tradingStore.strategyHealth$,
+    lastUpdate: this.tradingStore.lastUpdate$,
+    loading: this.tradingStore.dashboardLoading$,
+    error: this.tradingStore.dashboardError$,
+    alerts: this.tradingStore.alerts$,
+    trades: this.tradingStore.trades$,
+    positions: this.tradingStore.positions$,
+    isLiveMode: this.store.state$.pipe(map((state) => state.isLiveMode)),
+    user: this.store.state$.pipe(map((state) => state.user))
+  }).pipe(
+    map((vm) => {
+      const dailyPnlPercent = vm.account.totalCapital
+        ? (vm.account.dailyPnl / vm.account.totalCapital) * 100
+        : 0;
+      const monthlyPnlPercent = vm.account.totalCapital
+        ? (vm.account.monthlyPnl / vm.account.totalCapital) * 100
+        : 0;
+      const circuitUsage = vm.riskSummary.dailyLossLimit
+        ? Math.min(100, (Math.abs(vm.riskSummary.dailyLossUsed) / vm.riskSummary.dailyLossLimit) * 100)
+        : 0;
+
+      return {
+        ...vm,
+        dailyPnlPercent,
+        monthlyPnlPercent,
+        circuitUsage
+      };
+    }),
     shareReplay({ bufferSize: 1, refCount: true })
   );
-  scanProgress$ = this.scanCountdown$.pipe(
-    map((countdown) => ((this.scanInterval - countdown) / this.scanInterval) * 100)
-  );
-  maxPositions: number = 3;
-  supportsClose = false;
-
-  private destroy$ = new Subject<void>();
-  private subscriptions: Subscription[] = [];
 
   constructor(
-    private dashboardService: DashboardService,
-    private positionService: PositionService,
     private wsService: WebSocketService,
     private botService: BotService,
     private store: StoreService,
-    private notify: NotificationService,
-    private settingsService: SettingsService,
-    private riskService: RiskService
+    private tradingModeService: TradingModeService,
+    private tradingStore: TradingStoreService
   ) {}
 
-  ngOnInit(): void {
-    this.loadDashboardData();
-    this.setupWebSocketSubscriptions();
-    this.store.state$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(state => {
-        if (this.stats.isLiveMode !== state.isLiveMode) {
-          this.stats.isLiveMode = state.isLiveMode;
-          this.loadDashboardData();
-        }
-      });
+  reloadDashboard(): void {
+    this.refreshTrigger$.next();
   }
 
-  get todayPnlPercent(): number {
-    return this.stats.totalCapital ? (this.stats.todayPnL / this.stats.totalCapital) * 100 : 0;
+  setSort(key: SortState['key']): void {
+    const current = this.sortState$.value;
+    const direction = current.key === key && current.direction === 'desc' ? 'asc' : 'desc';
+    this.sortState$.next({ key, direction });
   }
 
-  get weeklyPnlPercent(): number {
-    return this.stats.totalCapital ? (this.stats.weeklyPnL / this.stats.totalCapital) * 100 : 0;
+  toggleMode(isLiveMode: boolean): void {
+    const nextMode = isLiveMode ? 'PAPER' : 'LIVE';
+    this.tradingModeService.setMode(nextMode).subscribe();
   }
 
-  get circuitUsage(): number {
-    if (!this.stats.dailyLossLimit) {
-      return 0;
-    }
-    return Math.min(100, (Math.abs(this.stats.dailyLossUsed) / this.stats.dailyLossLimit) * 100);
-  }
-
-  get circuitStatus(): string {
-    if (this.circuitUsage >= 90) {
-      return 'Critical';
-    }
-    if (this.circuitUsage >= 70) {
-      return 'Warning';
-    }
-    return 'Safe';
-  }
-
-  loadDashboardData(): void {
-    this.isLoading = true;
-    this.backendUnavailable = false;
-    this.stats.isLiveMode = this.store.snapshot.isLiveMode;
-
-    const sub = forkJoin({
-      summary: this.dashboardService.getSummary(),
-      today: this.dashboardService.getTodayPnL(),
-      unrealized: this.dashboardService.getUnrealizedPnL(),
-      metrics: this.dashboardService.getPerformanceMetrics(),
-      equity: this.dashboardService.getEquityCurve(this.stats.isLiveMode ? 'LIVE' : 'PAPER'),
-      signals: this.dashboardService.getSignals(),
-      positions: this.positionService.getOpenPositions(),
-      settings: this.settingsService.loadSettings().pipe(catchError(() => of(null))),
-      circuit: this.riskService.getCircuitBreakerStatus().pipe(catchError(() => of(null)))
-    }).pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: ({ summary, today, unrealized, metrics, equity, signals, positions, settings, circuit }) => {
-          const totalCapital = summary.availableFunds ?? summary.availablePaperFunds ?? summary.availableRealFunds ?? summary.currentValue ?? 0;
-          const circuitStatus = (circuit as CircuitBreakerStatus | null) ?? null;
-          queueMicrotask(() => {
-            this.stats = {
-              ...this.stats,
-              todayPnL: today?.todayPnL ?? summary.todaysPnl ?? 0,
-              weeklyPnL: metrics?.netProfit ?? 0,
-              unrealizedPnL: unrealized?.unrealizedPnL ?? 0,
-              winRate: metrics?.winRate ?? 0,
-              totalTrades: metrics?.totalTrades ?? 0,
-              roi: summary.currentValue && summary.totalInvested
-                ? ((summary.currentValue - summary.totalInvested) / summary.totalInvested) * 100
-                : 0,
-              totalCapital,
-              portfolioValue: summary.currentValue ?? 0,
-              accountBalance: summary.availableFunds ?? summary.availablePaperFunds ?? 0,
-              activePositions: positions.length,
-              lastScan: signals?.[0]?.scanTime ? new Date(signals[0].scanTime).toLocaleString() : 'N/A',
-              signalsFound: signals?.length ?? 0,
-              dailyLossLimit: settings?.riskLimits?.maxDailyLossPercent && totalCapital
-                ? (settings.riskLimits.maxDailyLossPercent / 100) * totalCapital
-                : this.stats.dailyLossLimit,
-              dailyLossUsed: circuitStatus?.dailyLossUsed ?? this.stats.dailyLossUsed,
-              circuitBreakerStatus: circuitStatus?.triggered ? 'TRIGGERED' : 'SAFE'
-            };
-            if (settings?.maxPositions) {
-              this.maxPositions = settings.maxPositions;
-            }
-            this.activePositions = positions;
-            this.newSignals = signals;
-            this.equityData = equity?.curve ?? equity ?? [];
-            this.safeMode = !!circuitStatus?.triggered;
-            this.safeModeReason = circuitStatus?.reason ?? '';
-            this.isLoading = false;
-          });
-        },
-        error: (error: any) => {
-          console.error('Failed to load dashboard stats', error);
-          queueMicrotask(() => {
-            this.isLoading = false;
-            this.backendUnavailable = true;
-            this.loadingMessage = 'Backend unavailable.';
-          });
-        }
-      });
-    this.subscriptions.push(sub);
-  }
-
-  setupWebSocketSubscriptions(): void {
-    const sub = this.wsService.connect()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe();
-    this.subscriptions.push(sub);
-  }
-
-  pauseBot(): void {
-    this.stats.isPaused = !this.stats.isPaused;
-  }
-
-  scanNow(): void {
-    this.botService.scanNow().subscribe();
-  }
-
-  getPositionTarget(position: PositionView): number {
-    return position.entryPrice * 1.05;
-  }
-
-  getPositionProgress(position: PositionView): number {
-    const target = this.getPositionTarget(position);
-    if (target === position.entryPrice) {
-      return 0;
-    }
-    const progress = ((position.currentPrice - position.entryPrice) / (target - position.entryPrice)) * 100;
-    return Math.min(100, Math.max(0, progress));
-  }
-
-  closeActivePosition(position: PositionView): void {
-    if (!this.supportsClose) {
-      this.notify.warning('Action Unavailable', 'Not supported yet.');
-      return;
-    }
-    if (!position.id) {
-      this.notify.warning('Action Unavailable', `No position ID for ${position.symbol}.`);
-      return;
-    }
-    this.positionService.closePosition(position.id).subscribe({
-      next: () => {
-        this.notify.success('Position Closed', `${position.symbol} has been closed.`);
-        this.loadDashboardData();
-      },
-      error: (err: any) => {
-        this.notify.error('Close Failed', err?.message || 'Unable to close position.');
-      }
+  toggleKillSwitch(isPaused: boolean): void {
+    this.botService.setBotStatus(!isPaused).subscribe({
+      next: () => this.tradingStore.updateBotStatus({ isPaused: !isPaused }),
+      error: () => this.tradingStore.addAlert({
+        type: 'error',
+        message: 'Unable to update trading state',
+        timestamp: new Date().toISOString()
+      })
     });
   }
 
-  navigateToDashboard(): void {}
+  trackBySymbol(index: number, item: PositionRow): string {
+    return item.symbol;
+  }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.subscriptions.forEach(sub => sub.unsubscribe());
+  trackByAlert(index: number, item: { id: string }): string {
+    return item.id;
+  }
+
+  private toPositionRow(position: PositionView): PositionRow {
+    const stopDistance = position.stopLoss && position.entryPrice
+      ? ((position.entryPrice - position.stopLoss) / position.entryPrice) * 100
+      : null;
+    const entryTime = (position as any).entryTime ?? (position as any).openedAt ?? (position as any).createdAt;
+    const timeHeldLabel = entryTime ? this.formatDuration(Date.now() - new Date(entryTime).getTime()) : '—';
+
+    return {
+      ...position,
+      stopDistance,
+      timeHeldLabel,
+      rMultiple: position.rMultiple ?? 0
+    };
+  }
+
+  private formatDuration(milliseconds: number): string {
+    if (!Number.isFinite(milliseconds) || milliseconds <= 0) {
+      return '—';
+    }
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   }
 }

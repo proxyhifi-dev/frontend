@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import {
@@ -31,7 +31,8 @@ export interface ChartOptions {
   standalone: true,
   imports: [CommonModule, NgApexchartsModule],
   templateUrl: './equity-curve-chart.component.html',
-  styleUrls: ['./equity-curve-chart.component.scss']
+  styleUrls: ['./equity-curve-chart.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EquityCurveChartComponent implements OnInit, OnChanges {
   @Input() data: any[] = [];

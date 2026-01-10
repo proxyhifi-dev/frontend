@@ -29,15 +29,17 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private readonly routeTitles: Record<string, string> = {
     dashboard: 'Dashboard',
-    account: 'Account',
+    account: 'Paper Account',
     positions: 'Positions',
     holdings: 'Holdings',
     orders: 'Orders',
     trades: 'Trades',
     backtesting: 'Backtesting',
+    'backtest-validation': 'Backtest & Validation',
     signals: 'Signals',
     strategy: 'Strategy / Bot',
     risk: 'Risk',
+    'risk-correlation': 'Risk & Correlation',
     logs: 'Logs',
     settings: 'Settings',
     help: 'Help',

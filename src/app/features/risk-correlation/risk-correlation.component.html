@@ -1,0 +1,76 @@
+<section class="page-shell">
+  <header class="page-header">
+    <div>
+      <h1>Risk &amp; Correlation</h1>
+      <p>Monitor portfolio heat, exposure, and cross-asset correlation regimes.</p>
+    </div>
+    <span class="regime-pill">Regime: {{ correlationRegime }}</span>
+  </header>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Portfolio Heat Gauge</h2>
+      <div class="chart-wrap" *ngIf="!loading; else heatSkeleton">
+        <apx-chart
+          [series]="heatGaugeOptions.series"
+          [chart]="heatGaugeOptions.chart"
+          [plotOptions]="heatGaugeOptions.plotOptions"
+          [dataLabels]="heatGaugeOptions.dataLabels"
+          [labels]="heatGaugeOptions.labels"
+          [colors]="heatGaugeOptions.colors"
+        ></apx-chart>
+      </div>
+      <ng-template #heatSkeleton>
+        <div class="chart-skeleton"></div>
+      </ng-template>
+    </section>
+
+    <section class="panel">
+      <h2>Sector Exposure</h2>
+      <div class="chart-wrap" *ngIf="!loading; else exposureSkeleton">
+        <apx-chart
+          [series]="exposureOptions.series"
+          [chart]="exposureOptions.chart"
+          [xaxis]="exposureOptions.xaxis"
+          [dataLabels]="exposureOptions.dataLabels"
+          [stroke]="exposureOptions.stroke"
+          [tooltip]="exposureOptions.tooltip"
+          [colors]="exposureOptions.colors"
+        ></apx-chart>
+      </div>
+      <ng-template #exposureSkeleton>
+        <div class="chart-skeleton"></div>
+      </ng-template>
+    </section>
+  </div>
+
+  <section class="panel table-panel">
+    <div class="panel-header">
+      <div>
+        <h2>Pairwise Correlations</h2>
+        <p>Track high-correlation pairs and regime shifts.</p>
+      </div>
+      <span class="status-pill">{{ correlations.length }} pairs</span>
+    </div>
+
+    <table *ngIf="correlations.length; else emptyCorrelations">
+      <thead>
+        <tr>
+          <th>Pair</th>
+          <th>Correlation</th>
+          <th>Regime</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of correlations">
+          <td>{{ row.pair }}</td>
+          <td>{{ row.correlation | number:'1.2-2' }}</td>
+          <td><span class="tag">{{ row.regime }}</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <ng-template #emptyCorrelations>
+      <div class="empty-state">No correlation data loaded yet.</div>
+    </ng-template>
+  </section>
+</section>
