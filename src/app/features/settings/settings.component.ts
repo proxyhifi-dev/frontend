@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService, TradingSettings } from '../../core/services/settings.service';
-import { BrokerErrorLog, BrokerStatus, FyersOAuthService } from '../../core/services/fyers-oauth.service';
+import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
+import { BrokerConnectionStatus, BrokerErrorLog } from '../../core/models/broker.dto';
 
 @Component({
   selector: 'app-settings',
@@ -17,7 +18,7 @@ export class SettingsComponent implements OnInit {
   activeTab = 'trading';
   isSaving = false;
   brokerStatus: 'CONNECTED' | 'DISCONNECTED' | 'LOADING' = 'LOADING';
-  brokerDetails?: BrokerStatus;
+  brokerDetails?: BrokerConnectionStatus;
   brokerErrors: BrokerErrorLog[] = [];
   brokerLoading = false;
   brokerLogsLoading = false;
@@ -60,7 +61,7 @@ export class SettingsComponent implements OnInit {
 
   connectBroker(): void {
     this.fyersService.getAuthUrl().subscribe({
-      next: (response: any) => {
+      next: (response) => {
         if (response?.authUrl) {
           window.location.href = response.authUrl;
         }
@@ -87,11 +88,7 @@ export class SettingsComponent implements OnInit {
       next: (status) => {
         this.brokerDetails = status;
         this.brokerStatus = status.connected ? 'CONNECTED' : 'DISCONNECTED';
-        if (status.errorLogs) {
-          this.brokerErrors = status.errorLogs;
-        } else {
-          this.loadBrokerErrors();
-        }
+        this.loadBrokerErrors();
       },
       error: () => {
         this.brokerStatus = 'DISCONNECTED';

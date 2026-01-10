@@ -1,18 +1,19 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { StoreService } from './store.service';
-import { PositionView, PaperPosition, Trade } from '../models/domain.model';
+import { ModeStore } from './mode-store.service';
+import { PositionView, PaperPosition } from '../models/domain.model';
 import { environment } from '../../../environments/environment';
+import { TradeDTO } from '../models/trade.dto';
 
 @Injectable({ providedIn: 'root' })
 export class PositionService {
   private baseUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient, private store: StoreService) {}
+  constructor(private http: HttpClient, private modeStore: ModeStore) {}
 
   private get endpoints() {
-    const isLive = this.store.snapshot.isLiveMode;
+    const isLive = this.modeStore.snapshot === 'LIVE';
     // Dynamically choose endpoint based on mode
     return {
       open: isLive ? `${this.baseUrl}/trades/open` : `${this.baseUrl}/paper/positions/open`,
@@ -21,8 +22,8 @@ export class PositionService {
   }
 
   getOpenPositions(): Observable<PositionView[]> {
-    if (this.store.snapshot.isLiveMode) {
-      return this.http.get<Trade[]>(this.endpoints.open).pipe(
+    if (this.modeStore.snapshot === 'LIVE') {
+      return this.http.get<TradeDTO[]>(this.endpoints.open).pipe(
         map(trades => trades.map(trade => this.toViewFromTrade(trade)))
       );
     }
@@ -32,8 +33,8 @@ export class PositionService {
   }
 
   getClosedPositions(): Observable<PositionView[]> {
-    if (this.store.snapshot.isLiveMode) {
-      return this.http.get<Trade[]>(this.endpoints.closed).pipe(
+    if (this.modeStore.snapshot === 'LIVE') {
+      return this.http.get<TradeDTO[]>(this.endpoints.closed).pipe(
         map(trades => trades.map(trade => this.toViewFromTrade(trade)))
       );
     }
@@ -42,21 +43,21 @@ export class PositionService {
     );
   }
 
-  closePosition(positionId: number | undefined): Observable<any> {
+  closePosition(positionId: number | undefined): Observable<void> {
     if (!positionId) {
       return new Observable(observer => {
         observer.error(new Error('Position id missing'));
         observer.complete();
       });
     }
-    const isLive = this.store.snapshot.isLiveMode;
+    const isLive = this.modeStore.snapshot === 'LIVE';
     const url = isLive
       ? `${this.baseUrl}/trades/close`
       : `${this.baseUrl}/paper/positions/close`;
-    return this.http.post(url, { id: positionId });
+    return this.http.post<void>(url, { id: positionId });
   }
 
-  private toViewFromTrade(trade: Trade): PositionView {
+  private toViewFromTrade(trade: TradeDTO): PositionView {
     const currentPrice = trade.currentPrice ?? trade.entryPrice;
     const pnl = trade.pnl ?? (currentPrice - trade.entryPrice) * trade.quantity;
     const pnlPercent = trade.pnlPercent ?? (trade.entryPrice ? (pnl / (trade.entryPrice * trade.quantity)) * 100 : 0);

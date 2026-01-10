@@ -57,6 +57,9 @@ export interface PositionView {
   symbol: string;
   quantity: number;
   entryPrice: number;
+  entryTime?: string;
+  openedAt?: string;
+  createdAt?: string;
   currentPrice: number;
   pnl: number;
   pnlPercent?: number;

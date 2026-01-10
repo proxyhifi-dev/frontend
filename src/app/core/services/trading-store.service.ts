@@ -5,10 +5,13 @@ import { DashboardService } from './dashboard.service';
 import { PositionService } from './position.service';
 import { RiskService, CircuitBreakerStatus } from './risk.service';
 import { SettingsService } from './settings.service';
-import { StoreService } from './store.service';
 import { TradingMode } from './trading-mode.service';
 import { ToastService } from './toast.service';
 import { PositionView, Signal } from '../models/domain.model';
+import { ModeStore } from './mode-store.service';
+import { AccountOverviewDTO } from '../models/account.dto';
+import { MarketDataPoint } from '../models/market-data.model';
+import { PnLMetrics } from '../models/pnl-metrics.dto';
 
 export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
 export type StrategyHealthStatus = 'OK' | 'DEGRADED' | 'BROKEN';
@@ -28,6 +31,7 @@ export interface AccountOverview {
   freeMargin: number;
   dailyPnl: number;
   monthlyPnl: number;
+  unrealizedPnl: number;
   drawdown: number;
   totalCapital: number;
   mode: TradingMode;
@@ -78,7 +82,7 @@ export class TradingStoreService {
   private tradesSubject = new BehaviorSubject<PositionView[]>([]);
   readonly trades$ = this.tradesSubject.asObservable();
 
-  private marketDataSubject = new BehaviorSubject<any[]>([]);
+  private marketDataSubject = new BehaviorSubject<MarketDataPoint[]>([]);
   readonly marketData$ = this.marketDataSubject.asObservable();
 
   private accountOverviewSubject = new BehaviorSubject<AccountOverview>({
@@ -87,6 +91,7 @@ export class TradingStoreService {
     freeMargin: 0,
     dailyPnl: 0,
     monthlyPnl: 0,
+    unrealizedPnl: 0,
     drawdown: 0,
     totalCapital: 0,
     mode: 'PAPER'
@@ -132,14 +137,13 @@ export class TradingStoreService {
     private positionService: PositionService,
     private settingsService: SettingsService,
     private riskService: RiskService,
-    private store: StoreService,
+    private modeStore: ModeStore,
     private toastService: ToastService
   ) {
-    this.store.state$
+    this.modeStore.mode$
       .pipe(
-        map((state) => state.isLiveMode),
         distinctUntilChanged(),
-        switchMap((isLive) => this.refreshSnapshot(isLive ? 'LIVE' : 'PAPER'))
+        switchMap((mode) => this.refreshSnapshot(mode))
       )
       .subscribe();
   }
@@ -161,7 +165,7 @@ export class TradingStoreService {
     this.tradesSubject.next(trades);
   }
 
-  setMarketData(data: any[]) {
+  setMarketData(data: MarketDataPoint[]) {
     this.marketDataSubject.next(data);
   }
 
@@ -217,19 +221,27 @@ export class TradingStoreService {
       circuit: this.riskService.getCircuitBreakerStatus().pipe(catchError(() => of(null)))
     }).pipe(
       tap(({ summary, today, unrealized, metrics, equity, signals, positions, trades, settings, circuit }) => {
+        const summaryPayload = summary as AccountOverviewDTO;
+        const todayMetrics = today as PnLMetrics;
+        const unrealizedMetrics = unrealized as PnLMetrics;
         const totalCapital =
-          summary.availableFunds ?? summary.availablePaperFunds ?? summary.availableRealFunds ?? summary.currentValue ?? 0;
+          summaryPayload.availableFunds ??
+          summaryPayload.availablePaperFunds ??
+          summaryPayload.availableRealFunds ??
+          summaryPayload.currentValue ??
+          0;
         const circuitStatus = (circuit as CircuitBreakerStatus | null) ?? null;
         const dailyLossLimit = settings?.riskLimits?.maxDailyLossPercent && totalCapital
           ? (settings.riskLimits.maxDailyLossPercent / 100) * totalCapital
           : 0;
 
         this.setAccountOverview({
-          equity: summary.currentValue ?? 0,
-          usedMargin: summary.marginUsed ?? summary.equityUsed ?? 0,
-          freeMargin: summary.availableFunds ?? summary.availablePaperFunds ?? 0,
-          dailyPnl: today?.todayPnL ?? summary.todaysPnl ?? 0,
+          equity: summaryPayload.currentValue ?? 0,
+          usedMargin: summaryPayload.marginUsed ?? summaryPayload.equityUsed ?? 0,
+          freeMargin: summaryPayload.availableFunds ?? summaryPayload.availablePaperFunds ?? 0,
+          dailyPnl: todayMetrics?.todayPnL ?? summaryPayload.todaysPnl ?? 0,
           monthlyPnl: metrics?.netProfit ?? 0,
+          unrealizedPnl: unrealizedMetrics?.unrealizedPnL ?? summaryPayload.unrealizedPnL ?? 0,
           drawdown: metrics?.maxDrawdown ?? 0,
           totalCapital,
           mode
@@ -264,14 +276,15 @@ export class TradingStoreService {
 
         this.updateBotStatus({
           lastScan: signals?.[0]?.scanTime ? new Date(signals[0].scanTime).toLocaleString() : 'N/A',
-          nextScan: summary.nextScanTime ?? 'N/A',
+          nextScan: summaryPayload.nextScanTime ?? 'N/A',
           signalsFound: signals?.length ?? 0
         });
 
         this.setPositions(positions ?? []);
         this.setTrades(trades ?? []);
         this.setSignals(signals ?? []);
-        this.setMarketData(equity?.curve ?? equity ?? []);
+        const equityCurve = Array.isArray(equity) ? equity : equity?.curve ?? [];
+        this.setMarketData(equityCurve);
         this.setLastUpdate(new Date().toLocaleTimeString());
         this.dashboardLoadingSubject.next(false);
       }),
@@ -286,32 +299,40 @@ export class TradingStoreService {
     );
   }
 
-  handleWebsocketMessage(type: string, data: any) {
+  handleWebsocketMessage(type: string, data: unknown) {
     switch (type) {
       case 'market-data':
-        this.setMarketData(data ?? []);
+        this.setMarketData(Array.isArray(data) ? (data as MarketDataPoint[]) : []);
         break;
       case 'positions':
-        this.setPositions(data ?? []);
+        this.setPositions(Array.isArray(data) ? (data as PositionView[]) : []);
         break;
       case 'trades':
-        this.setTrades(data ?? []);
+        this.setTrades(Array.isArray(data) ? (data as PositionView[]) : []);
         break;
       case 'bot-status':
         this.updateBotStatus({
-          state: data?.state ?? data?.status ?? 'RUNNING',
-          isPaused: data?.isPaused ?? data?.paused ?? false,
-          lastScan: data?.lastScan ?? data?.lastScanTime ?? this.botStatusSubject.value.lastScan,
-          nextScan: data?.nextScan ?? data?.nextScanTime ?? this.botStatusSubject.value.nextScan,
-          signalsFound: data?.signalsFound ?? this.botStatusSubject.value.signalsFound
+          state: (data as { state?: string; status?: string } | null)?.state ??
+            (data as { status?: string } | null)?.status ??
+            'RUNNING',
+          isPaused: (data as { isPaused?: boolean; paused?: boolean } | null)?.isPaused ??
+            (data as { paused?: boolean } | null)?.paused ??
+            false,
+          lastScan: (data as { lastScan?: string; lastScanTime?: string } | null)?.lastScan ??
+            (data as { lastScanTime?: string } | null)?.lastScanTime ??
+            this.botStatusSubject.value.lastScan,
+          nextScan: (data as { nextScan?: string; nextScanTime?: string } | null)?.nextScan ??
+            (data as { nextScanTime?: string } | null)?.nextScanTime ??
+            this.botStatusSubject.value.nextScan,
+          signalsFound: (data as { signalsFound?: number } | null)?.signalsFound ?? this.botStatusSubject.value.signalsFound
         });
         break;
       case 'alerts':
-        if (data?.message) {
+        if ((data as { message?: string } | null)?.message) {
           this.addAlert({
-            type: data.type ?? 'info',
-            message: data.message,
-            timestamp: data.timestamp ?? new Date().toISOString()
+            type: (data as { type?: 'info' | 'warning' | 'error' } | null)?.type ?? 'info',
+            message: (data as { message: string }).message,
+            timestamp: (data as { timestamp?: string } | null)?.timestamp ?? new Date().toISOString()
           });
         }
         break;

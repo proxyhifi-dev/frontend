@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgApexchartsModule } from 'ng-apexcharts';
+import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card';
 import { AnalyticsService } from '../../core/services/analytics.service';
 import { Subscription } from 'rxjs';
@@ -31,7 +31,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   activeRange: '30d' | '90d' | 'all' = '30d';
 
   // Chart configs required by template
-  public pieOptions: any = {
+  public pieOptions: ApexOptions = {
     series: [0, 0],
     chart: { type: 'donut', height: 300 },
     labels: ['Wins', 'Losses'],
@@ -40,7 +40,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     legend: { position: 'bottom', labels: { colors: '#fff' } }
   };
 
-  public histOptions: any = {
+  public histOptions: ApexOptions = {
     series: [{ name: 'Trades', data: [] }],
     chart: { type: 'bar', height: 300 },
     xaxis: { categories: [], labels: { style: { colors: '#fff' } } },

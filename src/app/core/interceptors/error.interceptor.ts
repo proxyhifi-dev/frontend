@@ -1,12 +1,14 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, retry, throwError, timer } from 'rxjs';
+import { catchError, retry, switchMap, throwError, timer } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
-import { Router } from '@angular/router';
+import { mapHttpError } from '../utils/api-error';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const toastService = inject(ToastService);
-  const router = inject(Router);
+  const authService = inject(AuthService);
+  const isRetryableMethod = ['GET', 'HEAD', 'OPTIONS'].includes(req.method);
 
   return next(req).pipe(
     retry({
@@ -14,7 +16,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       delay: (error, retryCount) => {
         // Only retry on network errors or 5xx errors
         if (error instanceof HttpErrorResponse) {
-          if (error.status >= 500 || error.status === 0) {
+          if (isRetryableMethod && (error.status >= 500 || error.status === 0)) {
             return timer(1000 * retryCount);
           }
         }
@@ -22,49 +24,34 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       }
     }),
     catchError((error: HttpErrorResponse) => {
-      let errorMessage = 'An unexpected error occurred';
+      const apiError = mapHttpError(error);
 
-      if (error.error instanceof ErrorEvent) {
-        // Client-side error
-        errorMessage = `Error: ${error.error.message}`;
-      } else {
-        // Server-side error
-        switch (error.status) {
-          case 0:
-            errorMessage = 'No internet connection. Please check your network.';
-            break;
-          case 400:
-            errorMessage = error.error?.message || 'Invalid request';
-            break;
-          case 401:
-            errorMessage = 'Session expired. Please login again.';
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('refreshToken');
-            router.navigate(['/login']);
-            break;
-          case 403:
-            errorMessage = 'Access denied. Please login again.';
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('refreshToken');
-            router.navigate(['/login']);
-            break;
-          case 404:
-            errorMessage = 'Resource not found';
-            break;
-          case 500:
-            errorMessage = 'Server error. Please try again later.';
-            break;
-          case 503:
-            errorMessage = 'Service temporarily unavailable';
-            break;
-          default:
-            errorMessage = error.error?.message || `Error: ${error.status}`;
-        }
+      if (error.status === 401 && authService.refreshToken && !req.url.includes('/auth/refresh')) {
+        return authService.refreshAccessToken().pipe(
+          switchMap((token) => {
+            if (!token) {
+              return throwError(() => error);
+            }
+            const refreshed = req.clone({
+              setHeaders: {
+                Authorization: `Bearer ${token}`
+              }
+            });
+            return next(refreshed);
+          }),
+          catchError(() => {
+            authService.logout();
+            toastService.showError(apiError.userMessage);
+            return throwError(() => error);
+          })
+        );
       }
 
-      toastService.showError(errorMessage);
+      if (error.status === 401 || error.status === 403) {
+        authService.logout();
+      }
+
+      toastService.showError(apiError.userMessage);
       return throwError(() => error);
     })
   );

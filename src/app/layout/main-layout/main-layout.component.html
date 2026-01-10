@@ -1,4 +1,4 @@
-<div class="app-container" [class.live-mode]="(store.state$ | async)?.isLiveMode">
+<div class="app-container" [class.live-mode]="(modeStore.isLive$ | async)">
 
   <app-command-palette></app-command-palette>
 
@@ -34,7 +34,7 @@
         type="button"
         class="mode-toggle"
         (click)="toggleMode()"
-        [attr.aria-pressed]="(store.state$ | async)?.isLiveMode"
+        [attr.aria-pressed]="(modeStore.isLive$ | async)"
         aria-label="Toggle paper or live mode"
       >
         <div class="toggle-pill">
@@ -69,7 +69,7 @@
     <section class="status-banner">
       <div class="status-item">
         <span class="label">Mode</span>
-        <span class="value">{{ (store.state$ | async)?.isLiveMode ? 'LIVE' : 'PAPER' }}</span>
+        <span class="value">{{ (modeStore.mode$ | async) || 'PAPER' }}</span>
       </div>
       <div class="status-item">
         <span class="label">Data Source</span>

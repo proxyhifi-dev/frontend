@@ -7,12 +7,12 @@ import { map, scan, shareReplay, startWith, switchMap, withLatestFrom } from 'rx
 import { WebSocketService } from '../../core/services/websocket.service';
 import { BotService } from '../../core/services/bot.service';
 import { StoreService } from '../../core/services/store.service';
-import { TradingModeService } from '../../core/services/trading-mode.service';
 import { TradingStoreService } from '../../core/services/trading-store.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
 import { PositionView } from '../../core/models/domain.model';
 import { StrategyHealthWidgetComponent } from './components/strategy-health-widget.component';
+import { ModeStore } from '../../core/services/mode-store.service';
 
 interface SortState {
   key: 'symbol' | 'pnl' | 'rMultiple' | 'stopDistance' | 'timeHeld';
@@ -49,8 +49,8 @@ export class DashboardComponent {
   readonly connectionStatus$ = this.wsService.connect();
 
   readonly reloadSnapshot$ = this.refreshTrigger$.pipe(
-    withLatestFrom(this.store.state$),
-    switchMap(([, state]) => this.tradingStore.refreshSnapshot(state.isLiveMode ? 'LIVE' : 'PAPER'))
+    withLatestFrom(this.modeStore.mode$),
+    switchMap(([, mode]) => this.tradingStore.refreshSnapshot(mode))
   );
 
   readonly scanCountdown$ = this.tick$.pipe(
@@ -120,7 +120,7 @@ export class DashboardComponent {
     alerts: this.tradingStore.alerts$,
     trades: this.tradingStore.trades$,
     positions: this.tradingStore.positions$,
-    isLiveMode: this.store.state$.pipe(map((state) => state.isLiveMode)),
+    mode: this.modeStore.mode$,
     user: this.store.state$.pipe(map((state) => state.user))
   }).pipe(
     map((vm) => {
@@ -136,6 +136,7 @@ export class DashboardComponent {
 
       return {
         ...vm,
+        isLiveMode: vm.mode === 'LIVE',
         dailyPnlPercent,
         monthlyPnlPercent,
         circuitUsage
@@ -148,7 +149,7 @@ export class DashboardComponent {
     private wsService: WebSocketService,
     private botService: BotService,
     private store: StoreService,
-    private tradingModeService: TradingModeService,
+    private modeStore: ModeStore,
     private tradingStore: TradingStoreService
   ) {}
 
@@ -164,7 +165,7 @@ export class DashboardComponent {
 
   toggleMode(isLiveMode: boolean): void {
     const nextMode = isLiveMode ? 'PAPER' : 'LIVE';
-    this.tradingModeService.setMode(nextMode).subscribe();
+    this.modeStore.setMode(nextMode).subscribe();
   }
 
   toggleKillSwitch(isPaused: boolean): void {
@@ -190,7 +191,7 @@ export class DashboardComponent {
     const stopDistance = position.stopLoss && position.entryPrice
       ? ((position.entryPrice - position.stopLoss) / position.entryPrice) * 100
       : null;
-    const entryTime = (position as any).entryTime ?? (position as any).openedAt ?? (position as any).createdAt;
+    const entryTime = position.entryTime ?? position.openedAt ?? position.createdAt;
     const timeHeldLabel = entryTime ? this.formatDuration(Date.now() - new Date(entryTime).getTime()) : '—';
 
     return {

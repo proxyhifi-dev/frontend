@@ -1,10 +1,22 @@
 /// <reference lib="webworker" />
 
+interface PnlWorkerPosition {
+  symbol: string;
+  entry: number;
+  qty: number;
+}
+
+interface PnlWorkerPayload {
+  positions: PnlWorkerPosition[];
+  ltp: Record<string, number>;
+}
+
 addEventListener('message', ({ data }) => {
   // Perform heavy P&L math across 100s of positions here
-  const result = data.positions.map((p: any) => ({
+  const payload = data as PnlWorkerPayload;
+  const result = payload.positions.map((p) => ({
     ...p,
-    pnl: (data.ltp[p.symbol] - p.entry) * p.qty
+    pnl: ((payload.ltp[p.symbol] ?? p.entry) - p.entry) * p.qty
   }));
   postMessage(result);
 });

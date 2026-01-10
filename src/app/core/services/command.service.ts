@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
-import { StoreService } from './store.service';
-import { TradingModeService } from './trading-mode.service';
+import { ModeStore } from './mode-store.service';
 
 export interface Command {
   id: string;
@@ -30,8 +29,7 @@ export class CommandService {
 
   constructor(
     private router: Router,
-    private store: StoreService,
-    private tradingModeService: TradingModeService
+    private modeStore: ModeStore
   ) {}
 
   toggle() {
@@ -43,7 +41,7 @@ export class CommandService {
   }
 
   private toggleMode(): void {
-    const nextMode = this.store.snapshot.isLiveMode ? 'PAPER' : 'LIVE';
-    this.tradingModeService.setMode(nextMode).subscribe();
+    const nextMode = this.modeStore.snapshot === 'LIVE' ? 'PAPER' : 'LIVE';
+    this.modeStore.setMode(nextMode).subscribe();
   }
 }

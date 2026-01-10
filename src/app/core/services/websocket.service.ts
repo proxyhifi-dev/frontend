@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Client, IMessage } from '@stomp/stompjs';
+import { Client, IMessage, IFrame } from '@stomp/stompjs';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ToastService } from './toast.service';
@@ -7,7 +7,7 @@ import { TradingStoreService } from './trading-store.service';
 
 export interface WebSocketMessage {
   type: string;
-  data: any;
+  data: unknown;
   timestamp: number;
 }
 
@@ -176,7 +176,8 @@ export class WebSocketService {
     if (message.type !== 'bot-status') {
       return;
     }
-    const statusMessage: string | undefined = message.data?.message ?? message.data?.statusMessage;
+    const payload = message.data as { message?: string; statusMessage?: string } | null;
+    const statusMessage: string | undefined = payload?.message ?? payload?.statusMessage;
     if (!statusMessage) {
       return;
     }
@@ -199,7 +200,7 @@ export class WebSocketService {
     return true;
   }
 
-  private onError(frame: any) {
+  private onError(frame: IFrame) {
     console.error('WebSocket error:', frame);
     this.store.setConnectionStatus('error');
     this.toastService.showError('Real-time connection error. Retrying...');
@@ -234,7 +235,7 @@ export class WebSocketService {
     }, delay);
   }
 
-  sendMessage(destination: string, body: any) {
+  sendMessage(destination: string, body: unknown) {
     if (this.client && this.client.connected) {
       this.client.publish({
         destination,

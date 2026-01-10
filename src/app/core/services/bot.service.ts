@@ -14,6 +14,11 @@ export interface BotStatus {
   currentStrategy: string;
 }
 
+export interface BotActionResponse {
+  success?: boolean;
+  message?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -26,18 +31,18 @@ export class BotService {
     return this.fetchStatus();
   }
 
-  setBotStatus(isActive: boolean): Observable<any> {
-    return this.http.post(`${this.apiUrl}/status`, { isActive }).pipe(
+  setBotStatus(isActive: boolean): Observable<BotActionResponse> {
+    return this.http.post<BotActionResponse>(`${this.apiUrl}/status`, { isActive }).pipe(
       catchError(() => of({ success: false }))
     );
   }
 
-  triggerManualScan(): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/strategy/scan-now`, {});
+  triggerManualScan(): Observable<BotActionResponse> {
+    return this.http.post<BotActionResponse>(`${environment.apiUrl}/strategy/scan-now`, {});
   }
 
   // Alias for triggerManualScan to match component usage
-  scanNow(): Observable<any> {
+  scanNow(): Observable<BotActionResponse> {
     return this.triggerManualScan();
   }
 

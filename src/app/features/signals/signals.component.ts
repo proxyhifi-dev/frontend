@@ -10,6 +10,7 @@ import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
 import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
 import { RiskService } from '../../core/services/risk.service';
+import { ModeStore } from '../../core/services/mode-store.service';
 
 @Component({
   selector: 'app-signals',
@@ -32,13 +33,14 @@ export class SignalsComponent implements OnInit, OnDestroy {
   isDrawerOpen = false;
   detailLoading = false;
   detailError = '';
-  private lastMode?: boolean;
+  private lastMode?: string;
   private destroy$ = new Subject<void>();
 
   constructor(
     private signalSvc: SignalService,
     private notify: NotificationService,
     private store: StoreService,
+    private modeStore: ModeStore,
     private riskService: RiskService
   ) {}
 
@@ -49,11 +51,15 @@ export class SignalsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((state) => {
         this.searchTerm = state.searchSymbol ?? '';
-        if (this.lastMode !== state.isLiveMode) {
-          this.lastMode = state.isLiveMode;
+        this.applySearch();
+      });
+
+    this.modeStore.mode$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((mode) => {
+        if (this.lastMode !== mode) {
+          this.lastMode = mode;
           this.loadSignals();
-        } else {
-          this.applySearch();
         }
       });
   }
@@ -102,7 +108,10 @@ export class SignalsComponent implements OnInit, OnDestroy {
         this.notify.success('Scan Started', 'Manual scan triggered.');
         this.loadSignals();
       },
-      error: (err: any) => this.notify.error('Scan Failed', err.message)
+      error: (err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Unable to start scan.';
+        this.notify.error('Scan Failed', message);
+      }
     });
   }
 
@@ -151,8 +160,9 @@ export class SignalsComponent implements OnInit, OnDestroy {
         this.notify.success('Order Placed', `Trade executed for ${signal.symbol}.`);
         this.loadSignals();
       },
-      error: (err: any) => {
-        this.notify.error('Execution Failed', err?.message || 'Unable to execute trade.');
+      error: (err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Unable to execute trade.';
+        this.notify.error('Execution Failed', message);
       }
     });
   }

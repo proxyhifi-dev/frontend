@@ -6,7 +6,7 @@ import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { CorrelationMatrix, RiskStatus } from '../../core/models/domain.model';
 import { BotService } from '../../core/services/bot.service';
 import { PositionService } from '../../core/services/position.service';
-import { StoreService } from '../../core/services/store.service';
+import { ModeStore } from '../../core/services/mode-store.service';
 import { finalize, forkJoin } from 'rxjs';
 
 @Component({
@@ -33,7 +33,7 @@ export class RiskComponent implements OnInit {
     private notify: NotificationService,
     private botService: BotService,
     private positionService: PositionService,
-    private store: StoreService
+    private modeStore: ModeStore
   ) {}
 
   ngOnInit() {
@@ -70,11 +70,14 @@ export class RiskComponent implements OnInit {
             positions: this.positionService.getOpenPositions(),
             bot: this.botService.fetchStatus()
           }).subscribe(() => {
-            this.store.setMode(false);
+            this.modeStore.setMode('PAPER').subscribe();
             this.loadRiskData();
           });
         },
-        error: (err: any) => this.notify.error('Action Failed', err.message)
+        error: (err: unknown) => {
+          const message = err instanceof Error ? err.message : 'Unable to complete emergency stop.';
+          this.notify.error('Action Failed', message);
+        }
       });
     }
   }

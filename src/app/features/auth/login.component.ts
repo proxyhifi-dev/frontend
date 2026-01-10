@@ -10,7 +10,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoadingService } from '../../core/services/loading.service';
-import { TradingModeService } from '../../core/services/trading-mode.service';
+import { ModeStore } from '../../core/services/mode-store.service';
+import { AuthResponse } from '../../core/models/auth.model';
 
 @Component({
   selector: 'app-login',
@@ -28,7 +29,7 @@ export class LoginComponent implements OnInit {
     private readonly fyersService: FyersOAuthService,
     private readonly notificationService: NotificationService,
     private readonly loadingService: LoadingService,
-    private readonly tradingModeService: TradingModeService,
+    private readonly modeStore: ModeStore,
     private readonly route: ActivatedRoute,
     private readonly router: Router
   ) {}
@@ -53,16 +54,13 @@ export class LoginComponent implements OnInit {
         })
       )
       .subscribe({
-        next: (response: any) => {
+        next: (response: AuthResponse) => {
           const token = response?.accessToken || response?.token;
 
-          if (response?.refreshToken) {
-            localStorage.setItem('refreshToken', response.refreshToken);
-          }
-          this.authService.updateAuthState(response?.user ?? null, token ?? '');
+          this.authService.updateAuthState(response?.user ?? null, token ?? '', response?.refreshToken);
 
           if (token) {
-            this.tradingModeService.syncModeFromBackend().subscribe();
+            this.modeStore.syncFromBackend().subscribe();
             this.notificationService.success('✅ Fyers account connected successfully!');
             this.router.navigate(['/dashboard'], { replaceUrl: true });
             return;
@@ -75,7 +73,7 @@ export class LoginComponent implements OnInit {
           }
 
           this.notificationService.success('✅ Fyers authentication completed');
-          this.tradingModeService.syncModeFromBackend().subscribe();
+          this.modeStore.syncFromBackend().subscribe();
           this.router.navigate(['/dashboard'], { replaceUrl: true });
         },
         error: () => {
@@ -103,19 +101,24 @@ export class LoginComponent implements OnInit {
       .subscribe({
         next: () => {
           this.notificationService.success('Login successful!');
-          this.tradingModeService.syncModeFromBackend().subscribe();
+          this.modeStore.syncFromBackend().subscribe();
           this.router.navigate(['/dashboard']);
         },
-        error: (err: any) => {
-          this.notificationService.error(err?.error?.error || 'Login failed');
+        error: (err: unknown) => {
+          const message = err instanceof Error ? err.message : 'Login failed';
+          this.notificationService.error(message);
         },
       });
   }
 
   loginWithFyers(): void {
     this.fyersService.getAuthUrl().subscribe({
-      next: (response: any) => {
-        window.location.href = response.authUrl;
+      next: (response) => {
+        if (response.authUrl) {
+          window.location.href = response.authUrl;
+        } else {
+          this.notificationService.error('Fyers auth URL unavailable.');
+        }
       },
       error: () => {
         this.notificationService.error('Failed to initiate Fyers login');

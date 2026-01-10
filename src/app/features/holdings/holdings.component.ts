@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { finalize } from 'rxjs';
+import { finalize, Subject, takeUntil } from 'rxjs';
 import { LiveAccountService } from '../../core/services/live-account.service';
-import { TradingModeService } from '../../core/services/trading-mode.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
+import { ModeStore } from '../../core/services/mode-store.service';
+import { HoldingDTO } from '../../core/models/holding.dto';
 
 @Component({
   selector: 'app-holdings',
@@ -13,7 +14,7 @@ import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
   templateUrl: './holdings.component.html',
   styleUrls: ['./holdings.component.scss']
 })
-export class HoldingsComponent implements OnInit {
+export class HoldingsComponent implements OnInit, OnDestroy {
   holdings: Array<{
     symbol: string;
     quantity: number;
@@ -25,34 +26,29 @@ export class HoldingsComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
   isLiveMode = false;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private liveAccountService: LiveAccountService,
-    private tradingModeService: TradingModeService
+    private modeStore: ModeStore
   ) {}
 
   ngOnInit(): void {
-    this.loadModeAndHoldings();
-  }
-
-  loadModeAndHoldings(): void {
-    this.isLoading = true;
-    this.errorMessage = '';
-    this.tradingModeService.getMode().pipe(
-      finalize(() => (this.isLoading = false))
-    ).subscribe({
-      next: (mode) => {
+    this.modeStore.mode$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((mode) => {
         this.isLiveMode = mode === 'LIVE';
         if (this.isLiveMode) {
           this.loadHoldings();
         } else {
           this.holdings = [];
         }
-      },
-      error: () => {
-        this.errorMessage = 'Unable to load trading mode.';
-      }
-    });
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadHoldings(): void {
@@ -71,7 +67,7 @@ export class HoldingsComponent implements OnInit {
     });
   }
 
-  private normalizeHoldings(holdings: any[]) {
+  private normalizeHoldings(holdings: HoldingDTO[]) {
     return holdings.map((holding) => ({
       symbol: holding?.symbol ?? holding?.tradingSymbol ?? holding?.ticker ?? holding?.instrument ?? '—',
       quantity: Number(holding?.qty ?? holding?.quantity ?? holding?.netQty ?? 0),
@@ -82,7 +78,7 @@ export class HoldingsComponent implements OnInit {
     }));
   }
 
-  private numberOrUndefined(value: any): number | undefined {
+  private numberOrUndefined(value: unknown): number | undefined {
     const num = Number(value);
     return Number.isFinite(num) ? num : undefined;
   }

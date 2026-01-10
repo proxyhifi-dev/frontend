@@ -12,6 +12,9 @@ import {
   ApexTooltip,
   ApexLegend
 } from 'ng-apexcharts';
+import { EquityCurvePoint } from '../../../core/models/market-data.model';
+
+type EquityDataPoint = EquityCurvePoint & { equity?: number };
 
 export interface ChartOptions {
   series: ApexAxisChartSeries;
@@ -35,7 +38,7 @@ export interface ChartOptions {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EquityCurveChartComponent implements OnInit, OnChanges {
-  @Input() data: any[] = [];
+  @Input() data: EquityDataPoint[] = [];
   @Input() timeRange: string = '1D';
 
   public chartOptions: Partial<ChartOptions> = {};
@@ -121,15 +124,15 @@ export class EquityCurveChartComponent implements OnInit, OnChanges {
       
       this.chartOptions.series = [{
         name: 'Equity',
-        data: filteredData.map((item: any) => ({
+        data: filteredData.map((item) => ({
           x: new Date(item.timestamp).getTime(),
-          y: item.equity
+          y: item.value ?? item.equity ?? 0
         }))
       }];
     }
   }
 
-  private filterDataByTimeRange(data: any[], timeRange: string): any[] {
+  private filterDataByTimeRange(data: EquityDataPoint[], timeRange: string): EquityDataPoint[] {
     const now = new Date();
     const ranges: { [key: string]: number } = {
       '1D': 1,
@@ -149,6 +152,6 @@ export class EquityCurveChartComponent implements OnInit, OnChanges {
     }
 
     const cutoffDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
-    return data.filter((item: any) => new Date(item.timestamp) >= cutoffDate);
+    return data.filter((item) => new Date(item.timestamp) >= cutoffDate);
   }
 }

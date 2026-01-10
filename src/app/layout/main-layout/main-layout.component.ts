@@ -8,7 +8,7 @@ import { SidebarComponent } from '../sidebar/sidebar.component'; // Ensure this 
 import { MobileNavComponent } from '../mobile-nav/mobile-nav.component';
 import { CommandPaletteComponent } from '../../shared/components/command-palette/command-palette.component';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
-import { TradingModeService } from '../../core/services/trading-mode.service';
+import { ModeStore } from '../../core/services/mode-store.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -25,7 +25,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   dataSource = 'Paper Ledger';
   isConnected = false;
   lastUpdated?: Date;
-  private lastMode?: boolean;
+  private lastMode?: string;
   private destroy$ = new Subject<void>();
   private readonly routeTitles: Record<string, string> = {
     dashboard: 'Dashboard',
@@ -50,7 +50,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
     public store: StoreService,
     private router: Router,
     private fyersOAuthService: FyersOAuthService,
-    private tradingModeService: TradingModeService
+    public modeStore: ModeStore
   ) {}
 
   ngOnInit(): void {
@@ -66,10 +66,15 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((state) => {
         this.searchQuery = state.searchSymbol ?? '';
-        if (this.lastMode !== state.isLiveMode) {
-          this.lastMode = state.isLiveMode;
-          this.dataSource = state.isLiveMode ? 'Fyers' : 'Paper Ledger';
-          this.refreshConnectionStatus(state.isLiveMode);
+      });
+
+    this.modeStore.mode$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((mode) => {
+        if (this.lastMode !== mode) {
+          this.lastMode = mode;
+          this.dataSource = mode === 'LIVE' ? 'Fyers' : 'Paper Ledger';
+          this.refreshConnectionStatus(mode === 'LIVE');
         }
       });
   }
@@ -100,8 +105,8 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   }
 
   toggleMode(): void {
-    const nextMode = this.store.snapshot.isLiveMode ? 'PAPER' : 'LIVE';
-    this.tradingModeService.setMode(nextMode).subscribe();
+    const nextMode = this.modeStore.snapshot === 'LIVE' ? 'PAPER' : 'LIVE';
+    this.modeStore.setMode(nextMode).subscribe();
   }
 
   private updatePageMeta(url: string): void {
