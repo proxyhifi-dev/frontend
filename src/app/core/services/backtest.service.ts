@@ -36,6 +36,12 @@ export interface BacktestDetail {
   run: BacktestRun;
   metrics?: BacktestMetrics;
   monthly?: BacktestMonthlyBreakdown[];
+
+  // Backwards-compatible flattened fields used by some UI components.
+  profit?: number;
+  profitFactor?: number;
+  maxDrawdown?: number;
+  trades?: unknown[];
 }
 
 @Injectable({ providedIn: 'root' })

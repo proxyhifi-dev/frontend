@@ -32,5 +32,7 @@ export interface CircuitBreakerStatus {
   reason?: string;
   dailyLossUsed?: number;
   dailyLossLimit?: number;
+  // Optional... some backends include this field.
+  portfolioHeat?: number;
   lastTriggeredAt?: string;
 }

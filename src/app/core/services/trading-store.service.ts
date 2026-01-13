@@ -63,6 +63,10 @@ export interface AlertEvent {
 
 @Injectable({ providedIn: 'root' })
 export class TradingStoreService {
+  private toNumber(value: unknown, fallback = 0): number {
+    const num = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(num) ? num : fallback;
+  }
   private connectionStatusSubject = new BehaviorSubject<ConnectionStatus>('disconnected');
   readonly connectionStatus$ = this.connectionStatusSubject.asObservable();
 
@@ -236,13 +240,17 @@ export class TradingStoreService {
           : 0;
 
         this.setAccountOverview({
-          equity: summaryPayload.currentValue ?? 0,
-          usedMargin: summaryPayload.marginUsed ?? summaryPayload.equityUsed ?? 0,
-          freeMargin: summaryPayload.availableFunds ?? summaryPayload.availablePaperFunds ?? 0,
-          dailyPnl: todayMetrics?.todayPnL ?? summaryPayload.todaysPnl ?? 0,
-          monthlyPnl: metrics?.netProfit ?? 0,
-          unrealizedPnl: unrealizedMetrics?.unrealizedPnL ?? summaryPayload.unrealizedPnL ?? 0,
-          drawdown: metrics?.maxDrawdown ?? 0,
+          equity: this.toNumber(summaryPayload.currentValue, 0),
+          usedMargin: this.toNumber(summaryPayload.marginUsed ?? summaryPayload.equityUsed, 0),
+          freeMargin: this.toNumber(summaryPayload.availableFunds ?? summaryPayload.availablePaperFunds, 0),
+          dailyPnl: this.toNumber(todayMetrics?.todayPnL ?? summaryPayload.todaysPnl ?? summaryPayload['todayPnL'], 0),
+          monthlyPnl: this.toNumber(metrics?.netProfit, 0),
+          // Backend/DTO naming isn't consistent (unrealizedPnl vs unrealizedPnL), so support both.
+          unrealizedPnl: this.toNumber(
+            unrealizedMetrics?.unrealizedPnL ?? summaryPayload.unrealizedPnl ?? summaryPayload['unrealizedPnL'],
+            0
+          ),
+          drawdown: this.toNumber(metrics?.maxDrawdown, 0),
           totalCapital,
           mode
         });
@@ -259,16 +267,16 @@ export class TradingStoreService {
         const strategyStatus: StrategyHealthStatus = circuitStatus?.triggered
           ? 'BROKEN'
           : metrics?.maxDrawdown && metrics.maxDrawdown > 20
-          ? 'DEGRADED'
-          : 'OK';
+            ? 'DEGRADED'
+            : 'OK';
 
         this.setStrategyHealth({
           status: strategyStatus,
           reasons: circuitStatus?.triggered
             ? [circuitStatus.reason ?? 'Risk circuit breaker triggered']
             : metrics?.maxDrawdown && metrics.maxDrawdown > 20
-            ? ['Drawdown exceeds 20%', 'Volatility elevated beyond guardrails']
-            : ['Execution within risk guardrails'],
+              ? ['Drawdown exceeds 20%', 'Volatility elevated beyond guardrails']
+              : ['Execution within risk guardrails'],
           updatedAt: new Date().toLocaleTimeString(),
           isPaused: circuitStatus?.triggered ?? false,
           canManage: true
@@ -283,8 +291,8 @@ export class TradingStoreService {
         this.setPositions(positions ?? []);
         this.setTrades(trades ?? []);
         this.setSignals(signals ?? []);
-        const equityCurve = Array.isArray(equity) ? equity : equity?.curve ?? [];
-        this.setMarketData(equityCurve);
+        const equityCurve = Array.isArray(equity) ? equity : (equity as { curve?: MarketDataPoint[] } | null)?.curve ?? [];
+        this.setMarketData(equityCurve as MarketDataPoint[]);
         this.setLastUpdate(new Date().toLocaleTimeString());
         this.dashboardLoadingSubject.next(false);
       }),

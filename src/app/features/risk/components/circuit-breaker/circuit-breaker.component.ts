@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
+import { ApexChart, ApexPlotOptions, NgApexchartsModule } from 'ng-apexcharts';
 import { CurrencyInrPipe } from '../../../../shared/pipes/currency-inr-pipe';
 
 @Component({
@@ -43,7 +43,7 @@ export class CircuitBreakerComponent {
     return '#00C853';
   }
 
-  public chartOptions: ApexOptions = {
+  public chartOptions: { chart: ApexChart; plotOptions: ApexPlotOptions } = {
     chart: { type: 'radialBar', height: 250, sparkline: { enabled: true } },
     plotOptions: {
       radialBar: {

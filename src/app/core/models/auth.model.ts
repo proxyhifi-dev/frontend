@@ -11,4 +11,7 @@ export interface AuthResponse {
   token?: string;
   refreshToken?: string;
   user?: User;
+  // Some backend responses return status flags/messages.
+  message?: string;
+  requiresLogin?: boolean;
 }

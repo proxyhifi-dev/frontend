@@ -72,13 +72,13 @@
             <span class="text-secondary">→ {{ t.exitPrice | currencyInr }}</span>
           </div>
         </td>
-        <td [class.positive]="t.realizedPnl >= 0" [class.negative]="t.realizedPnl < 0">
-          {{ t.realizedPnl | currencyInr }}
+        <td [class.positive]="(t.realizedPnl ?? 0) >= 0" [class.negative]="(t.realizedPnl ?? 0) < 0">
+          {{ (t.realizedPnl ?? 0) | currencyInr }}
         </td>
         <td class="bold">{{ t.rMultiple | rMultiple }}</td>
         <td>
-            <span class="reason-badge" [ngClass]="getExitClass(t.exitReason)">
-              {{ t.exitReason }}
+            <span class="reason-badge" [ngClass]="getExitClass(t.exitReason ?? '')">
+              {{ t.exitReason ?? '—' }}
             </span>
         </td>
       </tr>

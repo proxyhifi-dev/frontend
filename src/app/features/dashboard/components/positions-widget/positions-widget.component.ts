@@ -1,9 +1,9 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { CurrencyInrPipe } from '../../../shared/pipes/currency-inr-pipe';
-import { PercentFormatPipe } from '../../../shared/pipes/percent-format.pipe';
-import { PositionView } from '../../../core/models/domain.model';
+import { CurrencyInrPipe } from '../../../../shared/pipes/currency-inr-pipe';
+import { PercentFormatPipe } from '../../../../shared/pipes/percent-format.pipe';
+import { PositionView } from '../../../../core/models/domain.model';
 
 @Component({
   selector: 'app-positions-widget',

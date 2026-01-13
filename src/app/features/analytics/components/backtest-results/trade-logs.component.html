@@ -9,7 +9,7 @@
   </tr>
   </thead>
   <tbody>
-  <tr *ngFor="let trade of results.trades">
+  <tr *ngFor="let trade of (results?.trades ?? [])">
     <td>{{ trade.date | date:'dd/MM HH:mm' }}</td>
     <td>{{ trade.entryPrice }}</td>
     <td>{{ trade.exitPrice }}</td>

@@ -1,6 +1,7 @@
 import { Component, AfterViewInit, Input } from '@angular/core';
 
-declare const TradingView: { widget: (config: Record<string, unknown>) => void };
+// TradingView's embed script exposes `TradingView.widget` as a constructor.
+declare const TradingView: { widget: new (config: Record<string, unknown>) => unknown };
 
 @Component({
   selector: 'app-tv-chart',

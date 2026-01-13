@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
+import { ApexAxisChartSeries, ApexChart, ApexXAxis, NgApexchartsModule } from 'ng-apexcharts';
 import { CurrencyInrPipe } from '../../../../shared/pipes/currency-inr-pipe';
 import { PercentFormatPipe } from '../../../../shared/pipes/percent-format.pipe';
 import { BacktestDetail } from '../../../../core/services/backtest.service';
@@ -13,7 +13,7 @@ import { BacktestDetail } from '../../../../core/services/backtest.service';
 })
 export class BacktestResultsComponent {
   @Input() results: BacktestDetail | null = null;
-  @Input() backtestChartData: ApexOptions = {
+  @Input() backtestChartData: { series: ApexAxisChartSeries; chart: ApexChart; xaxis: ApexXAxis } = {
     series: [],
     chart: { type: 'line', height: 300 },
     xaxis: { categories: [] }

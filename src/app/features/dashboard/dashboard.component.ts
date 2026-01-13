@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -41,6 +41,12 @@ interface PositionRow extends PositionView {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent {
+  private wsService = inject(WebSocketService);
+  private botService = inject(BotService);
+  private store = inject(StoreService);
+  private modeStore = inject(ModeStore);
+  private tradingStore = inject(TradingStoreService);
+
   private readonly refreshTrigger$ = new Subject<void>();
   private readonly sortState$ = new BehaviorSubject<SortState>({ key: 'pnl', direction: 'desc' });
   private readonly tick$ = timer(0, 1000);
@@ -121,7 +127,8 @@ export class DashboardComponent {
     trades: this.tradingStore.trades$,
     positions: this.tradingStore.positions$,
     mode: this.modeStore.mode$,
-    user: this.store.state$.pipe(map((state) => state.user))
+    // allow template to safely optional-chain user fields during initial load
+    user: this.store.state$.pipe(map((state) => state.user ?? null))
   }).pipe(
     map((vm) => {
       const dailyPnlPercent = vm.account.totalCapital
@@ -145,13 +152,7 @@ export class DashboardComponent {
     shareReplay({ bufferSize: 1, refCount: true })
   );
 
-  constructor(
-    private wsService: WebSocketService,
-    private botService: BotService,
-    private store: StoreService,
-    private modeStore: ModeStore,
-    private tradingStore: TradingStoreService
-  ) {}
+  // Using inject() avoids "used before initialization" errors from field initializers.
 
   reloadDashboard(): void {
     this.refreshTrigger$.next();

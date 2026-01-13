@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { NgApexchartsModule } from 'ng-apexcharts';
@@ -20,6 +20,7 @@ interface MetricCard {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BacktestValidationComponent {
+  private fb = inject(FormBuilder);
   readonly form = this.fb.group({
     universe: ['NIFTY 50'],
     startDate: ['2023-01-01'],
@@ -80,7 +81,7 @@ export class BacktestValidationComponent {
     colors: ['#38BDF8']
   };
 
-  constructor(private fb: FormBuilder, private toastService: ToastService) {}
+  constructor(private toastService: ToastService) {}
 
   runBacktest(): void {
     this.executeJob('Backtest');
