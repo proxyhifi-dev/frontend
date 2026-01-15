@@ -1,21 +1,23 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, map, of, tap } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { BehaviorSubject, Observable, of, tap, map, catchError } from 'rxjs';
 import { AuthResponse, User } from '../models/auth.model';
+import { TokenService } from '../auth/token.service';
+import { HttpBaseService } from '../http/http-base.service';
+import { WebSocketService } from './websocket.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = environment.apiUrl;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(
-    private http: HttpClient,
-    private router: Router
+    private http: HttpBaseService,
+    private router: Router,
+    private tokenService: TokenService,
+    private websocketService: WebSocketService
   ) {
     const user = localStorage.getItem('user');
     if (user) {
@@ -28,91 +30,111 @@ export class AuthService {
   }
 
   get token(): string | null {
-    return localStorage.getItem('token');
+    return this.tokenService.getAccessToken();
   }
 
   get refreshToken(): string | null {
-    return localStorage.getItem('refreshToken');
+    return this.tokenService.getRefreshToken();
   }
 
   login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, { email, password })
-      .pipe(
-        tap((response) => {
-          const accessToken = response.accessToken || response.token;
-          if (accessToken) {
-            localStorage.setItem('token', accessToken);
-          }
-          if (response.refreshToken) {
-            localStorage.setItem('refreshToken', response.refreshToken);
-          }
-          if (response.user) {
-            localStorage.setItem('user', JSON.stringify(response.user));
-            this.currentUserSubject.next(response.user);
-          }
-        })
-      );
+    return this.http.post<AuthResponse>('/auth/login', { email, password }).pipe(
+      tap((response) => this.persistAuth(response))
+    );
+  }
+
+  register(email: string, username: string, password: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/auth/register', { email, username, password }).pipe(
+      tap((response) => this.persistAuth(response))
+    );
+  }
+
+  bootstrapSession(): Observable<User | null> {
+    if (!this.isAuthenticated()) {
+      return of(null);
+    }
+
+    return this.http.get<User>('/auth/me').pipe(
+      tap((user) => this.setUser(user)),
+      catchError(() => {
+        this.logout();
+        return of(null);
+      })
+    );
   }
 
   logout(): void {
-    localStorage.removeItem('token');
+    this.tokenService.clear();
     localStorage.removeItem('user');
-    localStorage.removeItem('refreshToken');
     this.currentUserSubject.next(null);
+    this.websocketService.disconnect();
     this.router.navigate(['/login']);
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('token');
+    return !!this.tokenService.getAccessToken();
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return this.tokenService.getAccessToken();
   }
 
-  // Public method to update authentication state (used by Fyers callback)
   updateAuthState(user: User | null, token: string, refreshToken?: string): void {
     if (token) {
-      localStorage.setItem('token', token);
+      this.tokenService.setAccessToken(token);
     }
     if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken);
+      this.tokenService.setRefreshToken(refreshToken);
     }
     if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
-      this.currentUserSubject.next(user);
+      this.setUser(user);
     }
+  }
+
+  refreshAccessToken(): Observable<string> {
+    const refreshToken = this.tokenService.getRefreshToken();
+    if (!refreshToken) {
+      return of('');
+    }
+    return this.http.post<{ accessToken?: string; token?: string }>('/auth/refresh', { refreshToken }).pipe(
+      map((response) => response.accessToken || response.token || ''),
+      tap((token) => {
+        if (token) {
+          this.tokenService.setAccessToken(token);
+        }
+      })
+    );
   }
 
   getFyersAuthUrl(): Observable<{ authUrl: string }> {
-    return this.http.get<{ authUrl: string }>(`${this.apiUrl}/auth/fyers/auth-url`);
+    return this.http.get<{ authUrl: string }>('/auth/fyers/authorize');
   }
 
   handleFyersCallback(authCode: string, state?: string): Observable<AuthResponse> {
-    // Send both auth_code and state to backend
     const payload: { auth_code: string; state?: string } = { auth_code: authCode };
     if (state) {
       payload.state = state;
     }
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/fyers/callback`, payload);
-  }
-
-  register(email: string, username: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/register`, { email, username, password });
-  }
-
-  refreshAccessToken(): Observable<string> {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken) {
-      return of('');
-    }
-    return this.http.post<{ accessToken?: string; token?: string }>(`${this.apiUrl}/auth/refresh`, { refreshToken }).pipe(
-      map((response) => response.accessToken || response.token || ''),
-      tap((token) => {
-        if (token) {
-          localStorage.setItem('token', token);
-        }
-      })
+    return this.http.post<AuthResponse>('/auth/fyers/callback', payload).pipe(
+      tap((response) => this.persistAuth(response))
     );
+  }
+
+  private persistAuth(response: AuthResponse): void {
+    const accessToken = response.accessToken || response.token;
+    if (accessToken) {
+      this.tokenService.setAccessToken(accessToken);
+    }
+    if (response.refreshToken) {
+      this.tokenService.setRefreshToken(response.refreshToken);
+    }
+    if (response.user) {
+      this.setUser(response.user);
+    }
+  }
+
+  private setUser(user: User): void {
+    localStorage.setItem('user', JSON.stringify(user));
+    this.currentUserSubject.next(user);
   }
 }

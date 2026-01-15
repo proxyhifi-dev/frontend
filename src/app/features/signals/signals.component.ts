@@ -32,6 +32,7 @@ export class SignalsComponent implements OnInit, OnDestroy {
   isDrawerOpen = false;
   detailLoading = false;
   detailError = '';
+  executionSupported = false;
   private lastMode?: string;
   private destroy$ = new Subject<void>();
 
@@ -60,6 +61,12 @@ export class SignalsComponent implements OnInit, OnDestroy {
           this.lastMode = mode;
           this.loadSignals();
         }
+      });
+
+    this.signalSvc.executionSupported$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((supported) => {
+        this.executionSupported = supported;
       });
   }
 
@@ -108,7 +115,7 @@ export class SignalsComponent implements OnInit, OnDestroy {
         this.loadSignals();
       },
       error: (err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Unable to start scan.';
+        const message = (err as { userMessage?: string })?.userMessage ?? 'Unable to start scan.';
         this.notify.error('Scan Failed', message);
       }
     });
@@ -160,7 +167,7 @@ export class SignalsComponent implements OnInit, OnDestroy {
         this.loadSignals();
       },
       error: (err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Unable to execute trade.';
+        const message = (err as { userMessage?: string })?.userMessage ?? 'Unable to execute trade.';
         this.notify.error('Execution Failed', message);
       }
     });

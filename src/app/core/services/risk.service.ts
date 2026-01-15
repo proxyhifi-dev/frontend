@@ -1,29 +1,30 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CorrelationMatrix, RiskStatus } from '../models/domain.model';
-import { environment } from '../../../environments/environment';
+import { HttpBaseService } from '../http/http-base.service';
 
 @Injectable({ providedIn: 'root' })
 export class RiskService {
-  private apiUrl = `${environment.apiUrl}/risk`;
-
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpBaseService) {}
 
   getStatus(): Observable<RiskStatus> {
-    return this.http.get<RiskStatus>(`${this.apiUrl}/status`);
+    return this.http.get<RiskStatus>('/risk/status');
   }
 
   getCorrelationMatrix(): Observable<CorrelationMatrix> {
-    return this.http.get<CorrelationMatrix>(`${this.apiUrl}/correlation-matrix`);
+    return this.http.get<CorrelationMatrix>('/risk/correlation-matrix');
   }
 
   getCircuitBreakerStatus(): Observable<CircuitBreakerStatus> {
-    return this.http.get<CircuitBreakerStatus>(`${this.apiUrl}/circuit-breaker`);
+    return this.http.get<CircuitBreakerStatus>('/guard/status');
+  }
+
+  clearGuard(): Observable<void> {
+    return this.http.post<void>('/guard/clear', {});
   }
 
   triggerEmergencyStop(): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/emergency-stop`, {});
+    return this.http.post<void>('/risk/emergency-stop', {});
   }
 }
 
@@ -32,7 +33,6 @@ export interface CircuitBreakerStatus {
   reason?: string;
   dailyLossUsed?: number;
   dailyLossLimit?: number;
-  // Optional... some backends include this field.
   portfolioHeat?: number;
   lastTriggeredAt?: string;
 }

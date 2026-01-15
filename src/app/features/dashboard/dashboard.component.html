@@ -40,15 +40,23 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="mode-toggle" type="button" (click)="toggleMode(vm.isLiveMode)" [attr.aria-label]="vm.isLiveMode ? 'Switch to paper mode' : 'Switch to live mode'">
+        <button
+          class="mode-toggle"
+          type="button"
+          (click)="toggleMode(vm.isLiveMode, vm.modeSupported)"
+          [disabled]="!vm.modeSupported"
+          [attr.title]="vm.modeSupported ? '' : 'Backend mode endpoint pending'"
+          [attr.aria-label]="vm.isLiveMode ? 'Switch to paper mode' : 'Switch to live mode'"
+        >
           <span>{{ vm.isLiveMode ? 'Switch to Paper' : 'Switch to Live' }}</span>
         </button>
         <button
           class="kill-switch"
           type="button"
           [class.active]="vm.strategyHealth.isPaused"
-          (click)="toggleKillSwitch(vm.strategyHealth.isPaused)"
-          [disabled]="!vm.strategyHealth.canManage"
+          (click)="toggleKillSwitch(vm.strategyHealth.isPaused, vm.botControlSupported)"
+          [disabled]="!vm.strategyHealth.canManage || !vm.botControlSupported"
+          [attr.title]="vm.botControlSupported ? '' : 'Backend bot control endpoint pending'"
           [attr.aria-label]="vm.strategyHealth.isPaused ? 'Resume trading' : 'Pause trading'"
         >
           {{ vm.strategyHealth.isPaused ? 'Resume Trading' : 'Kill Switch' }}
@@ -99,8 +107,8 @@
         <app-strategy-health-widget
           class="strategy-widget"
           [health]="vm.strategyHealth"
-          (pause)="toggleKillSwitch(false)"
-          (resume)="toggleKillSwitch(true)"
+          (pause)="toggleKillSwitch(false, vm.botControlSupported)"
+          (resume)="toggleKillSwitch(true, vm.botControlSupported)"
         ></app-strategy-health-widget>
       </div>
       <ng-template #accountSkeleton>

@@ -53,6 +53,7 @@ export class DashboardComponent {
 
   readonly filterControl = new FormControl('', { nonNullable: true });
   readonly connectionStatus$ = this.wsService.connect();
+  readonly botControlSupported$ = this.botService.controlSupported$;
 
   readonly reloadSnapshot$ = this.refreshTrigger$.pipe(
     withLatestFrom(this.modeStore.mode$),
@@ -127,6 +128,8 @@ export class DashboardComponent {
     trades: this.tradingStore.trades$,
     positions: this.tradingStore.positions$,
     mode: this.modeStore.mode$,
+    modeSupported: this.modeStore.modeSupported$,
+    botControlSupported: this.botControlSupported$,
     // allow template to safely optional-chain user fields during initial load
     user: this.store.state$.pipe(map((state) => state.user ?? null))
   }).pipe(
@@ -152,8 +155,6 @@ export class DashboardComponent {
     shareReplay({ bufferSize: 1, refCount: true })
   );
 
-  // Using inject() avoids "used before initialization" errors from field initializers.
-
   reloadDashboard(): void {
     this.refreshTrigger$.next();
   }
@@ -164,12 +165,23 @@ export class DashboardComponent {
     this.sortState$.next({ key, direction });
   }
 
-  toggleMode(isLiveMode: boolean): void {
+  toggleMode(isLiveMode: boolean, modeSupported: boolean): void {
+    if (!modeSupported) {
+      return;
+    }
     const nextMode = isLiveMode ? 'PAPER' : 'LIVE';
     this.modeStore.setMode(nextMode).subscribe();
   }
 
-  toggleKillSwitch(isPaused: boolean): void {
+  toggleKillSwitch(isPaused: boolean, botControlSupported: boolean): void {
+    if (!botControlSupported) {
+      this.tradingStore.addAlert({
+        type: 'warning',
+        message: 'Backend bot control endpoint pending.',
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
     this.botService.setBotStatus(!isPaused).subscribe({
       next: () => this.tradingStore.updateBotStatus({ isPaused: !isPaused }),
       error: () => this.tradingStore.addAlert({

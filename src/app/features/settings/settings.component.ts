@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { finalize, Subject, takeUntil } from 'rxjs';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService, TradingSettings } from '../../core/services/settings.service';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
@@ -14,7 +14,7 @@ import { BrokerConnectionStatus, BrokerErrorLog } from '../../core/models/broker
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss']
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
   activeTab = 'trading';
   isSaving = false;
   brokerStatus: 'CONNECTED' | 'DISCONNECTED' | 'LOADING' = 'LOADING';
@@ -23,6 +23,10 @@ export class SettingsComponent implements OnInit {
   brokerLoading = false;
   brokerLogsLoading = false;
   brokerErrorMessage = '';
+  storageMode: 'remote' | 'local' = 'remote';
+  disconnectSupported = true;
+  errorLogsSupported = true;
+  private destroy$ = new Subject<void>();
 
   // Settings Config Model
   config: TradingSettings = {
@@ -38,7 +42,23 @@ export class SettingsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.settingsService.loadSettings().subscribe({
+    this.settingsService.storageMode$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((mode) => {
+        this.storageMode = mode;
+      });
+    this.fyersService.disconnectSupported$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((supported) => {
+        this.disconnectSupported = supported;
+      });
+    this.fyersService.errorLogsSupported$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((supported) => {
+        this.errorLogsSupported = supported;
+      });
+
+    this.settingsService.loadSettings().pipe(takeUntil(this.destroy$)).subscribe({
       next: (settings) => {
         this.config = settings;
       },
@@ -49,12 +69,20 @@ export class SettingsComponent implements OnInit {
     this.refreshBrokerStatus();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   save(): void {
     this.isSaving = true;
     this.settingsService.saveSettings(this.config)
       .pipe(finalize(() => (this.isSaving = false)))
       .subscribe({
-        next: () => this.notificationService.success('Saved to server.'),
+        next: () => {
+          const message = this.storageMode === 'local' ? 'Saved locally.' : 'Saved to server.';
+          this.notificationService.success(message);
+        },
         error: () => this.notificationService.error('Failed to save settings to server.')
       });
   }
@@ -71,6 +99,10 @@ export class SettingsComponent implements OnInit {
   }
 
   disconnectBroker(): void {
+    if (!this.disconnectSupported) {
+      this.notificationService.warning('Backend disconnect endpoint pending.', 'Action unavailable');
+      return;
+    }
     this.fyersService.disconnectFyers().subscribe({
       next: () => {
         this.notificationService.success('Broker disconnected.');
@@ -98,6 +130,11 @@ export class SettingsComponent implements OnInit {
   }
 
   loadBrokerErrors(): void {
+    if (!this.errorLogsSupported) {
+      this.brokerErrors = [];
+      this.brokerLogsLoading = false;
+      return;
+    }
     this.brokerLogsLoading = true;
     this.fyersService.getFyersErrors().subscribe({
       next: (logs) => {

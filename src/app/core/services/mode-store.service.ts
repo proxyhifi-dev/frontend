@@ -6,16 +6,26 @@ import { TradingMode, TradingModeService } from './trading-mode.service';
 export class ModeStore {
   private readonly storageKey = 'tradingMode';
   private readonly modeSubject = new BehaviorSubject<TradingMode>(this.getInitialMode());
+  private readonly modeSupportedSubject = new BehaviorSubject<boolean>(true);
 
   readonly mode$ = this.modeSubject.asObservable().pipe(distinctUntilChanged());
   readonly isLive$ = this.mode$.pipe(map((mode) => mode === 'LIVE'));
   readonly modeLabel$ = this.mode$.pipe(map((mode) => (mode === 'LIVE' ? 'LIVE MODE' : 'PAPER MODE')));
   readonly toggleLabel$ = this.mode$.pipe(map((mode) => (mode === 'LIVE' ? 'Switch to Paper' : 'Switch to Live')));
+  readonly modeSupported$ = this.modeSupportedSubject.asObservable();
 
-  constructor(private tradingModeService: TradingModeService) {}
+  constructor(private tradingModeService: TradingModeService) {
+    this.tradingModeService.modeSupported$.subscribe((supported) => {
+      this.modeSupportedSubject.next(supported);
+    });
+  }
 
   get snapshot(): TradingMode {
     return this.modeSubject.value;
+  }
+
+  get modeSupported(): boolean {
+    return this.modeSupportedSubject.value;
   }
 
   syncFromBackend(): Observable<TradingMode> {

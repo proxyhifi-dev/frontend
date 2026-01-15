@@ -25,6 +25,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   dataSource = 'Paper Ledger';
   isConnected = false;
   lastUpdated?: Date;
+  modeSupported = true;
   private lastMode?: string;
   private destroy$ = new Subject<void>();
   private readonly routeTitles: Record<string, string> = {
@@ -77,6 +78,12 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
           this.refreshConnectionStatus(mode === 'LIVE');
         }
       });
+
+    this.modeStore.modeSupported$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((supported) => {
+        this.modeSupported = supported;
+      });
   }
 
   ngOnDestroy(): void {
@@ -105,6 +112,9 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   }
 
   toggleMode(): void {
+    if (!this.modeSupported) {
+      return;
+    }
     const nextMode = this.modeStore.snapshot === 'LIVE' ? 'PAPER' : 'LIVE';
     this.modeStore.setMode(nextMode).subscribe();
   }

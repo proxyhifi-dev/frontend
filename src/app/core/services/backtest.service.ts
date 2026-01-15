@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { HttpBaseService } from '../http/http-base.service';
 
 export interface BacktestRun {
   id: string | number;
@@ -46,19 +45,17 @@ export interface BacktestDetail {
 
 @Injectable({ providedIn: 'root' })
 export class BacktestService {
-  private readonly apiUrl = `${environment.apiUrl}/backtest`;
-
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpBaseService) {}
 
   getRuns(): Observable<BacktestRun[]> {
-    return this.http.get<BacktestRun[]>(`${this.apiUrl}/runs`);
+    return this.http.get<BacktestRun[]>('/backtest/runs');
   }
 
   runBacktest(payload: Record<string, unknown>): Observable<BacktestRun> {
-    return this.http.post<BacktestRun>(`${this.apiUrl}/run`, payload);
+    return this.http.post<BacktestRun>('/backtest/run', payload);
   }
 
   getRunDetail(id: string | number): Observable<BacktestDetail> {
-    return this.http.get<BacktestDetail>(`${this.apiUrl}/runs/${id}`);
+    return this.http.get<BacktestDetail>(`/backtest/runs/${id}`);
   }
 }

@@ -26,6 +26,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
+      this.authService.bootstrapSession().subscribe();
       this.modeStore.syncFromBackend().subscribe();
     }
   }

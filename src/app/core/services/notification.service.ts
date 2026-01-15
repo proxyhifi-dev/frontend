@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 export interface Notification {
   id: string;
@@ -16,8 +16,6 @@ export class NotificationService {
   private notificationSubject = new BehaviorSubject<Notification[]>([]);
   public notifications$ = this.notificationSubject.asObservable();
 
-  constructor() {}
-
   // Standard method for success notifications
   success(message: string, title: string = 'Success'): void {
     this.addNotification({
@@ -27,7 +25,6 @@ export class NotificationService {
       timestamp: new Date().toISOString(),
       read: false
     });
-    console.log(`✅ SUCCESS: ${message}`);
   }
 
   // Standard method for error notifications
@@ -39,7 +36,6 @@ export class NotificationService {
       timestamp: new Date().toISOString(),
       read: false
     });
-    console.error(`❌ ERROR: ${message}`);
   }
 
   // Warning notifications
@@ -51,7 +47,6 @@ export class NotificationService {
       timestamp: new Date().toISOString(),
       read: false
     });
-    console.warn(`⚠️ WARNING: ${message}`);
   }
 
   // Info notifications
@@ -63,7 +58,6 @@ export class NotificationService {
       timestamp: new Date().toISOString(),
       read: false
     });
-    console.info(`ℹ️ INFO: ${message}`);
   }
 
   // Keeping these for backward compatibility
@@ -97,6 +91,6 @@ export class NotificationService {
 
   // Generate unique ID for notifications
   private generateId(): string {
-    return `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `notif_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 }

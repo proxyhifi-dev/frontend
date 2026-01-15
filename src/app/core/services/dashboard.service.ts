@@ -1,58 +1,46 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { Observable } from 'rxjs';
 import { PerformanceMetrics, Signal } from '../models/domain.model';
 import { AccountOverviewDTO } from '../models/account.dto';
 import { EquityCurvePoint } from '../models/market-data.model';
 import { PnLMetrics } from '../models/pnl-metrics.dto';
+import { HttpBaseService } from '../http/http-base.service';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
-  private apiUrl = environment.apiUrl;
-
-  private summarySubject = new BehaviorSubject<AccountOverviewDTO>({
-    todayPnL: 0,
-    unrealizedPnL: 0,
-    winRate: 0,
-    roi: 0,
-    totalCapital: 100000,
-    totalTrades: 0
-  });
-
-  public summary$ = this.summarySubject.asObservable();
-
-  constructor(private http: HttpClient) {}
-
-  // Added to match component call
-  getDashboardStats(): Observable<AccountOverviewDTO> {
-    return this.getSummary();
-  }
+  constructor(private http: HttpBaseService) {}
 
   getSummary(): Observable<AccountOverviewDTO> {
-    return this.http.get<AccountOverviewDTO>(`${this.apiUrl}/account/summary`);
+    return this.http.get<AccountOverviewDTO>('/account/summary');
   }
 
-  // Existing methods
+  getOverview(): Observable<AccountOverviewDTO> {
+    return this.http.get<AccountOverviewDTO>('/account/overview');
+  }
+
   getTodayPnL(): Observable<PnLMetrics> {
-    return this.http.get<PnLMetrics>(`${this.apiUrl}/performance/today-pnl`);
+    return this.http.get<PnLMetrics>('/performance/today-pnl');
   }
 
-  getUnrealizedPnL(): Observable<PnLMetrics> {
-    return this.http.get<PnLMetrics>(`${this.apiUrl}/performance/unrealized-pnl`);
+  getDailyPnL(): Observable<PnLMetrics> {
+    return this.http.get<PnLMetrics>('/performance/daily-pnl');
+  }
+
+  getMonthlyPnL(): Observable<PnLMetrics> {
+    return this.http.get<PnLMetrics>('/performance/monthly-pnl');
   }
 
   getPerformanceMetrics(): Observable<PerformanceMetrics> {
-    return this.http.get<PerformanceMetrics>(`${this.apiUrl}/performance/metrics`);
+    return this.http.get<PerformanceMetrics>('/performance/metrics');
   }
 
   getEquityCurve(type: string = 'PAPER'): Observable<EquityCurvePoint[] | { curve: EquityCurvePoint[] }> {
     return this.http.get<EquityCurvePoint[] | { curve: EquityCurvePoint[] }>(
-      `${this.apiUrl}/performance/equity-curve?type=${type}`
+      `/performance/equity-curve?type=${type}`
     );
   }
 
   getSignals(): Observable<Signal[]> {
-    return this.http.get<Signal[]>(`${this.apiUrl}/strategy/signals`);
+    return this.http.get<Signal[]>('/strategy/signals/recent');
   }
 }

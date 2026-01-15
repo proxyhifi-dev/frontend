@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
+import { BehaviorSubject, Observable, of, catchError, map } from 'rxjs';
+import { HttpBaseService } from '../http/http-base.service';
+import { ApiError } from '../models/api-error.model';
 
 export interface BotStatus {
   isActive: boolean;
@@ -23,31 +22,41 @@ export interface BotActionResponse {
   providedIn: 'root'
 })
 export class BotService {
-  private apiUrl = `${environment.apiUrl}/bot`;
+  private controlSupportedSubject = new BehaviorSubject<boolean>(false);
+  readonly controlSupported$ = this.controlSupportedSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpBaseService) {}
 
   getBotStatus(): Observable<BotStatus> {
     return this.fetchStatus();
   }
 
   setBotStatus(isActive: boolean): Observable<BotActionResponse> {
-    return this.http.post<BotActionResponse>(`${this.apiUrl}/status`, { isActive }).pipe(
-      catchError(() => of({ success: false }))
+    if (!this.controlSupportedSubject.value) {
+      return of({ success: false, message: 'Backend bot control endpoint pending' });
+    }
+    return this.http.post<BotActionResponse>('/bot/status', { isActive }).pipe(
+      catchError((error: ApiError) => {
+        if (error.status === 404) {
+          this.controlSupportedSubject.next(false);
+        }
+        return of({ success: false, message: error.userMessage });
+      })
     );
   }
 
   triggerManualScan(): Observable<BotActionResponse> {
-    return this.http.post<BotActionResponse>(`${environment.apiUrl}/strategy/scan-now`, {});
+    return this.http.post<BotActionResponse>('/strategy/scan-now', {}).pipe(
+      catchError((error: ApiError) => of({ success: false, message: error.userMessage }))
+    );
   }
 
-  // Alias for triggerManualScan to match component usage
   scanNow(): Observable<BotActionResponse> {
     return this.triggerManualScan();
   }
 
   fetchStatus(): Observable<BotStatus> {
-    return this.http.get<BotStatus>(`${this.apiUrl}/status`).pipe(
+    return this.http.get<BotStatus>('/bot/status').pipe(
       map((status) => ({
         ...status,
         nextScanTime: status?.nextScanTime ? new Date(status.nextScanTime) : new Date(),

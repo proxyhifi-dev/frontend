@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { Observable, map } from 'rxjs';
+import { ModeStore } from './mode-store.service';
+import { PortfolioService } from '../portfolio/portfolio.service';
 
 export interface OrderRow {
   id: string | number;
@@ -16,15 +16,28 @@ export interface OrderRow {
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
-  private readonly apiUrl = `${environment.apiUrl}/orders`;
-
-  constructor(private http: HttpClient) {}
+  constructor(private modeStore: ModeStore, private portfolio: PortfolioService) {}
 
   getOpenOrders(): Observable<OrderRow[]> {
-    return this.http.get<OrderRow[]>(`${this.apiUrl}/open`);
+    return this.getOrders().pipe(
+      map((orders) => orders.filter((order) => !this.isClosedStatus(order.status)))
+    );
   }
 
   getOrderHistory(): Observable<OrderRow[]> {
-    return this.http.get<OrderRow[]>(`${this.apiUrl}/history`);
+    return this.getOrders().pipe(
+      map((orders) => orders.filter((order) => this.isClosedStatus(order.status)))
+    );
+  }
+
+  private getOrders(): Observable<OrderRow[]> {
+    return this.modeStore.snapshot === 'LIVE'
+      ? this.portfolio.getLiveOrders()
+      : this.portfolio.getPaperOrders();
+  }
+
+  private isClosedStatus(status?: string): boolean {
+    const normalized = status?.toUpperCase();
+    return ['FILLED', 'COMPLETE', 'COMPLETED', 'CANCELLED', 'REJECTED'].includes(normalized ?? '');
   }
 }

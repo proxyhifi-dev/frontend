@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  baseUrl: 'https://api.proxyhifi.com',
-  apiUrl: 'https://api.proxyhifi.com/api',
-  wsUrl: 'wss://api.proxyhifi.com/ws'
+  baseUrl: 'https://apex-trading-bot-w74z.onrender.com',
+  apiUrl: 'https://apex-trading-bot-w74z.onrender.com/api',
+  wsUrl: 'https://apex-trading-bot-w74z.onrender.com/ws'
 };
