@@ -41,7 +41,12 @@ import { takeUntil } from 'rxjs/operators';
       </div>
 
       <div class="action-buttons">
-        <button (click)="toggleBotStatus()" class="btn-toggle">
+        <button
+          (click)="toggleBotStatus()"
+          class="btn-toggle"
+          [disabled]="!controlSupported"
+          [attr.title]="controlSupported ? '' : 'Backend bot control endpoint pending'"
+        >
           {{ botStatus.isActive ? 'Pause' : 'Resume' }} Bot
         </button>
         <button (click)="triggerScan()" class="btn-scan" [disabled]="botStatus.isActive">
@@ -184,6 +189,7 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
 
   countdownTime: string = '0:30';
   lastScanFormatted: string = '1m ago';
+  controlSupported = false;
 
   private destroy$ = new Subject<void>();
 
@@ -192,6 +198,11 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.startCountdownTimer();
     this.subscribeToBotStatus();
+    this.botService.controlSupported$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((supported) => {
+        this.controlSupported = supported;
+      });
   }
 
   private startCountdownTimer(): void {
@@ -233,6 +244,9 @@ export class BotStatusWidgetComponent implements OnInit, OnDestroy {
   }
 
   toggleBotStatus(): void {
+    if (!this.controlSupported) {
+      return;
+    }
     const newStatus: BotStatus['status'] = this.botStatus.isActive ? 'Paused' : 'Running';
     this.botService.setBotStatus(newStatus === 'Running')
       .pipe(takeUntil(this.destroy$))

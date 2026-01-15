@@ -105,7 +105,7 @@ export class LoginComponent implements OnInit {
           this.router.navigate(['/dashboard']);
         },
         error: (err: unknown) => {
-          const message = err instanceof Error ? err.message : 'Login failed';
+          const message = (err as { userMessage?: string })?.userMessage ?? 'Login failed';
           this.notificationService.error(message);
         },
       });

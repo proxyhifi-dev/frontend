@@ -34,6 +34,8 @@
         type="button"
         class="mode-toggle"
         (click)="toggleMode()"
+        [disabled]="!modeSupported"
+        [attr.title]="modeSupported ? '' : 'Backend mode endpoint pending'"
         [attr.aria-pressed]="(modeStore.isLive$ | async)"
         aria-label="Toggle paper or live mode"
       >

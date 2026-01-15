@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Params, Router } from '@angular/router';
+import { take } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ModeStore } from '../../../core/services/mode-store.service';
@@ -51,7 +52,7 @@ export class FyersCallbackComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((params: Params) => {
+    this.route.queryParams.pipe(take(1)).subscribe((params: Params) => {
       const authCode = params['auth_code'];
       const state = params['state'];
       
@@ -92,7 +93,6 @@ export class FyersCallbackComponent implements OnInit {
             }
           },
           error: () => {
-            console.error('Fyers callback error.');
             this.notificationService.error('❌ Failed to connect Fyers account');
             
             // Redirect to login page on error

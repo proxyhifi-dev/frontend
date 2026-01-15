@@ -6,14 +6,14 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { routes } from './app.routes';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { loadingInterceptor } from './core/interceptors/loading.interceptor';
-import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(
-      withInterceptors([jwtInterceptor, loadingInterceptor, errorInterceptor])
+      withInterceptors([loadingInterceptor, errorInterceptor, authInterceptor])
     ),
     provideAnimations()
   ]

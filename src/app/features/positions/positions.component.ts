@@ -39,6 +39,11 @@ export class PositionsComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.refresh();
     this.loadCircuitBreaker();
+    this.positionSvc.closeSupported$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((supported) => {
+        this.supportsClose = supported;
+      });
     this.modeStore.mode$
       .pipe(takeUntil(this.destroy$))
       .subscribe((mode) => {
@@ -58,7 +63,7 @@ export class PositionsComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.openError = '';
     this.closedError = '';
-    this.positionSvc.getOpenPositions().subscribe({
+    this.positionSvc.getOpenPositions().pipe(takeUntil(this.destroy$)).subscribe({
       next: (data) => this.openPositions = data,
       error: () => {
         this.openError = 'Failed to load open positions.';
@@ -67,6 +72,7 @@ export class PositionsComponent implements OnInit, OnDestroy {
     });
 
     this.positionSvc.getClosedPositions().pipe(
+      takeUntil(this.destroy$),
       finalize(() => (this.isLoading = false))
     ).subscribe({
       next: (data) => {
@@ -97,7 +103,7 @@ export class PositionsComponent implements OnInit, OnDestroy {
         this.refresh();
       },
       error: (err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Unable to close position.';
+        const message = (err as { userMessage?: string })?.userMessage ?? 'Unable to close position.';
         this.notify.error('Close Failed', message);
       }
     });

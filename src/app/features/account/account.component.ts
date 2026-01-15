@@ -5,11 +5,11 @@ import { finalize, forkJoin, Subscription } from 'rxjs';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AccountProfile, LiveAccountService } from '../../core/services/live-account.service';
-import { PaperAccountService } from '../../core/services/paper-account.service';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { AccountOverviewDTO, PaperAccountDTO } from '../../core/models/account.dto';
 import { HoldingDTO } from '../../core/models/holding.dto';
 import { TradingMode } from '../../core/services/trading-mode.service';
+import { PaperService } from '../../core/paper/paper.service';
 
 interface HoldingRow {
   symbol: string;
@@ -37,12 +37,13 @@ export class AccountComponent implements OnInit, OnDestroy {
   loading = false;
   modeLoading = false;
   holdingsError = '';
+  modeSupported = true;
 
   private sub = new Subscription();
 
   constructor(
     private liveAccountService: LiveAccountService,
-    private paperAccountService: PaperAccountService,
+    private paperService: PaperService,
     private fyersService: FyersOAuthService,
     private notificationService: NotificationService,
     private modeStore: ModeStore
@@ -53,6 +54,11 @@ export class AccountComponent implements OnInit, OnDestroy {
       this.modeStore.mode$.subscribe((mode) => {
         this.isLiveMode = mode === 'LIVE';
         this.loadAccountData();
+      })
+    );
+    this.sub.add(
+      this.modeStore.modeSupported$.subscribe((supported) => {
+        this.modeSupported = supported;
       })
     );
     this.loadMode();
@@ -96,6 +102,10 @@ export class AccountComponent implements OnInit, OnDestroy {
   }
 
   toggleMode(): void {
+    if (!this.modeSupported) {
+      this.notificationService.warning('Backend mode endpoint pending.', 'Mode Locked');
+      return;
+    }
     const nextMode: TradingMode = this.isLiveMode ? 'PAPER' : 'LIVE';
     this.modeLoading = true;
     this.sub.add(
@@ -122,7 +132,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     }
     this.loading = true;
     this.sub.add(
-      this.paperAccountService.deposit(amount).pipe(
+      this.paperService.deposit(amount).pipe(
         finalize(() => {
           this.loading = false;
         })
@@ -145,7 +155,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     }
     this.loading = true;
     this.sub.add(
-      this.paperAccountService.withdraw(amount).pipe(
+      this.paperService.withdraw(amount).pipe(
         finalize(() => {
           this.loading = false;
         })
@@ -167,7 +177,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     }
     this.loading = true;
     this.sub.add(
-      this.paperAccountService.reset().pipe(
+      this.paperService.reset().pipe(
         finalize(() => {
           this.loading = false;
         })
@@ -248,7 +258,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     }
 
     this.sub.add(
-      this.paperAccountService.getAccount().pipe(
+      this.paperService.getAccount().pipe(
         finalize(() => {
           this.loading = false;
         })

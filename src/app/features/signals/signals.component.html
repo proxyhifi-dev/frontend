@@ -96,7 +96,14 @@
                 <span>{{ s.hasEntrySignal ? 'Yes' : 'No' }}</span>
               </div>
             </div>
-            <button class="btn-execute-big" (click)="executeSignal(s)" [disabled]="!s.hasEntrySignal || safeMode">EXECUTE TRADE</button>
+            <button
+              class="btn-execute-big"
+              (click)="executeSignal(s)"
+              [disabled]="!s.hasEntrySignal || safeMode || !executionSupported"
+              [attr.title]="executionSupported ? '' : 'Backend strategy execution endpoint pending'"
+            >
+              EXECUTE TRADE
+            </button>
           </div>
         </div>
       </div>

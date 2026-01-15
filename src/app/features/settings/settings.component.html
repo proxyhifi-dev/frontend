@@ -72,6 +72,7 @@
 
       <div class="setting-group">
         <label>Error Logs</label>
+        <div class="helper-text" *ngIf="!errorLogsSupported">Backend broker error logs endpoint pending.</div>
         <table class="data-table">
           <thead>
           <tr>
@@ -100,7 +101,14 @@
         <button class="btn btn-primary" type="button" (click)="connectBroker()" [disabled]="brokerStatus === 'CONNECTED'" aria-label="Connect broker">
           Connect Broker
         </button>
-        <button class="btn btn-danger-outline" type="button" (click)="disconnectBroker()" [disabled]="brokerStatus !== 'CONNECTED'" aria-label="Disconnect broker">
+        <button
+          class="btn btn-danger-outline"
+          type="button"
+          (click)="disconnectBroker()"
+          [disabled]="brokerStatus !== 'CONNECTED' || !disconnectSupported"
+          [attr.title]="disconnectSupported ? '' : 'Backend disconnect endpoint pending'"
+          aria-label="Disconnect broker"
+        >
           Disconnect Broker
         </button>
       </div>
@@ -131,7 +139,10 @@
       <button class="btn btn-primary" (click)="save()" [disabled]="isSaving">
         {{ isSaving ? 'Saving...' : 'Save Changes' }}
       </button>
-      <p class="save-note">Changes are saved to the server.</p>
+      <p class="save-note">
+        Changes are saved to the server.
+        <span class="badge" *ngIf="storageMode === 'local'">Saved locally</span>
+      </p>
     </div>
   </div>
 </div>

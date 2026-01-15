@@ -12,6 +12,7 @@ import { ModeStore } from './mode-store.service';
 import { AccountOverviewDTO } from '../models/account.dto';
 import { MarketDataPoint } from '../models/market-data.model';
 import { PnLMetrics } from '../models/pnl-metrics.dto';
+import { PaperService } from '../paper/paper.service';
 
 export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
 export type StrategyHealthStatus = 'OK' | 'DEGRADED' | 'BROKEN';
@@ -142,7 +143,8 @@ export class TradingStoreService {
     private settingsService: SettingsService,
     private riskService: RiskService,
     private modeStore: ModeStore,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private paperService: PaperService
   ) {
     this.modeStore.mode$
       .pipe(
@@ -213,9 +215,12 @@ export class TradingStoreService {
     this.dashboardErrorSubject.next(null);
 
     return forkJoin({
+      overview: this.dashboardService.getOverview(),
+      paperAccount: this.paperService.getAccount().pipe(catchError(() => of(null))),
       summary: this.dashboardService.getSummary(),
       today: this.dashboardService.getTodayPnL(),
-      unrealized: this.dashboardService.getUnrealizedPnL(),
+      daily: this.dashboardService.getDailyPnL(),
+      monthly: this.dashboardService.getMonthlyPnL(),
       metrics: this.dashboardService.getPerformanceMetrics(),
       equity: this.dashboardService.getEquityCurve(mode),
       signals: this.dashboardService.getSignals(),
@@ -224,30 +229,44 @@ export class TradingStoreService {
       settings: this.settingsService.loadSettings().pipe(catchError(() => of(null))),
       circuit: this.riskService.getCircuitBreakerStatus().pipe(catchError(() => of(null)))
     }).pipe(
-      tap(({ summary, today, unrealized, metrics, equity, signals, positions, trades, settings, circuit }) => {
+      tap(({ overview, paperAccount, summary, today, daily, monthly, metrics, equity, signals, positions, trades, settings, circuit }) => {
         const summaryPayload = summary as AccountOverviewDTO;
+        const overviewPayload = overview as AccountOverviewDTO;
+        const paperPayload = paperAccount ?? null;
         const todayMetrics = today as PnLMetrics;
-        const unrealizedMetrics = unrealized as PnLMetrics;
-        const totalCapital =
-          summaryPayload.availableFunds ??
-          summaryPayload.availablePaperFunds ??
-          summaryPayload.availableRealFunds ??
-          summaryPayload.currentValue ??
-          0;
+        const dailyMetrics = daily as PnLMetrics;
+        const monthlyMetrics = monthly as PnLMetrics;
+        const isLiveMode = mode === 'LIVE';
+        const totalCapital = isLiveMode
+          ? (overviewPayload.availableFunds ??
+              overviewPayload.availableRealFunds ??
+              overviewPayload.currentValue ??
+              0)
+          : (paperPayload?.balance ?? paperPayload?.totalEquity ?? paperPayload?.equity ?? 0);
         const circuitStatus = (circuit as CircuitBreakerStatus | null) ?? null;
         const dailyLossLimit = settings?.riskLimits?.maxDailyLossPercent && totalCapital
           ? (settings.riskLimits.maxDailyLossPercent / 100) * totalCapital
           : 0;
 
         this.setAccountOverview({
-          equity: this.toNumber(summaryPayload.currentValue, 0),
-          usedMargin: this.toNumber(summaryPayload.marginUsed ?? summaryPayload.equityUsed, 0),
-          freeMargin: this.toNumber(summaryPayload.availableFunds ?? summaryPayload.availablePaperFunds, 0),
+          equity: this.toNumber(isLiveMode ? overviewPayload.currentValue : paperPayload?.equity ?? paperPayload?.totalEquity, 0),
+          usedMargin: this.toNumber(
+            isLiveMode ? (overviewPayload.marginUsed ?? overviewPayload.equityUsed) : paperPayload?.used,
+            0
+          ),
+          freeMargin: this.toNumber(
+            isLiveMode ? (overviewPayload.availableFunds ?? overviewPayload.availableRealFunds) : paperPayload?.free,
+            0
+          ),
           dailyPnl: this.toNumber(todayMetrics?.todayPnL ?? summaryPayload.todaysPnl ?? summaryPayload['todayPnL'], 0),
-          monthlyPnl: this.toNumber(metrics?.netProfit, 0),
-          // Backend/DTO naming isn't consistent (unrealizedPnl vs unrealizedPnL), so support both.
+          monthlyPnl: this.toNumber(monthlyMetrics?.monthlyPnL ?? metrics?.netProfit, 0),
           unrealizedPnl: this.toNumber(
-            unrealizedMetrics?.unrealizedPnL ?? summaryPayload.unrealizedPnl ?? summaryPayload['unrealizedPnL'],
+            overviewPayload.unrealizedPnl ??
+              overviewPayload['unrealizedPnL'] ??
+              summaryPayload.unrealizedPnl ??
+              summaryPayload['unrealizedPnL'] ??
+              dailyMetrics?.unrealizedPnL ??
+              dailyMetrics?.dailyPnL,
             0
           ),
           drawdown: this.toNumber(metrics?.maxDrawdown, 0),
@@ -297,8 +316,7 @@ export class TradingStoreService {
         this.dashboardLoadingSubject.next(false);
       }),
       map(() => undefined),
-      catchError((error) => {
-        console.error('Failed to load dashboard snapshot', error);
+      catchError(() => {
         this.dashboardLoadingSubject.next(false);
         this.dashboardErrorSubject.next('Unable to load trading dashboard. Please retry.');
         this.toastService.showError('Dashboard data unavailable.');
