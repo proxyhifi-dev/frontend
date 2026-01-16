@@ -1,11 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Client, IMessage, IFrame, StompSubscription } from '@stomp/stompjs';
 import { Observable, BehaviorSubject, filter, take } from 'rxjs';
-import SockJS from 'sockjs-client';
-import { ApiConfigService } from '../config/api-config.service';
-import { ToastService } from './toast.service';
-import { TradingStoreService } from './trading-store.service';
-import { TokenService } from '../auth/token.service';
+import { RuntimeConfigService } from '../config/runtime-config.service';
+import { ToastService } from '../services/toast.service';
+import { TradingStoreService } from '../services/trading-store.service';
 
 export interface WebSocketMessage {
   type: string;
@@ -26,20 +24,26 @@ export class WebSocketService {
   private readonly connectionStatusSubject = new BehaviorSubject<'connected' | 'disconnected' | 'connecting' | 'error'>(
     'disconnected'
   );
+  readonly connectionStatus$ = this.connectionStatusSubject.asObservable();
 
   private toastService = inject(ToastService);
   private store = inject(TradingStoreService);
-  private apiConfig = inject(ApiConfigService);
-  private tokenService = inject(TokenService);
+  private runtimeConfig = inject(RuntimeConfigService);
   private topicSubscriptions = new Map<string, StompSubscription>();
   private recentToastEvents = new Map<string, number>();
+  private isEnabled = false;
+  private authToken?: string;
 
   constructor() {
     this.registerOnlineHandlers();
-    this.initializeWebSocket();
   }
 
-  connect(): Observable<'connected' | 'disconnected' | 'connecting' | 'error'> {
+  connect(authToken: string): Observable<'connected' | 'disconnected' | 'connecting' | 'error'> {
+    this.isEnabled = true;
+    this.authToken = authToken;
+    if (!this.client) {
+      this.initializeWebSocket();
+    }
     if (this.client && !this.client.active) {
       this.setConnectionStatus('connecting');
       this.client.activate();
@@ -93,6 +97,7 @@ export class WebSocketService {
   }
 
   disconnect(): void {
+    this.isEnabled = false;
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = undefined;
@@ -103,14 +108,15 @@ export class WebSocketService {
   }
 
   private initializeWebSocket() {
-    const wsUrl = this.apiConfig.wsUrl;
+    const wsUrl = this.runtimeConfig.wsUrl;
     if (!wsUrl) {
       this.setConnectionStatus('error');
+      this.toastService.showError('WebSocket URL unavailable. Check server configuration.');
       return;
     }
 
     this.client = new Client({
-      webSocketFactory: () => new SockJS(wsUrl),
+      brokerURL: wsUrl,
       connectHeaders: this.buildHeaders(),
       beforeConnect: () => {
         if (this.client) {
@@ -126,14 +132,10 @@ export class WebSocketService {
       onWebSocketClose: () => this.onDisconnected(),
       onWebSocketError: () => this.onDisconnected()
     });
-
-    this.setConnectionStatus('connecting');
-    this.client.activate();
   }
 
   private buildHeaders(): Record<string, string> {
-    const token = this.tokenService.getAccessToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {};
   }
 
   private onConnected() {
@@ -161,6 +163,9 @@ export class WebSocketService {
   }
 
   private scheduleReconnect() {
+    if (!this.isEnabled) {
+      return;
+    }
     if (!navigator.onLine) {
       return;
     }
@@ -257,9 +262,9 @@ export class WebSocketService {
 
   private registerOnlineHandlers(): void {
     window.addEventListener('online', () => {
-      if (this.connectionStatusSubject.value !== 'connected') {
+      if (this.connectionStatusSubject.value !== 'connected' && this.isEnabled && this.authToken) {
         this.reconnectAttempts = 0;
-        this.connect();
+        this.connect(this.authToken);
       }
     });
 
