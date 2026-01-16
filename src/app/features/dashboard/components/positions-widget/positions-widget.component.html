@@ -27,12 +27,12 @@
         </div>
         <div class="price-row">
           <span class="label">LTP</span>
-          <span class="val">{{ pos.ltp | currencyInr }}</span>
+          <span class="val">{{ pos.currentPrice | currencyInr }}</span>
         </div>
 
         <div class="pnl-bar-container">
           <div class="pnl-bar"
-               [style.width.%]="(pos.pnlPercent > 0 ? pos.pnlPercent * 5 : -pos.pnlPercent * 5) + 20"
+               [style.width.%]="((pos.pnlPercent ?? 0) > 0 ? (pos.pnlPercent ?? 0) * 5 : -(pos.pnlPercent ?? 0) * 5) + 20"
                [class.profit]="pos.pnl > 0"
                [class.loss]="pos.pnl < 0">
           </div>
@@ -42,7 +42,7 @@
       <div class="pos-footer">
         <div class="pnl-info" [class.text-green]="pos.pnl > 0" [class.text-red]="pos.pnl < 0">
           <span class="amount">{{ pos.pnl | currencyInr }}</span>
-          <span class="pct">({{ pos.pnlPercent | percentFormat:2 }})</span>
+          <span class="pct">({{ (pos.pnlPercent ?? 0) | percentFormat:2 }})</span>
         </div>
         <button
           class="btn-close"

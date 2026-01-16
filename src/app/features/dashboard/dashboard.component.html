@@ -24,7 +24,7 @@
       <div class="header-left">
         <div class="user-block">
           <span class="label">Trader</span>
-          <strong>{{ vm.user?.name || 'Operator' }}</strong>
+          <strong>{{ vm.user.name || 'Operator' }}</strong>
           <span class="subtext">Capital: {{ vm.account.totalCapital | currencyInr }}</span>
         </div>
         <div class="connection-pill" [class.connected]="vm.connectionStatus === 'connected'" [class.error]="vm.connectionStatus === 'error'">

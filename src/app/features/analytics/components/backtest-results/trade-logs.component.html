@@ -9,15 +9,15 @@
   </tr>
   </thead>
   <tbody>
-  <tr *ngFor="let trade of (results?.trades ?? [])">
+  <tr *ngFor="let trade of tradeLogs">
     <td>{{ trade.date | date:'dd/MM HH:mm' }}</td>
-    <td>{{ trade.entryPrice }}</td>
-    <td>{{ trade.exitPrice }}</td>
-    <td [class]="trade.points > 0 ? 'positive' : 'negative'">
-      {{ trade.points > 0 ? '+' : '' }}{{ trade.points }}
+    <td>{{ trade.entryPrice ?? '-' }}</td>
+    <td>{{ trade.exitPrice ?? '-' }}</td>
+    <td [class]="(trade.points ?? 0) > 0 ? 'positive' : 'negative'">
+      {{ (trade.points ?? 0) > 0 ? '+' : '' }}{{ trade.points ?? 0 }}
     </td>
     <td>
-        <span class="res-badge" [class.win]="trade.win">
+        <span class="res-badge" [class.win]="trade.win ?? false">
           {{ trade.win ? 'WIN' : 'LOSS' }}
         </span>
     </td>

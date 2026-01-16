@@ -149,7 +149,7 @@ export class WebSocketService {
 
   private onError(frame: IFrame) {
     this.setConnectionStatus('error');
-    if (frame?.headers?.message) {
+    if (frame?.headers?.['message']) {
       this.toastService.showError('Real-time connection error. Retrying...');
     }
     this.scheduleReconnect();
