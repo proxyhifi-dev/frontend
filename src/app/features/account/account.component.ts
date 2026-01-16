@@ -242,10 +242,14 @@ export class AccountComponent implements OnInit, OnDestroy {
             this.overview = overview;
             this.profile = profile;
             this.holdings = this.normalizeHoldings(holdings || []);
+            const isConnected = typeof profile?.['connected'] === 'boolean' ? profile['connected'] : false;
+            const status = typeof profile?.['status'] === 'string' ? profile['status'] : undefined;
+            const clientId = typeof profile?.['clientId'] === 'string' ? profile['clientId'] : '-';
+            const broker = typeof profile?.['broker'] === 'string' ? profile['broker'] : '-';
             this.broker = {
-              status: profile?.connected || profile?.status === 'CONNECTED' ? 'CONNECTED' : 'DISCONNECTED',
-              clientId: profile?.clientId ?? '-',
-              broker: profile?.broker ?? '-'
+              status: isConnected || status === 'CONNECTED' ? 'CONNECTED' : 'DISCONNECTED',
+              clientId,
+              broker
             };
           },
           error: () => {

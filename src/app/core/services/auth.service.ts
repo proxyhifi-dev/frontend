@@ -4,7 +4,7 @@ import { BehaviorSubject, Observable, of, tap, map, catchError } from 'rxjs';
 import { AuthResponse, User } from '../models/auth.model';
 import { TokenService } from '../auth/token.service';
 import { HttpBaseService } from '../http/http-base.service';
-import { WebSocketService } from './websocket.service';
+import { WebSocketService } from '../websocket/websocket.service';
 
 @Injectable({
   providedIn: 'root'
@@ -55,7 +55,13 @@ export class AuthService {
     }
 
     return this.http.get<User>('/auth/me').pipe(
-      tap((user) => this.setUser(user)),
+      tap((user) => {
+        this.setUser(user);
+        const token = this.tokenService.getAccessToken();
+        if (token) {
+          this.websocketService.connect(token);
+        }
+      }),
       catchError(() => {
         this.logout();
         return of(null);
@@ -82,6 +88,7 @@ export class AuthService {
   updateAuthState(user: User | null, token: string, refreshToken?: string): void {
     if (token) {
       this.tokenService.setAccessToken(token);
+      this.websocketService.connect(token);
     }
     if (refreshToken) {
       this.tokenService.setRefreshToken(refreshToken);
@@ -107,7 +114,19 @@ export class AuthService {
   }
 
   getFyersAuthUrl(): Observable<{ authUrl: string }> {
-    return this.http.get<{ authUrl: string }>('/auth/fyers/authorize');
+    return this.http.get<{ authUrl: string }>('/auth/fyers/auth-url');
+  }
+
+  loginWithFyers(): Observable<void> {
+    return this.getFyersAuthUrl().pipe(
+      tap((response) => {
+        if (!response?.authUrl) {
+          throw new Error('Fyers auth URL missing');
+        }
+        window.location.href = response.authUrl;
+      }),
+      map(() => undefined)
+    );
   }
 
   handleFyersCallback(authCode: string, state?: string): Observable<AuthResponse> {
@@ -124,6 +143,7 @@ export class AuthService {
     const accessToken = response.accessToken || response.token;
     if (accessToken) {
       this.tokenService.setAccessToken(accessToken);
+      this.websocketService.connect(accessToken);
     }
     if (response.refreshToken) {
       this.tokenService.setRefreshToken(response.refreshToken);

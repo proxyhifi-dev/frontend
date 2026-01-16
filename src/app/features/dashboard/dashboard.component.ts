@@ -4,7 +4,7 @@ import { RouterModule } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { BehaviorSubject, combineLatest, Subject, timer } from 'rxjs';
 import { map, scan, shareReplay, startWith, switchMap, withLatestFrom } from 'rxjs/operators';
-import { WebSocketService } from '../../core/services/websocket.service';
+import { WebSocketService } from '../../core/websocket/websocket.service';
 import { BotService } from '../../core/services/bot.service';
 import { StoreService } from '../../core/services/store.service';
 import { TradingStoreService } from '../../core/services/trading-store.service';
@@ -52,7 +52,7 @@ export class DashboardComponent {
   private readonly tick$ = timer(0, 1000);
 
   readonly filterControl = new FormControl('', { nonNullable: true });
-  readonly connectionStatus$ = this.wsService.connect();
+  readonly connectionStatus$ = this.wsService.connectionStatus$;
   readonly botControlSupported$ = this.botService.controlSupported$;
 
   readonly reloadSnapshot$ = this.refreshTrigger$.pipe(

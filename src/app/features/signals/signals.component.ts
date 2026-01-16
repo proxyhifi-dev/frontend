@@ -7,14 +7,14 @@ import { NotificationService } from '../../core/services/notification.service';
 import { Signal, SignalDetail } from '../../core/models/domain.model';
 import { StoreService } from '../../core/services/store.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
-import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
 import { RiskService } from '../../core/services/risk.service';
 import { ModeStore } from '../../core/services/mode-store.service';
+import { EntityDetailsComponent } from '../../shared/components/entity-details/entity-details.component';
 
 @Component({
   selector: 'app-signals',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyInrPipe, RMultiplePipe],
+  imports: [CommonModule, FormsModule, CurrencyInrPipe, EntityDetailsComponent],
   templateUrl: './signals.component.html',
   styleUrls: ['./signals.component.scss']
 })

@@ -154,10 +154,7 @@
 
         <div class="drawer-section">
           <h4>Trade summary</h4>
-          <div class="drawer-row"><span>Score</span><span>{{ selectedSignal.signalScore }}</span></div>
-          <div class="drawer-row"><span>Grade</span><span>{{ selectedSignal.grade }}</span></div>
-          <div class="drawer-row"><span>R-multiple</span><span>{{ selectedSignal.rMultiple | rMultiple }}</span></div>
-          <div class="drawer-row"><span>Exit reason</span><span>{{ selectedSignal.exitReason || '—' }}</span></div>
+          <app-entity-details entityType="signals" [data]="selectedSignal"></app-entity-details>
         </div>
       </ng-container>
     </div>

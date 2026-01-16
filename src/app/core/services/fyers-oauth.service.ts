@@ -3,21 +3,27 @@ import { BehaviorSubject, Observable, of, catchError, tap, throwError } from 'rx
 import { BrokerConnectionStatus, BrokerErrorLog } from '../models/broker.dto';
 import { HttpBaseService } from '../http/http-base.service';
 import { ApiError } from '../models/api-error.model';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FyersOAuthService {
-  private disconnectSupportedSubject = new BehaviorSubject<boolean>(true);
-  private errorLogsSupportedSubject = new BehaviorSubject<boolean>(true);
+  private disconnectSupportedSubject = new BehaviorSubject<boolean>(false);
+  private errorLogsSupportedSubject = new BehaviorSubject<boolean>(false);
 
   readonly disconnectSupported$ = this.disconnectSupportedSubject.asObservable();
   readonly errorLogsSupported$ = this.errorLogsSupportedSubject.asObservable();
 
-  constructor(private http: HttpBaseService) {}
+  constructor(private http: HttpBaseService, private runtimeConfig: RuntimeConfigService) {
+    this.runtimeConfig.config$.subscribe(() => {
+      this.disconnectSupportedSubject.next(this.runtimeConfig.hasEndpoint('/auth/fyers/disconnect'));
+      this.errorLogsSupportedSubject.next(this.runtimeConfig.hasEndpoint('/auth/fyers/errors'));
+    });
+  }
 
   getAuthUrl(): Observable<{ authUrl: string }> {
-    return this.http.get<{ authUrl: string }>('/auth/fyers/authorize');
+    return this.http.get<{ authUrl: string }>('/auth/fyers/auth-url');
   }
 
   handleCallback(authCode: string): Observable<BrokerConnectionStatus> {
