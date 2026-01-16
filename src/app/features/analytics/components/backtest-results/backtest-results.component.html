@@ -2,17 +2,17 @@
   <div class="stats-summary">
     <div class="stat-box">
       <label>Net Profit</label>
-      <span [class]="results.profit >= 0 ? 'positive' : 'negative'">
-        {{ results.profit | currencyInr }}
+      <span [class]="(results.profit ?? 0) >= 0 ? 'positive' : 'negative'">
+        {{ (results.profit ?? 0) | currencyInr }}
       </span>
     </div>
     <div class="stat-box">
       <label>Profit Factor</label>
-      <span class="bold">{{ results.profitFactor }}</span>
+      <span class="bold">{{ results.profitFactor ?? '-' }}</span>
     </div>
     <div class="stat-box">
       <label>Max Drawdown</label>
-      <span class="negative">{{ results.maxDrawdown | percentFormat:2 }}</span>
+      <span class="negative">{{ (results.maxDrawdown ?? 0) | percentFormat:2 }}</span>
     </div>
   </div>
 
