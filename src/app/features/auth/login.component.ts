@@ -7,7 +7,6 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../core/services/auth.service';
-import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ModeStore } from '../../core/services/mode-store.service';
@@ -26,7 +25,6 @@ export class LoginComponent implements OnInit {
 
   constructor(
     private readonly authService: AuthService,
-    private readonly fyersService: FyersOAuthService,
     private readonly notificationService: NotificationService,
     private readonly loadingService: LoadingService,
     private readonly modeStore: ModeStore,
@@ -112,17 +110,10 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithFyers(): void {
-    this.fyersService.getAuthUrl().subscribe({
-      next: (response) => {
-        if (response.authUrl) {
-          window.location.href = response.authUrl;
-        } else {
-          this.notificationService.error('Fyers auth URL unavailable.');
-        }
-      },
+    this.authService.loginWithFyers().subscribe({
       error: () => {
         this.notificationService.error('Failed to initiate Fyers login');
-      },
+      }
     });
   }
 }

@@ -1,23 +1,30 @@
 import { Injectable } from '@angular/core';
-import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from './runtime-config.service';
 
 @Injectable({ providedIn: 'root' })
 export class ApiConfigService {
-  readonly apiUrl = environment.apiUrl;
-  readonly wsUrl = environment.wsUrl;
+  constructor(private runtimeConfig: RuntimeConfigService) {}
+
+  get apiUrl(): string {
+    return this.runtimeConfig.apiBaseUrl;
+  }
+
+  get wsUrl(): string {
+    return this.runtimeConfig.wsUrl;
+  }
 
   buildApiUrl(path: string): string {
     if (!path) {
-      return this.apiUrl;
+      return this.runtimeConfig.apiBaseUrl;
     }
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }
     const normalized = path.startsWith('/') ? path : `/${path}`;
-    return `${this.apiUrl}${normalized}`;
+    return `${this.runtimeConfig.apiBaseUrl}${normalized}`;
   }
 
   isApiRequest(url: string): boolean {
-    return url.startsWith(this.apiUrl);
+    return url.startsWith(this.runtimeConfig.apiBaseUrl);
   }
 }
