@@ -1,6 +1,10 @@
 export const environment = {
   production: false,
-  baseUrl: 'http://localhost:8080',
-  apiUrl: 'http://localhost:8080/api',
-  wsUrl: 'http://localhost:8080/ws'
+
+  // keep new name if other code uses it
+  apiBaseUrl: 'https://apex-trading-bot-w74z.onrender.com',
+
+  // add OLD names because your services/interceptors still use them
+  apiUrl: 'https://apex-trading-bot-w74z.onrender.com/api',
+  wsUrl: 'wss://apex-trading-bot-w74z.onrender.com/ws'
 };
