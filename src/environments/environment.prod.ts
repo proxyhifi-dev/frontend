@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  baseUrl: 'https://apex-trading-bot-w74z.onrender.com',
+  apiBaseUrl: 'https://apex-trading-bot-w74z.onrender.com/api',
   apiUrl: 'https://apex-trading-bot-w74z.onrender.com/api',
-  wsUrl: 'https://apex-trading-bot-w74z.onrender.com/ws'
+  wsUrl: 'wss://apex-trading-bot-w74z.onrender.com/ws'
 };

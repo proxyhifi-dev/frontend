@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, catchError, map } from 'rxjs';
+import { Observable, of, catchError, map, forkJoin } from 'rxjs';
 import { HttpBaseService } from '../http/http-base.service';
 import { Signal } from '../models/domain.model';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 
 export interface StrategyConfig {
   name?: string;
@@ -43,25 +44,39 @@ interface StrategyStatusResponse {
 
 @Injectable({ providedIn: 'root' })
 export class StrategyService {
-  constructor(private http: HttpBaseService) {}
+  constructor(private http: HttpBaseService, private runtimeConfig: RuntimeConfigService) {}
 
   getConfig(): Observable<StrategyConfig> {
-    return this.http.get<StrategyStatusResponse>('/strategy/status').pipe(
-      map((status) => ({
-        name: status.name ?? status.status ?? 'Strategy',
-        mode: status.mode ?? 'PAPER',
-        maxPositions: undefined,
-        scanIntervalSeconds: status.scanIntervalSeconds,
-        riskPerTradePercent: status.riskPerTradePercent,
-        dailyLossLimitPercent: status.dailyLossLimitPercent,
-        universe: status.universe
-      })),
+    const health$ = this.runtimeConfig.hasEndpoint('/strategy/health')
+      ? this.http.get<StrategyStatusResponse>('/strategy/health').pipe(catchError(() => of(null)))
+      : of(null);
+    const mode$ = this.runtimeConfig.hasEndpoint('/strategy/mode')
+      ? this.http.get<{ mode?: string } | string>('/strategy/mode').pipe(catchError(() => of(null)))
+      : of(null);
+
+    return forkJoin({ health: health$, mode: mode$ }).pipe(
+      map(({ health, mode }) => {
+        const modeValue = typeof mode === 'string' ? mode : mode?.mode;
+        return {
+          name: health?.name ?? health?.status ?? 'Strategy',
+          mode: modeValue ?? health?.mode ?? 'PAPER',
+          maxPositions: undefined,
+          scanIntervalSeconds: health?.scanIntervalSeconds,
+          riskPerTradePercent: health?.riskPerTradePercent,
+          dailyLossLimitPercent: health?.dailyLossLimitPercent,
+          universe: health?.universe
+        };
+      }),
       catchError(() => of(this.defaultConfig()))
     );
   }
 
   getRegime(): Observable<RegimeStatus> {
-    return this.http.get<StrategyStatusResponse>('/strategy/status').pipe(
+    if (!this.runtimeConfig.hasEndpoint('/strategy/health')) {
+      return of({ regime: 'Unknown', confidence: 0, lastUpdated: 'N/A', notes: 'Backend pending' });
+    }
+
+    return this.http.get<StrategyStatusResponse>('/strategy/health').pipe(
       map((status) => ({
         regime: status.regime ?? 'Unknown',
         confidence: status.regimeConfidence,
@@ -73,7 +88,7 @@ export class StrategyService {
   }
 
   getScoringSummary(): Observable<ScoringSummary[]> {
-    return this.http.get<Signal[]>('/strategy/signals/recent').pipe(
+    return this.http.get<Signal[]>('/strategy/signals').pipe(
       map((signals) =>
         signals.map((signal) => ({
           signalId: signal.id,

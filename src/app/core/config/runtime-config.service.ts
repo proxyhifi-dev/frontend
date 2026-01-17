@@ -18,7 +18,9 @@ export interface UiEntityConfig {
 export interface UiConfig {
   apiBaseUrl: string;
   wsUrl: string;
-  endpoints?: string[];
+  wsBaseUrl?: string;
+  wsTopics?: string[];
+  endpoints?: string[] | Record<string, string | string[]>;
   entities?: UiEntityConfig[];
 }
 
@@ -30,7 +32,7 @@ export class RuntimeConfigService {
   constructor(private http: HttpClient, private toastService: ToastService) {}
 
   load(): Observable<UiConfig> {
-    return this.http.get<UiConfig>(`${environment.apiUrl}/ui/config`).pipe(
+    return this.http.get<UiConfig>(`${environment.apiBaseUrl}/ui/config`).pipe(
       tap((config) => this.configSubject.next(this.normalizeConfig(config))),
       catchError(() => {
         const fallback = this.createFallback();
@@ -42,7 +44,7 @@ export class RuntimeConfigService {
   }
 
   get apiBaseUrl(): string {
-    return this.configSubject.value?.apiBaseUrl ?? environment.apiUrl;
+    return this.configSubject.value?.apiBaseUrl ?? environment.apiBaseUrl;
   }
 
   get wsUrl(): string {
@@ -50,11 +52,15 @@ export class RuntimeConfigService {
   }
 
   get endpoints(): string[] {
-    return this.configSubject.value?.endpoints ?? [];
+    return this.normalizeEndpoints(this.configSubject.value?.endpoints);
   }
 
   get entities(): UiEntityConfig[] {
     return this.configSubject.value?.entities ?? [];
+  }
+
+  get wsTopics(): string[] {
+    return this.configSubject.value?.wsTopics ?? [];
   }
 
   getEntityFields(entityType: string): UiEntityField[] {
@@ -69,18 +75,22 @@ export class RuntimeConfigService {
   }
 
   private normalizeConfig(config: UiConfig): UiConfig {
+    const wsUrl = config.wsUrl || config.wsBaseUrl || environment.wsUrl;
     return {
-      apiBaseUrl: config.apiBaseUrl || environment.apiUrl,
-      wsUrl: config.wsUrl || environment.wsUrl,
-      endpoints: config.endpoints ?? [],
+      apiBaseUrl: config.apiBaseUrl || environment.apiBaseUrl,
+      wsUrl,
+      wsBaseUrl: config.wsBaseUrl,
+      wsTopics: config.wsTopics ?? [],
+      endpoints: this.normalizeEndpoints(config.endpoints),
       entities: config.entities ?? []
     };
   }
 
   private createFallback(): UiConfig {
     return {
-      apiBaseUrl: environment.apiUrl,
+      apiBaseUrl: environment.apiBaseUrl,
       wsUrl: environment.wsUrl,
+      wsTopics: [],
       endpoints: [],
       entities: []
     };
@@ -92,11 +102,30 @@ export class RuntimeConfigService {
     }
     if (path.startsWith('http://') || path.startsWith('https://')) {
       try {
-        return new URL(path).pathname;
+        return this.normalizeEndpoint(new URL(path).pathname);
       } catch {
         return path;
       }
     }
-    return path.startsWith('/') ? path : `/${path}`;
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    return normalized.startsWith('/api/') ? normalized.replace('/api', '') : normalized;
+  }
+
+  private normalizeEndpoints(endpoints?: UiConfig['endpoints']): string[] {
+    if (!endpoints) {
+      return [];
+    }
+    if (Array.isArray(endpoints)) {
+      return endpoints.map((endpoint) => this.normalizeEndpoint(endpoint));
+    }
+    const collected: string[] = [];
+    Object.values(endpoints).forEach((value) => {
+      if (Array.isArray(value)) {
+        value.forEach((entry) => collected.push(this.normalizeEndpoint(entry)));
+      } else if (typeof value === 'string') {
+        collected.push(this.normalizeEndpoint(value));
+      }
+    });
+    return collected;
   }
 }

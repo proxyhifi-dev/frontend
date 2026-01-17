@@ -93,11 +93,11 @@ export class PositionsComponent implements OnInit, OnDestroy {
       this.notify.warning('Action Unavailable', 'Not supported yet.');
       return;
     }
-    if (!pos.id) {
-      this.notify.warning('Action Unavailable', `No position ID for ${pos.symbol}.`);
+    if (!pos.symbol) {
+      this.notify.warning('Action Unavailable', 'No symbol available to close.');
       return;
     }
-    this.positionSvc.closePosition(pos.id).subscribe({
+    this.positionSvc.closePosition(pos).subscribe({
       next: () => {
         this.notify.success('Position Closed', `${pos.symbol} has been closed.`);
         this.refresh();

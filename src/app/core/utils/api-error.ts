@@ -10,7 +10,8 @@ export const mapHttpError = (error: HttpErrorResponse): ApiError => {
   } else {
     switch (error.status) {
       case 0:
-        userMessage = 'No internet connection. Please check your network.';
+        userMessage =
+          'No response from server. If running locally, ensure APEX_ALLOWED_ORIGINS includes http://localhost:4200.';
         break;
       case 400:
         userMessage = error.error?.message || 'Invalid request';
@@ -19,7 +20,8 @@ export const mapHttpError = (error: HttpErrorResponse): ApiError => {
         userMessage = 'Session expired. Please login again.';
         break;
       case 403:
-        userMessage = 'Access denied. Please login again.';
+        userMessage =
+          'Access denied. If running locally, ensure APEX_ALLOWED_ORIGINS includes http://localhost:4200.';
         break;
       case 404:
         userMessage = 'Resource not found';

@@ -31,7 +31,7 @@ export class TradingModeService {
       this.setLocalMode(mode);
       return of(mode);
     }
-    return this.http.post<void>(`/strategy/mode?mode=${mode}`, {}).pipe(
+    return this.http.post<void>('/strategy/mode', { mode }).pipe(
       map(() => mode),
       catchError((error: ApiError) => {
         if (error.status === 404) {

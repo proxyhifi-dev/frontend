@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of, catchError, map } from 'rxjs';
 import { HttpBaseService } from '../http/http-base.service';
 import { ApiError } from '../models/api-error.model';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 
 export interface BotStatus {
   isActive: boolean;
@@ -25,7 +26,13 @@ export class BotService {
   private controlSupportedSubject = new BehaviorSubject<boolean>(false);
   readonly controlSupported$ = this.controlSupportedSubject.asObservable();
 
-  constructor(private http: HttpBaseService) {}
+  constructor(private http: HttpBaseService, private runtimeConfig: RuntimeConfigService) {
+    this.runtimeConfig.config$.subscribe(() => {
+      this.controlSupportedSubject.next(
+        this.runtimeConfig.hasEndpoint('/bot/start') && this.runtimeConfig.hasEndpoint('/bot/stop')
+      );
+    });
+  }
 
   getBotStatus(): Observable<BotStatus> {
     return this.fetchStatus();
@@ -35,7 +42,8 @@ export class BotService {
     if (!this.controlSupportedSubject.value) {
       return of({ success: false, message: 'Backend bot control endpoint pending' });
     }
-    return this.http.post<BotActionResponse>('/bot/status', { isActive }).pipe(
+    const path = isActive ? '/bot/start' : '/bot/stop';
+    return this.http.post<BotActionResponse>(path, {}).pipe(
       catchError((error: ApiError) => {
         if (error.status === 404) {
           this.controlSupportedSubject.next(false);
