@@ -5,6 +5,7 @@ import { AuthResponse, User } from '../models/auth.model';
 import { TokenService } from '../auth/token.service';
 import { HttpBaseService } from '../http/http-base.service';
 import { WebSocketService } from '../websocket/websocket.service';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 
 @Injectable({
   providedIn: 'root'
@@ -17,7 +18,8 @@ export class AuthService {
     private http: HttpBaseService,
     private router: Router,
     private tokenService: TokenService,
-    private websocketService: WebSocketService
+    private websocketService: WebSocketService,
+    private runtimeConfig: RuntimeConfigService
   ) {
     const user = localStorage.getItem('user');
     if (user) {
@@ -54,6 +56,15 @@ export class AuthService {
       return of(null);
     }
 
+    if (!this.runtimeConfig.hasEndpoint('/auth/me')) {
+      const storedUser = this.currentUserSubject.value;
+      const token = this.tokenService.getAccessToken();
+      if (token) {
+        this.websocketService.connect(token);
+      }
+      return of(storedUser);
+    }
+
     return this.http.get<User>('/auth/me').pipe(
       tap((user) => {
         this.setUser(user);
@@ -70,6 +81,9 @@ export class AuthService {
   }
 
   logout(): void {
+    if (this.tokenService.getAccessToken()) {
+      this.http.post<void>('/auth/logout', {}).pipe(catchError(() => of(undefined))).subscribe();
+    }
     this.tokenService.clear();
     localStorage.removeItem('user');
     this.currentUserSubject.next(null);

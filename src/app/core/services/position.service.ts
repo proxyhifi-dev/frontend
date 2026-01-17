@@ -5,13 +5,27 @@ import { PositionView, PaperPosition } from '../models/domain.model';
 import { TradeDTO } from '../models/trade.dto';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { ApiError } from '../models/api-error.model';
+import { HttpBaseService } from '../http/http-base.service';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 
 @Injectable({ providedIn: 'root' })
 export class PositionService {
   private closeSupportedSubject = new BehaviorSubject<boolean>(false);
   readonly closeSupported$ = this.closeSupportedSubject.asObservable();
 
-  constructor(private modeStore: ModeStore, private portfolio: PortfolioService) {}
+  constructor(
+    private modeStore: ModeStore,
+    private portfolio: PortfolioService,
+    private http: HttpBaseService,
+    private runtimeConfig: RuntimeConfigService
+  ) {
+    this.runtimeConfig.config$.subscribe(() => {
+      this.closeSupportedSubject.next(
+        this.runtimeConfig.hasEndpoint('/positions/{symbol}/close') ||
+          this.runtimeConfig.hasEndpoint('/positions/close')
+      );
+    });
+  }
 
   getOpenPositions(): Observable<PositionView[]> {
     if (this.modeStore.snapshot === 'LIVE') {
@@ -35,9 +49,9 @@ export class PositionService {
     );
   }
 
-  closePosition(positionId: number | undefined): Observable<void> {
-    if (!positionId) {
-      return throwError(() => new Error('Position id missing'));
+  closePosition(position: { id?: number; symbol?: string } | undefined): Observable<void> {
+    if (!position?.symbol) {
+      return throwError(() => new Error('Position symbol missing'));
     }
     if (!this.closeSupportedSubject.value) {
       return throwError(() => ({
@@ -45,10 +59,7 @@ export class PositionService {
         userMessage: 'Backend position close endpoint pending.'
       } as ApiError));
     }
-    return throwError(() => ({
-      status: 404,
-      userMessage: 'Backend position close endpoint pending.'
-    } as ApiError));
+    return this.http.post<void>(`/positions/${encodeURIComponent(position.symbol)}/close`, {});
   }
 
   private toViewFromTrade(trade: TradeDTO): PositionView {

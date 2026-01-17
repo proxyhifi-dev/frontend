@@ -43,6 +43,10 @@ export class WebSocketService {
   connect(authToken: string): Observable<'connected' | 'disconnected' | 'connecting' | 'error'> {
     this.isEnabled = true;
     this.authToken = authToken;
+    if (!authToken) {
+      this.toastService.showWarning('Real-time connection requires login.');
+      return this.connectionStatusSubject.asObservable();
+    }
     if (!this.client) {
       this.initializeWebSocket();
     }
@@ -195,12 +199,17 @@ export class WebSocketService {
       return;
     }
     this.clearTopicSubscriptions();
+    this.subscribeTopic('/user/queue/positions', 'positions');
+    this.subscribeTopic('/user/queue/orders', 'orders');
+    this.subscribeTopic('/user/queue/summary', 'summary');
+    this.subscribeTopic('/user/queue/bot-status', 'bot-status');
+    this.subscribeTopic('/user/queue/signals', 'signals');
+    this.subscribeTopic('/user/queue/logs', 'logs');
 
-    this.subscribeTopic('/topic/market-data', 'market-data');
-    this.subscribeTopic('/topic/positions', 'positions');
-    this.subscribeTopic('/topic/trades', 'trades');
-    this.subscribeTopic('/topic/bot-status', 'bot-status');
-    this.subscribeTopic('/topic/alerts', 'alerts');
+    this.getEnabledTopics().forEach((topic) => {
+      const normalized = topic.startsWith('/') ? topic : `/${topic}`;
+      this.subscribeTopic(normalized, normalized.replace('/topic/', ''));
+    });
   }
 
   private subscribeTopic(destination: string, type: string) {
@@ -278,5 +287,9 @@ export class WebSocketService {
   private setConnectionStatus(status: 'connected' | 'disconnected' | 'connecting' | 'error') {
     this.connectionStatusSubject.next(status);
     this.store.setConnectionStatus(status);
+  }
+
+  private getEnabledTopics(): string[] {
+    return this.runtimeConfig.wsTopics.filter((topic) => topic.startsWith('/topic/'));
   }
 }

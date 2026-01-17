@@ -333,9 +333,38 @@ export class TradingStoreService {
       case 'positions':
         this.setPositions(Array.isArray(data) ? (data as PositionView[]) : []);
         break;
+      case 'orders':
+        break;
       case 'trades':
         this.setTrades(Array.isArray(data) ? (data as PositionView[]) : []);
         break;
+      case 'summary': {
+        const summary = data as Partial<AccountOverview> & {
+          equity?: number;
+          usedMargin?: number;
+          freeMargin?: number;
+          dailyPnl?: number;
+          monthlyPnl?: number;
+          unrealizedPnl?: number;
+          drawdown?: number;
+          totalCapital?: number;
+          mode?: TradingMode;
+        };
+        if (summary) {
+          this.setAccountOverview({
+            equity: this.toNumber(summary.equity, this.accountOverviewSubject.value.equity),
+            usedMargin: this.toNumber(summary.usedMargin, this.accountOverviewSubject.value.usedMargin),
+            freeMargin: this.toNumber(summary.freeMargin, this.accountOverviewSubject.value.freeMargin),
+            dailyPnl: this.toNumber(summary.dailyPnl, this.accountOverviewSubject.value.dailyPnl),
+            monthlyPnl: this.toNumber(summary.monthlyPnl, this.accountOverviewSubject.value.monthlyPnl),
+            unrealizedPnl: this.toNumber(summary.unrealizedPnl, this.accountOverviewSubject.value.unrealizedPnl),
+            drawdown: this.toNumber(summary.drawdown, this.accountOverviewSubject.value.drawdown),
+            totalCapital: this.toNumber(summary.totalCapital, this.accountOverviewSubject.value.totalCapital),
+            mode: summary.mode ?? this.accountOverviewSubject.value.mode
+          });
+        }
+        break;
+      }
       case 'bot-status':
         this.updateBotStatus({
           state: (data as { state?: string; status?: string } | null)?.state ??
@@ -359,6 +388,18 @@ export class TradingStoreService {
             type: (data as { type?: 'info' | 'warning' | 'error' } | null)?.type ?? 'info',
             message: (data as { message: string }).message,
             timestamp: (data as { timestamp?: string } | null)?.timestamp ?? new Date().toISOString()
+          });
+        }
+        break;
+      case 'signals':
+        this.setSignals(Array.isArray(data) ? (data as Signal[]) : []);
+        break;
+      case 'logs':
+        if ((data as { message?: string } | null)?.message) {
+          this.addAlert({
+            type: (data as { level?: string } | null)?.level === 'error' ? 'error' : 'info',
+            message: (data as { message: string }).message,
+            timestamp: new Date().toISOString()
           });
         }
         break;

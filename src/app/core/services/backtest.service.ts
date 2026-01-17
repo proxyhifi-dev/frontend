@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { HttpBaseService } from '../http/http-base.service';
+import { RuntimeConfigService } from '../config/runtime-config.service';
+import { ApiError } from '../models/api-error.model';
 
 export interface BacktestRun {
   id: string | number;
@@ -45,17 +47,32 @@ export interface BacktestDetail {
 
 @Injectable({ providedIn: 'root' })
 export class BacktestService {
-  constructor(private http: HttpBaseService) {}
+  constructor(private http: HttpBaseService, private runtimeConfig: RuntimeConfigService) {}
 
   getRuns(): Observable<BacktestRun[]> {
+    if (!this.runtimeConfig.hasEndpoint('/backtest/runs')) {
+      return of([]);
+    }
     return this.http.get<BacktestRun[]>('/backtest/runs');
   }
 
   runBacktest(payload: Record<string, unknown>): Observable<BacktestRun> {
+    if (!this.runtimeConfig.hasEndpoint('/backtest/run')) {
+      return throwError(() => ({
+        status: 404,
+        userMessage: 'Backtesting endpoint not available on this backend.'
+      } as ApiError));
+    }
     return this.http.post<BacktestRun>('/backtest/run', payload);
   }
 
   getRunDetail(id: string | number): Observable<BacktestDetail> {
+    if (!this.runtimeConfig.hasEndpoint('/backtest/runs/{id}')) {
+      return throwError(() => ({
+        status: 404,
+        userMessage: 'Backtesting endpoint not available on this backend.'
+      } as ApiError));
+    }
     return this.http.get<BacktestDetail>(`/backtest/runs/${id}`);
   }
 }

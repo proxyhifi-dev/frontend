@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { AccountOverviewDTO } from '../models/account.dto';
 import { HoldingDTO } from '../models/holding.dto';
 import { HttpBaseService } from '../http/http-base.service';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 
 export interface AccountProfile {
   name?: string;
@@ -13,17 +14,24 @@ export interface AccountProfile {
 
 @Injectable({ providedIn: 'root' })
 export class LiveAccountService {
-  constructor(private http: HttpBaseService) {}
+  constructor(private http: HttpBaseService, private runtimeConfig: RuntimeConfigService) {}
 
   getOverview(): Observable<AccountOverviewDTO> {
-    return this.http.get<AccountOverviewDTO>('/account/overview');
+    return this.optionalGet<AccountOverviewDTO>('/account/overview', {});
   }
 
   getProfile(): Observable<AccountProfile> {
-    return this.http.get<AccountProfile>('/account/profile');
+    return this.optionalGet<AccountProfile>('/account/profile', {});
   }
 
   getHoldings(): Observable<HoldingDTO[]> {
-    return this.http.get<HoldingDTO[]>('/account/holdings');
+    return this.optionalGet<HoldingDTO[]>('/account/holdings', []);
+  }
+
+  private optionalGet<T>(path: string, fallback: T): Observable<T> {
+    if (!this.runtimeConfig.hasEndpoint(path)) {
+      return of(fallback);
+    }
+    return this.http.get<T>(path);
   }
 }

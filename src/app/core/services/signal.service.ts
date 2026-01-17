@@ -3,16 +3,21 @@ import { BehaviorSubject, Observable, of, catchError, map, throwError } from 'rx
 import { Signal, SignalDetail } from '../models/domain.model';
 import { HttpBaseService } from '../http/http-base.service';
 import { ApiError } from '../models/api-error.model';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 
 @Injectable({ providedIn: 'root' })
 export class SignalService {
   private executionSupportedSubject = new BehaviorSubject<boolean>(false);
   readonly executionSupported$ = this.executionSupportedSubject.asObservable();
 
-  constructor(private http: HttpBaseService) {}
+  constructor(private http: HttpBaseService, private runtimeConfig: RuntimeConfigService) {
+    this.runtimeConfig.config$.subscribe(() => {
+      this.executionSupportedSubject.next(this.hasApproveEndpoint());
+    });
+  }
 
   getSignals(): Observable<Signal[]> {
-    return this.http.get<Signal[]>('/strategy/signals/recent');
+    return this.http.get<Signal[]>('/strategy/signals');
   }
 
   getPendingSignals(): Observable<Signal[]> {
@@ -45,11 +50,11 @@ export class SignalService {
     if (!this.executionSupportedSubject.value) {
       return throwError(() => ({
         status: 404,
-        userMessage: 'Backend strategy execution endpoint pending.'
+        userMessage: 'Signal approval endpoint not available on this backend.'
       } as ApiError));
     }
 
-    return this.http.post<void>('/strategy/execute', { signalId }).pipe(
+    return this.http.post<void>(`/strategy/signals/${signalId}/approve`, {}).pipe(
       catchError((error: ApiError) => {
         if (error.status === 404) {
           this.executionSupportedSubject.next(false);
@@ -57,5 +62,12 @@ export class SignalService {
         return throwError(() => error);
       })
     );
+  }
+
+  private hasApproveEndpoint(): boolean {
+    if (this.runtimeConfig.hasEndpoint('/strategy/signals/{id}/approve')) {
+      return true;
+    }
+    return this.runtimeConfig.endpoints.some((endpoint) => endpoint.includes('/strategy/signals') && endpoint.includes('approve'));
   }
 }
