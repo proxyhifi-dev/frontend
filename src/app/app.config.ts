@@ -1,26 +1,41 @@
-import { ApplicationConfig, provideZoneChangeDetection, APP_INITIALIZER } from '@angular/core';
+import { APP_INITIALIZER, ApplicationConfig } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 
 import { routes } from './app.routes';
-import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { RuntimeConfigService } from './core/config/runtime-config.service';
 
-const runtimeConfigInitializer = (runtimeConfig: RuntimeConfigService) => () =>
-  firstValueFrom(runtimeConfig.load());
+/**
+ * IMPORTANT:
+ * - This initializer used to BLOCK the entire UI until /api/ui/config returned.
+ * - On Render free tier the backend can be "cold" and the call can hang,
+ *   resulting in a blank screen.
+ *
+ * Fix: add timeout + catchError so the app boots even if backend is slow/down.
+ */
+const runtimeConfigInitializer =
+  (runtimeConfig: RuntimeConfigService) =>
+    () =>
+      firstValueFrom(
+        runtimeConfig.load().pipe(
+          timeout(4000),            // ✅ don't block UI forever
+          catchError((err) => {
+            console.warn('[RuntimeConfig] load failed, continuing boot:', err);
+            return of(null);        // ✅ allow Angular to bootstrap
+          })
+        )
+      );
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(
-      withInterceptors([loadingInterceptor, errorInterceptor, authInterceptor])
-    ),
     provideAnimations(),
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     {
       provide: APP_INITIALIZER,
       useFactory: runtimeConfigInitializer,
