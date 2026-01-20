@@ -73,7 +73,7 @@ export class StrategyService {
 
   getRegime(): Observable<RegimeStatus> {
     if (!this.runtimeConfig.hasEndpoint('/strategy/health')) {
-      return of({ regime: 'Unknown', confidence: 0, lastUpdated: 'N/A', notes: 'Backend pending' });
+      return of({ regime: 'Unknown', confidence: 0, lastUpdated: 'N/A', notes: 'Strategy health unavailable for this backend.' });
     }
 
     return this.http.get<StrategyStatusResponse>('/strategy/health').pipe(
@@ -83,7 +83,7 @@ export class StrategyService {
         lastUpdated: new Date().toISOString(),
         notes: status.regimeNotes
       })),
-      catchError(() => of({ regime: 'Unknown', confidence: 0, lastUpdated: 'N/A', notes: 'Backend pending' }))
+      catchError(() => of({ regime: 'Unknown', confidence: 0, lastUpdated: 'N/A', notes: 'Strategy health unavailable for this backend.' }))
     );
   }
 

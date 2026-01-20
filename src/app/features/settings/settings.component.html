@@ -72,7 +72,7 @@
 
       <div class="setting-group">
         <label>Error Logs</label>
-        <div class="helper-text" *ngIf="!errorLogsSupported">Backend broker error logs endpoint pending.</div>
+        <div class="helper-text" *ngIf="!errorLogsSupported">Broker error logs are unavailable for the current backend.</div>
         <table class="data-table">
           <thead>
           <tr>
@@ -106,7 +106,7 @@
           type="button"
           (click)="disconnectBroker()"
           [disabled]="brokerStatus !== 'CONNECTED' || !disconnectSupported"
-          [attr.title]="disconnectSupported ? '' : 'Backend disconnect endpoint pending'"
+          [attr.title]="disconnectSupported ? '' : 'Disconnect is not supported by the current backend.'"
           aria-label="Disconnect broker"
         >
           Disconnect Broker

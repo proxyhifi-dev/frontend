@@ -12,7 +12,7 @@
           [checked]="isLiveMode"
           (change)="toggleMode()"
           [disabled]="modeLoading || loading || !modeSupported"
-          [attr.title]="modeSupported ? '' : 'Backend mode endpoint pending'"
+          [attr.title]="modeSupported ? '' : 'Mode switching is not supported by the current backend.'"
         >
         <span class="slider"></span>
       </label>

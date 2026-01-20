@@ -16,7 +16,15 @@
 
   <div class="filters-bar glass-card">
     <input type="text" placeholder="🔍 Search symbol..." class="dark-input">
-    <button class="btn btn-outline btn-sm" disabled title="Export report endpoint pending">Export CSV</button>
+    <button
+      class="btn btn-outline btn-sm"
+      type="button"
+      (click)="exportCsv()"
+      [disabled]="!exportSupported"
+      [attr.title]="exportSupported ? 'Export CSV' : 'CSV export is not supported by the current backend.'"
+    >
+      Export CSV
+    </button>
   </div>
 
   <div class="table-wrapper glass-card" *ngIf="activeTab === 'open'">

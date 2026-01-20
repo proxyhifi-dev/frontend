@@ -45,7 +45,7 @@ import { takeUntil } from 'rxjs/operators';
           (click)="toggleBotStatus()"
           class="btn-toggle"
           [disabled]="!controlSupported"
-          [attr.title]="controlSupported ? '' : 'Backend bot control endpoint pending'"
+          [attr.title]="controlSupported ? '' : 'Bot control is not supported by the current backend.'"
         >
           {{ botStatus.isActive ? 'Pause' : 'Resume' }} Bot
         </button>

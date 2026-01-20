@@ -48,7 +48,7 @@ export class CommandService {
 
   private toggleMode(): void {
     if (!this.modeStore.modeSupported) {
-      this.notificationService.warning('Backend mode endpoint pending.', 'Mode Locked');
+      this.notificationService.warning('Mode switching not supported by current backend.', 'Mode Locked');
       return;
     }
     const nextMode = this.modeStore.snapshot === 'LIVE' ? 'PAPER' : 'LIVE';
