@@ -2,19 +2,31 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 export const baseUrlInterceptor: HttpInterceptorFn = (req, next) => {
-  // If the request is for an asset (like .svg, .json config), let it pass normally
-  if (req.url.includes('/assets/') || req.url.includes('.json')) {
+  const url = req.url || '';
+
+  // ✅ Let asset requests pass (Angular static files)
+  // Keep this STRICT to assets only (avoid accidentally skipping API calls)
+  if (url.startsWith('/assets/') || url.includes('/assets/')) {
     return next(req);
   }
 
-  // If the request already has http (external api), let it pass
-  if (req.url.startsWith('http')) {
+  // ✅ If already absolute (http/https), do not touch
+  if (/^https?:\/\//i.test(url)) {
     return next(req);
   }
 
-  // Otherwise, prepend the backend URL (e.g., /api/account -> http://127.0.0.1:8080/api/account)
+  // ✅ Only normalize leading "/api" prefix (not any "/api" in the middle)
+  // We want final outgoing URL always like: https://host/api/<path>
+  const path = url.startsWith('/') ? url : `/${url}`;
+  const normalizedPath = path.startsWith('/api/')
+    ? path.substring('/api'.length) // remove ONLY the prefix "/api"
+    : path;
+
+  // ✅ environment.apiUrl should already include "/api"
+  const base = (environment.apiUrl || environment.apiBaseUrl || '').replace(/\/+$/, '');
+
   const apiReq = req.clone({
-    url: `${environment.apiUrl}${req.url.replace('/api', '')}`
+    url: `${base}${normalizedPath}`
   });
 
   return next(apiReq);
