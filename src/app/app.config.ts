@@ -6,6 +6,10 @@ import { firstValueFrom, of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 
 import { routes } from './app.routes';
+
+
+import { baseUrlInterceptor } from './core/interceptors/base-url.interceptor';
+
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { RuntimeConfigService } from './core/config/runtime-config.service';
@@ -23,10 +27,10 @@ const runtimeConfigInitializer =
     () =>
       firstValueFrom(
         runtimeConfig.load().pipe(
-          timeout(4000),            // ✅ don't block UI forever
+          timeout(4000), // ✅ don't block UI forever
           catchError((err) => {
             console.warn('[RuntimeConfig] load failed, continuing boot:', err);
-            return of(null);        // ✅ allow Angular to bootstrap
+            return of(null); // ✅ allow Angular to bootstrap
           })
         )
       );
@@ -35,7 +39,16 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideAnimations(),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+
+    // ✅ IMPORTANT: baseUrlInterceptor should be FIRST
+    provideHttpClient(
+      withInterceptors([
+        baseUrlInterceptor,
+        authInterceptor,
+        errorInterceptor
+      ])
+    ),
+
     {
       provide: APP_INITIALIZER,
       useFactory: runtimeConfigInitializer,
