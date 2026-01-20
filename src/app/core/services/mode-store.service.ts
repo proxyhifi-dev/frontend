@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, distinctUntilChanged, map, of, tap } from 'rxjs';
 import { TradingMode, TradingModeService } from './trading-mode.service';
+import { TokenService } from '../auth/token.service';
 
 @Injectable({ providedIn: 'root' })
 export class ModeStore {
@@ -14,7 +15,10 @@ export class ModeStore {
   readonly toggleLabel$ = this.mode$.pipe(map((mode) => (mode === 'LIVE' ? 'Switch to Paper' : 'Switch to Live')));
   readonly modeSupported$ = this.modeSupportedSubject.asObservable();
 
-  constructor(private tradingModeService: TradingModeService) {
+  constructor(
+    private tradingModeService: TradingModeService,
+    private tokenService: TokenService
+  ) {
     this.tradingModeService.modeSupported$.subscribe((supported) => {
       this.modeSupportedSubject.next(supported);
     });
@@ -28,7 +32,17 @@ export class ModeStore {
     return this.modeSupportedSubject.value;
   }
 
+  /**
+   * ✅ Only sync from backend when user is authenticated.
+   * Otherwise this will trigger 401/403 on app load (expected but noisy).
+   */
   syncFromBackend(): Observable<TradingMode> {
+    const token = this.tokenService.getAccessToken();
+    if (!token) {
+      // keep local mode without hitting backend
+      return of(this.modeSubject.value);
+    }
+
     return this.tradingModeService.getMode().pipe(
       tap((mode) => this.updateMode(mode)),
       catchError(() => of(this.modeSubject.value))
@@ -39,8 +53,17 @@ export class ModeStore {
     if (mode === this.modeSubject.value) {
       return of(mode);
     }
+
+    // ✅ If not logged in, update locally only (or you can choose to block)
+    const token = this.tokenService.getAccessToken();
+    if (!token) {
+      this.updateMode(mode);
+      return of(mode);
+    }
+
     return this.tradingModeService.setMode(mode).pipe(
-      tap((nextMode) => this.updateMode(nextMode))
+      tap((nextMode) => this.updateMode(nextMode)),
+      catchError(() => of(this.modeSubject.value))
     );
   }
 
