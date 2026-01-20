@@ -15,13 +15,34 @@ export interface UiEntityConfig {
   entityFields: UiEntityField[];
 }
 
+/**
+ * Backend may return endpoints as objects:
+ * { method: "GET", path: "/api/strategy/mode", description: "..." }
+ */
+export interface UiEndpointDTO {
+  method?: string;
+  path: string;
+  description?: string;
+}
+
 export interface UiConfig {
   apiBaseUrl: string;
   wsUrl: string;
   wsBaseUrl?: string;
   wsTopics?: string[];
-  endpoints?: string[] | Record<string, string | string[]>;
+
+  /**
+   * UI previously assumed endpoints were strings.
+   * Backend returns objects -> allow both.
+   */
+  endpoints?: Array<string | UiEndpointDTO> | Record<string, string | string[]>;
+
+  /**
+   * UI uses entities[] with entityFields[]
+   * Backend may send entityFields map instead.
+   */
   entities?: UiEntityConfig[];
+  entityFields?: Record<string, Array<UiEntityField | string>>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -32,6 +53,7 @@ export class RuntimeConfigService {
   constructor(private http: HttpClient, private toastService: ToastService) {}
 
   load(): Observable<UiConfig> {
+    // NOTE: keeping your current request style
     return this.http.get<UiConfig>(`${environment.apiBaseUrl}/ui/config`).pipe(
       tap((config) => this.configSubject.next(this.normalizeConfig(config))),
       catchError(() => {
@@ -56,6 +78,7 @@ export class RuntimeConfigService {
   }
 
   get entities(): UiEntityConfig[] {
+    // after normalizeConfig(), entities will be populated even if backend only sends entityFields map
     return this.configSubject.value?.entities ?? [];
   }
 
@@ -64,7 +87,7 @@ export class RuntimeConfigService {
   }
 
   getEntityFields(entityType: string): UiEntityField[] {
-    const normalizedType = entityType.toLowerCase();
+    const normalizedType = (entityType || '').toLowerCase();
     const entity = this.entities.find((entry) => entry.name.toLowerCase() === normalizedType);
     return entity?.entityFields ?? [];
   }
@@ -74,15 +97,35 @@ export class RuntimeConfigService {
     return this.endpoints.some((endpoint) => this.normalizeEndpoint(endpoint) === normalized);
   }
 
+  // ------------------------
+  // Normalization
+  // ------------------------
+
   private normalizeConfig(config: UiConfig): UiConfig {
     const wsUrl = config.wsUrl || config.wsBaseUrl || environment.wsUrl;
+
+    // ✅ Convert backend entityFields map -> entities[] (if entities[] not provided)
+    const entitiesFromMap: UiEntityConfig[] =
+      config.entityFields && typeof config.entityFields === 'object'
+        ? Object.entries(config.entityFields).map(([name, fields]) => ({
+            name,
+            entityFields: (Array.isArray(fields) ? fields : []).map((f) =>
+              typeof f === 'string' ? ({ name: f } as UiEntityField) : (f as UiEntityField)
+            )
+          }))
+        : [];
+
+    const mergedEntities =
+      (config.entities && config.entities.length ? config.entities : entitiesFromMap) ?? [];
+
     return {
       apiBaseUrl: config.apiBaseUrl || environment.apiBaseUrl,
       wsUrl,
       wsBaseUrl: config.wsBaseUrl,
       wsTopics: config.wsTopics ?? [],
       endpoints: this.normalizeEndpoints(config.endpoints),
-      entities: config.entities ?? []
+      entities: mergedEntities,
+      entityFields: config.entityFields
     };
   }
 
@@ -97,9 +140,9 @@ export class RuntimeConfigService {
   }
 
   private normalizeEndpoint(path: string): string {
-    if (!path) {
-      return '';
-    }
+    if (!path) return '';
+
+    // If full URL, normalize by pathname
     if (path.startsWith('http://') || path.startsWith('https://')) {
       try {
         return this.normalizeEndpoint(new URL(path).pathname);
@@ -107,25 +150,49 @@ export class RuntimeConfigService {
         return path;
       }
     }
+
+    // Ensure leading slash
     const normalized = path.startsWith('/') ? path : `/${path}`;
+
+    /**
+     * Your UI removes "/api" prefix so it can compare with UI paths.
+     * Keep your existing behavior.
+     */
     return normalized.startsWith('/api/') ? normalized.replace('/api', '') : normalized;
   }
 
   private normalizeEndpoints(endpoints?: UiConfig['endpoints']): string[] {
-    if (!endpoints) {
-      return [];
+    if (!endpoints) return [];
+
+    // Case 1: Record<string, string|string[]>
+    if (!Array.isArray(endpoints) && typeof endpoints === 'object') {
+      const collected: string[] = [];
+      Object.values(endpoints).forEach((value) => {
+        if (Array.isArray(value)) {
+          value.forEach((entry) => collected.push(this.normalizeEndpoint(entry)));
+        } else if (typeof value === 'string') {
+          collected.push(this.normalizeEndpoint(value));
+        }
+      });
+      return collected;
     }
+
+    // Case 2: Array<string | UiEndpointDTO>
     if (Array.isArray(endpoints)) {
-      return endpoints.map((endpoint) => this.normalizeEndpoint(endpoint));
+      return endpoints
+        .map((e) => {
+          if (!e) return '';
+
+          if (typeof e === 'string') return e;
+
+          // UiEndpointDTO from backend
+          const dto = e as UiEndpointDTO;
+          return typeof dto.path === 'string' ? dto.path : '';
+        })
+        .filter(Boolean)
+        .map((p) => this.normalizeEndpoint(p));
     }
-    const collected: string[] = [];
-    Object.values(endpoints).forEach((value) => {
-      if (Array.isArray(value)) {
-        value.forEach((entry) => collected.push(this.normalizeEndpoint(entry)));
-      } else if (typeof value === 'string') {
-        collected.push(this.normalizeEndpoint(value));
-      }
-    });
-    return collected;
+
+    return [];
   }
 }
