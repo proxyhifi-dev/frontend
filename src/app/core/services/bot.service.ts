@@ -40,7 +40,7 @@ export class BotService {
 
   setBotStatus(isActive: boolean): Observable<BotActionResponse> {
     if (!this.controlSupportedSubject.value) {
-      return of({ success: false, message: 'Backend bot control endpoint pending' });
+      return of({ success: false, message: 'Bot control is not supported by the current backend.' });
     }
     const path = isActive ? '/bot/start' : '/bot/stop';
     return this.http.post<BotActionResponse>(path, {}).pipe(

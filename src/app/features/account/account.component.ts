@@ -103,7 +103,7 @@ export class AccountComponent implements OnInit, OnDestroy {
 
   toggleMode(): void {
     if (!this.modeSupported) {
-      this.notificationService.warning('Backend mode endpoint pending.', 'Mode Locked');
+      this.notificationService.warning('Mode switching not supported by current backend.', 'Mode Locked');
       return;
     }
     const nextMode: TradingMode = this.isLiveMode ? 'PAPER' : 'LIVE';

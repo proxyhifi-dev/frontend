@@ -7,23 +7,31 @@ import { PortfolioService } from '../portfolio/portfolio.service';
 import { ApiError } from '../models/api-error.model';
 import { HttpBaseService } from '../http/http-base.service';
 import { RuntimeConfigService } from '../config/runtime-config.service';
+import { ApiConfigService } from '../config/api-config.service';
 
 @Injectable({ providedIn: 'root' })
 export class PositionService {
   private closeSupportedSubject = new BehaviorSubject<boolean>(false);
   readonly closeSupported$ = this.closeSupportedSubject.asObservable();
+  private exportSupportedSubject = new BehaviorSubject<boolean>(false);
+  private exportEndpointSubject = new BehaviorSubject<string | null>(null);
+  readonly exportSupported$ = this.exportSupportedSubject.asObservable();
 
   constructor(
     private modeStore: ModeStore,
     private portfolio: PortfolioService,
     private http: HttpBaseService,
-    private runtimeConfig: RuntimeConfigService
+    private runtimeConfig: RuntimeConfigService,
+    private apiConfig: ApiConfigService
   ) {
     this.runtimeConfig.config$.subscribe(() => {
       this.closeSupportedSubject.next(
         this.runtimeConfig.hasEndpoint('/positions/{symbol}/close') ||
           this.runtimeConfig.hasEndpoint('/positions/close')
       );
+      const exportEndpoint = this.findExportEndpoint();
+      this.exportEndpointSubject.next(exportEndpoint);
+      this.exportSupportedSubject.next(Boolean(exportEndpoint));
     });
   }
 
@@ -56,10 +64,18 @@ export class PositionService {
     if (!this.closeSupportedSubject.value) {
       return throwError(() => ({
         status: 404,
-        userMessage: 'Backend position close endpoint pending.'
+        userMessage: 'Position close is not supported by the current backend.'
       } as ApiError));
     }
     return this.http.post<void>(`/positions/${encodeURIComponent(position.symbol)}/close`, {});
+  }
+
+  getExportUrl(): string | null {
+    const endpoint = this.exportEndpointSubject.value;
+    if (!endpoint) {
+      return null;
+    }
+    return this.apiConfig.buildApiUrl(endpoint);
   }
 
   private toViewFromTrade(trade: TradeDTO): PositionView {
@@ -100,5 +116,23 @@ export class PositionService {
       isPaperTrade: true,
       rMultiple: 0
     };
+  }
+
+  private findExportEndpoint(): string | null {
+    const endpoints = this.runtimeConfig.endpoints;
+    if (this.runtimeConfig.hasEndpoint('/positions/export')) {
+      return '/positions/export';
+    }
+    if (this.runtimeConfig.hasEndpoint('/positions/report')) {
+      return '/positions/report';
+    }
+    if (this.runtimeConfig.hasEndpoint('/positions/export/csv')) {
+      return '/positions/export/csv';
+    }
+    const candidate = endpoints.find((endpoint) =>
+      endpoint.includes('/positions') &&
+      (endpoint.includes('export') || endpoint.includes('report') || endpoint.includes('csv'))
+    );
+    return candidate ?? null;
   }
 }

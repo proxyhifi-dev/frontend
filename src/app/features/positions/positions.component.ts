@@ -24,6 +24,7 @@ export class PositionsComponent implements OnInit, OnDestroy {
   openError = '';
   closedError = '';
   supportsClose = false;
+  exportSupported = false;
   safeMode = false;
   safeModeReason = '';
   private lastMode?: string;
@@ -43,6 +44,11 @@ export class PositionsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((supported) => {
         this.supportsClose = supported;
+      });
+    this.positionSvc.exportSupported$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((supported) => {
+        this.exportSupported = supported;
       });
     this.modeStore.mode$
       .pipe(takeUntil(this.destroy$))
@@ -107,6 +113,19 @@ export class PositionsComponent implements OnInit, OnDestroy {
         this.notify.error('Close Failed', message);
       }
     });
+  }
+
+  exportCsv(): void {
+    if (!this.exportSupported) {
+      this.notify.warning('Action Unavailable', 'CSV export is not supported by the current backend.');
+      return;
+    }
+    const exportUrl = this.positionSvc.getExportUrl();
+    if (!exportUrl) {
+      this.notify.error('Export Failed', 'Unable to resolve the export endpoint.');
+      return;
+    }
+    window.open(exportUrl, '_blank');
   }
 
   private loadCircuitBreaker(): void {

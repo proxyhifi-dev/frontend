@@ -100,7 +100,7 @@
               class="btn-execute-big"
               (click)="executeSignal(s)"
               [disabled]="!s.hasEntrySignal || safeMode || !executionSupported"
-              [attr.title]="executionSupported ? '' : 'Backend strategy execution endpoint pending'"
+              [attr.title]="executionSupported ? '' : 'Strategy execution is not supported by the current backend.'"
             >
               EXECUTE TRADE
             </button>

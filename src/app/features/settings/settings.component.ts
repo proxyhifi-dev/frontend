@@ -100,7 +100,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   disconnectBroker(): void {
     if (!this.disconnectSupported) {
-      this.notificationService.warning('Backend disconnect endpoint pending.', 'Action unavailable');
+      this.notificationService.warning('Disconnect not supported by current backend.', 'Action unavailable');
       return;
     }
     this.fyersService.disconnectFyers().subscribe({

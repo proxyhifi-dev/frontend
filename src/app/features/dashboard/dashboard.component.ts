@@ -177,7 +177,7 @@ export class DashboardComponent {
     if (!botControlSupported) {
       this.tradingStore.addAlert({
         type: 'warning',
-        message: 'Backend bot control endpoint pending.',
+        message: 'Bot control is not supported by the current backend.',
         timestamp: new Date().toISOString()
       });
       return;

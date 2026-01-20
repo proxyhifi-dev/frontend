@@ -45,7 +45,7 @@
           type="button"
           (click)="toggleMode(vm.isLiveMode, vm.modeSupported)"
           [disabled]="!vm.modeSupported"
-          [attr.title]="vm.modeSupported ? '' : 'Backend mode endpoint pending'"
+          [attr.title]="vm.modeSupported ? '' : 'Mode switching is not supported by the current backend.'"
           [attr.aria-label]="vm.isLiveMode ? 'Switch to paper mode' : 'Switch to live mode'"
         >
           <span>{{ vm.isLiveMode ? 'Switch to Paper' : 'Switch to Live' }}</span>
@@ -56,7 +56,7 @@
           [class.active]="vm.strategyHealth.isPaused"
           (click)="toggleKillSwitch(vm.strategyHealth.isPaused, vm.botControlSupported)"
           [disabled]="!vm.strategyHealth.canManage || !vm.botControlSupported"
-          [attr.title]="vm.botControlSupported ? '' : 'Backend bot control endpoint pending'"
+          [attr.title]="vm.botControlSupported ? '' : 'Bot control is not supported by the current backend.'"
           [attr.aria-label]="vm.strategyHealth.isPaused ? 'Resume trading' : 'Pause trading'"
         >
           {{ vm.strategyHealth.isPaused ? 'Resume Trading' : 'Kill Switch' }}
