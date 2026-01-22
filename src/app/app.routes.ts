@@ -1,18 +1,29 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
+import { ConfigGuard } from './core/guards/config.guard';
+import { FeatureGuard } from './core/guards/feature.guard';
 import { LoginComponent } from './features/auth/login.component';
 import { RegisterComponent } from './features/auth/register.component';
 import { FyersCallbackComponent } from './features/auth/fyers-callback/fyers-callback.component';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
+import { FeatureUnavailableComponent } from './features/feature-unavailable/feature-unavailable.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
   {
     path: 'login',
     component: LoginComponent
   },
   {
+    path: 'auth/login',
+    component: LoginComponent
+  },
+  {
     path: 'register',
+    component: RegisterComponent
+  },
+  {
+    path: 'auth/register',
     component: RegisterComponent
   },
   {
@@ -22,6 +33,7 @@ export const routes: Routes = [
   {
     path: '',
     component: MainLayoutComponent,
+    canActivate: [AuthGuard, ConfigGuard],
     children: [
       {
         path: 'dashboard',
@@ -43,15 +55,38 @@ export const routes: Routes = [
       },
       {
         path: 'orders',
-        canActivate: [AuthGuard],
+        canActivate: [AuthGuard, FeatureGuard],
+        data: { feature: { method: 'GET', path: '/orders', label: 'Orders' } },
         loadComponent: () => import('./features/orders/orders.component')
           .then(m => m.OrdersComponent)
       },
       {
+        path: 'orders/:id',
+        canActivate: [AuthGuard, FeatureGuard],
+        data: { feature: { method: 'GET', path: '/orders/{id}', label: 'Order Details' } },
+        loadComponent: () => import('./features/orders/order-detail.component')
+          .then(m => m.OrderDetailComponent)
+      },
+      {
         path: 'signals',
-        canActivate: [AuthGuard],
+        canActivate: [AuthGuard, FeatureGuard],
+        data: { feature: { method: 'GET', path: '/strategy/signals', label: 'Signals' } },
         loadComponent: () => import('./features/signals/signals.component')
           .then(m => m.SignalsComponent)
+      },
+      {
+        path: 'scanner',
+        canActivate: [AuthGuard, FeatureGuard],
+        data: { feature: { method: 'POST', path: '/scanner/run', label: 'Scanner' } },
+        loadComponent: () => import('./features/scanner/scanner.component')
+          .then(m => m.ScannerComponent)
+      },
+      {
+        path: 'watchlist',
+        canActivate: [AuthGuard, FeatureGuard],
+        data: { feature: { method: 'GET', path: '/watchlist', label: 'Watchlist' } },
+        loadComponent: () => import('./features/watchlist/watchlist.component')
+          .then(m => m.WatchlistComponent)
       },
       {
         path: 'risk',
@@ -85,7 +120,8 @@ export const routes: Routes = [
       },
       {
         path: 'strategy',
-        canActivate: [AuthGuard],
+        canActivate: [AuthGuard, FeatureGuard],
+        data: { feature: { method: 'GET', path: '/strategy/health', label: 'Strategy' } },
         loadComponent: () => import('./features/strategy/strategy.component')
           .then(m => m.StrategyComponent)
       },
@@ -114,6 +150,12 @@ export const routes: Routes = [
           .then(m => m.HelpComponent)
       },
       {
+        path: 'status',
+        canActivate: [AuthGuard],
+        loadComponent: () => import('./features/status/status.component')
+          .then(m => m.StatusComponent)
+      },
+      {
         path: 'account',
         canActivate: [AuthGuard],
         loadComponent: () => import('./features/account/account.component')
@@ -121,5 +163,9 @@ export const routes: Routes = [
       }
     ]
   },
-  { path: '**', redirectTo: 'login' }
+  {
+    path: 'feature-unavailable',
+    component: FeatureUnavailableComponent
+  },
+  { path: '**', redirectTo: 'auth/login' }
 ];

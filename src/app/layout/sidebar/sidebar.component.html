@@ -1,19 +1,17 @@
 <nav class="sidebar glass-card">
   <div class="nav-group">
-    <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
-      <span class="icon">📊</span> <span class="text">Dashboard</span>
-    </a>
-    <a routerLink="/account" routerLinkActive="active" class="nav-item">
-      <span class="icon">💼</span> <span class="text">Paper Account</span>
-    </a>
-    <a routerLink="/backtest-validation" routerLinkActive="active" class="nav-item">
-      <span class="icon">🧪</span> <span class="text">Backtest &amp; Validation</span>
-    </a>
-    <a routerLink="/risk-correlation" routerLinkActive="active" class="nav-item">
-      <span class="icon">🛡️</span> <span class="text">Risk &amp; Correlation</span>
-    </a>
-    <a routerLink="/settings" routerLinkActive="active" class="nav-item">
-      <span class="icon">⚙️</span> <span class="text">Settings</span>
+    <a
+      *ngFor="let item of navItems"
+      [routerLink]="item.path"
+      routerLinkActive="active"
+      class="nav-item"
+      [class.disabled]="!isEnabled(item)"
+      [attr.title]="getTooltip(item)"
+      [attr.aria-disabled]="!isEnabled(item)"
+      (click)="handleNavClick($event, item)"
+    >
+      <span class="icon">{{ item.icon }}</span>
+      <span class="text">{{ item.label }}</span>
     </a>
   </div>
 </nav>

@@ -1,0 +1,73 @@
+<section class="page-shell">
+  <header class="header-row">
+    <div>
+      <h2>Order Details</h2>
+      <p class="text-muted">Full lifecycle and status timeline.</p>
+    </div>
+    <a routerLink="/orders" class="btn btn-outline btn-sm">Back to Orders</a>
+  </header>
+
+  <div class="page-card" *ngIf="order; else loadingState">
+    <div class="detail-grid">
+      <div>
+        <span class="label">Order ID</span>
+        <strong>#{{ order.id }}</strong>
+      </div>
+      <div>
+        <span class="label">Symbol</span>
+        <strong>{{ order.symbol || '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Side</span>
+        <strong>{{ order.side || '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Quantity</span>
+        <strong>{{ order.quantity ?? '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Price</span>
+        <strong>{{ order.price | currencyInr }}</strong>
+      </div>
+      <div>
+        <span class="label">Mode</span>
+        <strong>{{ order.isPaper === true ? 'PAPER' : order.isPaper === false ? 'LIVE' : '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Status</span>
+        <strong>{{ order.status || '—' }}</strong>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-danger btn-sm" type="button" (click)="cancelOrder()" [disabled]="!canCancel || isCancelling">
+        Cancel Order
+      </button>
+      <span class="text-muted" *ngIf="!canCancel">Order cannot be cancelled.</span>
+    </div>
+
+    <div class="timeline">
+      <h3>Lifecycle</h3>
+      <div *ngIf="order.events?.length; else noEvents">
+        <div class="event" *ngFor="let event of order.events">
+          <div class="dot"></div>
+          <div class="event-body">
+            <strong>{{ event.status || 'Update' }}</strong>
+            <span class="text-muted">{{ event.timestamp ? (event.timestamp | date:'short') : '—' }}</span>
+            <p class="text-muted" *ngIf="event.message">{{ event.message }}</p>
+          </div>
+        </div>
+      </div>
+      <ng-template #noEvents>
+        <p class="text-muted">No lifecycle events available.</p>
+      </ng-template>
+    </div>
+  </div>
+
+  <ng-template #loadingState>
+    <div class="page-card">
+      <p class="text-muted" *ngIf="isLoading">Loading order details...</p>
+      <p class="text-muted text-red" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+    </div>
+  </ng-template>
+</section>

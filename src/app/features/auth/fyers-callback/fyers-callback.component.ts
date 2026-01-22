@@ -80,7 +80,7 @@ export class FyersCallbackComponent implements OnInit {
               this.notificationService.success('✅ Fyers account connected! Please login to continue.');
               
               setTimeout(() => {
-                this.router.navigate(['/login']);
+                this.router.navigate(['/auth/login']);
               }, 1500);
             }
             // Unknown response format
@@ -97,14 +97,14 @@ export class FyersCallbackComponent implements OnInit {
             
             // Redirect to login page on error
             setTimeout(() => {
-              this.router.navigate(['/login']);
+              this.router.navigate(['/auth/login']);
             }, 2000);
           }
         });
       } else {
         this.notificationService.error('Invalid callback: Missing auth code');
         setTimeout(() => {
-          this.router.navigate(['/login']);
+          this.router.navigate(['/auth/login']);
         }, 1500);
       }
     });

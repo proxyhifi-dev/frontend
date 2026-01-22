@@ -1,0 +1,52 @@
+<section class="page-shell">
+  <header class="header-row">
+    <div>
+      <h2>System Status</h2>
+      <p class="text-muted">Backend health, broker connectivity, and diagnostics.</p>
+    </div>
+    <button class="btn btn-outline btn-sm" type="button" (click)="loadHealth()">Refresh</button>
+  </header>
+
+  <div class="page-card">
+    <div class="card-header">
+      <h3>Backend Health</h3>
+      <span class="text-muted" *ngIf="isLoading">Loading...</span>
+    </div>
+    <div *ngIf="health; else healthUnavailable" class="status-grid">
+      <div>
+        <span class="label">Status</span>
+        <strong>{{ health?.status }}</strong>
+      </div>
+      <div *ngIf="health?.components?.db">
+        <span class="label">Database</span>
+        <strong>{{ health?.components?.db?.status }}</strong>
+      </div>
+      <div>
+        <span class="label">Config Loaded</span>
+        <strong>{{ configAvailable ? 'Yes' : 'No' }}</strong>
+      </div>
+    </div>
+    <ng-template #healthUnavailable>
+      <p class="text-muted">Health endpoint is not exposed in the current backend configuration.</p>
+    </ng-template>
+  </div>
+
+  <div class="page-card">
+    <div class="card-header">
+      <h3>Broker Connectivity</h3>
+    </div>
+    <p>Fyers Broker Status: <strong>{{ brokerStatus }}</strong></p>
+  </div>
+
+  <div class="page-card">
+    <div class="card-header">
+      <h3>Troubleshooting</h3>
+    </div>
+    <ul class="help-list">
+      <li><strong>401/403 errors:</strong> Your session expired or lacks permissions. Log in again.</li>
+      <li><strong>CORS issues:</strong> Ensure the backend allows the UI origin in CORS configuration.</li>
+      <li><strong>Config unreachable:</strong> /api/ui/config must be accessible by the UI host.</li>
+      <li><strong>Empty scan results:</strong> Review diagnostics for rejected symbols or strategy filters.</li>
+    </ul>
+  </div>
+</section>

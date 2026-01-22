@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, catchError, of, tap } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { ToastService } from '../services/toast.service';
 
 export interface UiEntityField {
@@ -19,62 +18,77 @@ export interface UiEntityConfig {
  * Backend may return endpoints as objects:
  * { method: "GET", path: "/api/strategy/mode", description: "..." }
  */
-export interface UiEndpointDTO {
-  method?: string;
+export interface RuntimeEndpoint {
+  method: string;
   path: string;
   description?: string;
 }
 
-export interface UiConfig {
+export interface RuntimeConfig {
   apiBaseUrl: string;
-  wsUrl: string;
   wsBaseUrl?: string;
   wsTopics?: string[];
-
-  /**
-   * UI previously assumed endpoints were strings.
-   * Backend returns objects -> allow both.
-   */
-  endpoints?: Array<string | UiEndpointDTO> | Record<string, string | string[]>;
-
-  /**
-   * UI uses entities[] with entityFields[]
-   * Backend may send entityFields map instead.
-   */
+  endpoints: RuntimeEndpoint[];
   entities?: UiEntityConfig[];
   entityFields?: Record<string, Array<UiEntityField | string>>;
 }
 
+export interface RuntimeConfigResponse extends Partial<RuntimeConfig> {
+  wsUrl?: string;
+  endpoints?: Array<string | RuntimeEndpoint> | Record<string, string | string[]>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RuntimeConfigService {
-  private configSubject = new BehaviorSubject<UiConfig | null>(null);
+  private configSubject = new BehaviorSubject<RuntimeConfig>(this.createFallback());
+  private configLoadedSubject = new BehaviorSubject<boolean>(false);
+  private configUnavailableSubject = new BehaviorSubject<boolean>(false);
   readonly config$ = this.configSubject.asObservable();
+  readonly configLoaded$ = this.configLoadedSubject.asObservable();
+  readonly configUnavailable$ = this.configUnavailableSubject.asObservable();
 
   constructor(private http: HttpClient, private toastService: ToastService) {}
 
-  load(): Observable<UiConfig> {
-    // NOTE: keeping your current request style
-    return this.http.get<UiConfig>(`${environment.apiBaseUrl}/ui/config`).pipe(
-      tap((config) => this.configSubject.next(this.normalizeConfig(config))),
+  load(): Observable<RuntimeConfig> {
+    return this.http.get<RuntimeConfigResponse>('/api/ui/config').pipe(
+      tap((config) => {
+        this.configSubject.next(this.normalizeConfig(config));
+        this.configLoadedSubject.next(true);
+        this.configUnavailableSubject.next(false);
+      }),
       catchError(() => {
         const fallback = this.createFallback();
         this.configSubject.next(fallback);
-        this.toastService.showWarning('Using default API configuration.');
+        this.configLoadedSubject.next(true);
+        this.configUnavailableSubject.next(true);
+        this.toastService.showWarning('Backend config unavailable. Running in limited mode.');
         return of(fallback);
       })
     );
   }
 
-  get apiBaseUrl(): string {
-    return this.configSubject.value?.apiBaseUrl ?? environment.apiBaseUrl;
+  getApiBaseUrl(): string {
+    return this.normalizeBaseUrl(this.configSubject.value.apiBaseUrl);
   }
 
-  get wsUrl(): string {
-    return this.configSubject.value?.wsUrl ?? environment.wsUrl;
+  getWsBaseUrl(): string {
+    return this.normalizeBaseUrl(this.configSubject.value.wsBaseUrl ?? '');
   }
 
-  get endpoints(): string[] {
-    return this.normalizeEndpoints(this.configSubject.value?.endpoints);
+  listEndpoints(): RuntimeEndpoint[] {
+    return [...this.configSubject.value.endpoints];
+  }
+
+  isConfigAvailable(): boolean {
+    return !this.configUnavailableSubject.value;
+  }
+
+  isConfigLoaded(): boolean {
+    return this.configLoadedSubject.value;
+  }
+
+  get endpoints(): RuntimeEndpoint[] {
+    return this.configSubject.value.endpoints;
   }
 
   get entities(): UiEntityConfig[] {
@@ -92,17 +106,32 @@ export class RuntimeConfigService {
     return entity?.entityFields ?? [];
   }
 
-  hasEndpoint(path: string): boolean {
-    const normalized = this.normalizeEndpoint(path);
-    return this.endpoints.some((endpoint) => this.normalizeEndpoint(endpoint) === normalized);
+  hasEndpoint(path: string): boolean;
+  hasEndpoint(method: string, path: string): boolean;
+  hasEndpoint(methodOrPath: string, path?: string): boolean {
+    const method = path ? methodOrPath : undefined;
+    const targetPath = path ?? methodOrPath;
+    const normalizedPath = this.normalizeEndpoint(targetPath);
+    const normalizedMethod = method?.toUpperCase();
+
+    return this.endpoints.some((endpoint) => {
+      const endpointPath = this.normalizeEndpoint(endpoint.path);
+      if (endpointPath !== normalizedPath) {
+        return false;
+      }
+      if (!normalizedMethod || endpoint.method === 'ANY') {
+        return true;
+      }
+      return endpoint.method === normalizedMethod;
+    });
   }
 
   // ------------------------
   // Normalization
   // ------------------------
 
-  private normalizeConfig(config: UiConfig): UiConfig {
-    const wsUrl = config.wsUrl || config.wsBaseUrl || environment.wsUrl;
+  private normalizeConfig(config: RuntimeConfigResponse): RuntimeConfig {
+    const wsBaseUrl = config.wsBaseUrl || config.wsUrl || '/ws';
 
     // ✅ Convert backend entityFields map -> entities[] (if entities[] not provided)
     const entitiesFromMap: UiEntityConfig[] =
@@ -119,9 +148,8 @@ export class RuntimeConfigService {
       (config.entities && config.entities.length ? config.entities : entitiesFromMap) ?? [];
 
     return {
-      apiBaseUrl: config.apiBaseUrl || environment.apiBaseUrl,
-      wsUrl,
-      wsBaseUrl: config.wsBaseUrl,
+      apiBaseUrl: config.apiBaseUrl || '/api',
+      wsBaseUrl,
       wsTopics: config.wsTopics ?? [],
       endpoints: this.normalizeEndpoints(config.endpoints),
       entities: mergedEntities,
@@ -129,10 +157,10 @@ export class RuntimeConfigService {
     };
   }
 
-  private createFallback(): UiConfig {
+  private createFallback(): RuntimeConfig {
     return {
-      apiBaseUrl: environment.apiBaseUrl,
-      wsUrl: environment.wsUrl,
+      apiBaseUrl: '/api',
+      wsBaseUrl: '/ws',
       wsTopics: [],
       endpoints: [],
       entities: []
@@ -161,38 +189,47 @@ export class RuntimeConfigService {
     return normalized.startsWith('/api/') ? normalized.replace('/api', '') : normalized;
   }
 
-  private normalizeEndpoints(endpoints?: UiConfig['endpoints']): string[] {
+  private normalizeEndpoints(endpoints?: RuntimeConfigResponse['endpoints']): RuntimeEndpoint[] {
     if (!endpoints) return [];
 
     // Case 1: Record<string, string|string[]>
     if (!Array.isArray(endpoints) && typeof endpoints === 'object') {
-      const collected: string[] = [];
-      Object.values(endpoints).forEach((value) => {
+      const collected: RuntimeEndpoint[] = [];
+      Object.entries(endpoints).forEach(([method, value]) => {
+        const normalizedMethod = method.toUpperCase();
         if (Array.isArray(value)) {
-          value.forEach((entry) => collected.push(this.normalizeEndpoint(entry)));
+          value.forEach((entry) =>
+            collected.push({ method: normalizedMethod, path: this.normalizeEndpoint(entry) })
+          );
         } else if (typeof value === 'string') {
-          collected.push(this.normalizeEndpoint(value));
+          collected.push({ method: normalizedMethod, path: this.normalizeEndpoint(value) });
         }
       });
       return collected;
     }
 
-    // Case 2: Array<string | UiEndpointDTO>
+    // Case 2: Array<string | RuntimeEndpoint>
     if (Array.isArray(endpoints)) {
       return endpoints
         .map((e) => {
-          if (!e) return '';
+          if (!e) return null;
 
-          if (typeof e === 'string') return e;
+          if (typeof e === 'string') {
+            return { method: 'ANY', path: this.normalizeEndpoint(e) } as RuntimeEndpoint;
+          }
 
-          // UiEndpointDTO from backend
-          const dto = e as UiEndpointDTO;
-          return typeof dto.path === 'string' ? dto.path : '';
+          const dto = e as RuntimeEndpoint;
+          const method = dto.method ? dto.method.toUpperCase() : 'ANY';
+          return dto.path ? { ...dto, method, path: this.normalizeEndpoint(dto.path) } : null;
         })
-        .filter(Boolean)
-        .map((p) => this.normalizeEndpoint(p));
+        .filter(Boolean) as RuntimeEndpoint[];
     }
 
     return [];
+  }
+
+  private normalizeBaseUrl(baseUrl: string): string {
+    if (!baseUrl) return '';
+    return baseUrl.replace(/\/+$/, '');
   }
 }

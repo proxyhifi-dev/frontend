@@ -140,6 +140,23 @@ export class StrategyService {
     );
   }
 
+  getStrategyOptions(): Observable<string[]> {
+    if (!this.hasToken()) return of([]);
+
+    const directEndpoint = this.runtimeConfig.hasEndpoint('/strategy/list') ? '/strategy/list' : null;
+    const fallbackEndpoint =
+      this.runtimeConfig.listEndpoints().find((endpoint) =>
+        endpoint.path.includes('/strategy') && endpoint.path.includes('list')
+      )?.path ?? null;
+
+    const endpoint = directEndpoint ?? fallbackEndpoint;
+    if (!endpoint) {
+      return of([]);
+    }
+
+    return this.http.get<string[]>(endpoint).pipe(catchError(() => of([])));
+  }
+
   // ------------------------
   // Helpers
   // ------------------------

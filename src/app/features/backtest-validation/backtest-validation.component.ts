@@ -22,7 +22,7 @@ interface MetricCard {
 export class BacktestValidationComponent {
   private fb = inject(FormBuilder);
   readonly form = this.fb.group({
-    universe: ['NIFTY 50'],
+    universe: [''],
     startDate: ['2023-01-01'],
     endDate: ['2024-01-01'],
     timeframe: ['15m'],

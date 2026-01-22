@@ -114,7 +114,7 @@ export class WebSocketService {
   }
 
   private initializeWebSocket() {
-    const wsUrl = this.runtimeConfig.wsUrl;
+    const wsUrl = this.runtimeConfig.getWsBaseUrl();
     if (!wsUrl) {
       this.setConnectionStatus('error');
       this.toastService.showError('WebSocket URL unavailable. Check server configuration.');

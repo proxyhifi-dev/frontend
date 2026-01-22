@@ -1,0 +1,67 @@
+<section class="page-shell">
+  <header class="header-row">
+    <div>
+      <h2>Watchlist</h2>
+      <p class="text-muted">Manage up to 100 symbols for scanner and strategy runs.</p>
+    </div>
+    <div class="count-pill">{{ usedCount }} / {{ maxCount }} used</div>
+  </header>
+
+  <div class="page-card">
+    <div class="card-header">
+      <h3>Add Symbols</h3>
+    </div>
+    <div class="form-grid">
+      <div class="form-card">
+        <label class="label">Single Symbol</label>
+        <input class="dark-input" [(ngModel)]="symbolInput" placeholder="E.g. RELIANCE" />
+        <button class="btn btn-primary btn-sm" type="button" (click)="addSymbol()" [disabled]="!symbolInput">Add</button>
+      </div>
+      <div class="form-card">
+        <label class="label">Bulk Add</label>
+        <textarea
+          class="dark-input"
+          rows="4"
+          [(ngModel)]="bulkInput"
+          placeholder="Paste symbols separated by commas or new lines"
+        ></textarea>
+        <button class="btn btn-secondary btn-sm" type="button" (click)="addBulk()" [disabled]="!bulkInput">
+          Add Bulk
+        </button>
+      </div>
+    </div>
+    <p class="error-text" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </div>
+
+  <div class="page-card">
+    <div class="card-header">
+      <h3>Current Watchlist</h3>
+      <span class="text-muted" *ngIf="isLoading">Loading...</span>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="isLoading">
+          <td colspan="2" class="empty-state">Loading watchlist...</td>
+        </tr>
+        <tr *ngIf="!isLoading && errorMessage">
+          <td colspan="2" class="empty-state text-red">{{ errorMessage }}</td>
+        </tr>
+        <tr *ngFor="let symbol of symbols">
+          <td>{{ symbol }}</td>
+          <td>
+            <button class="btn btn-ghost btn-sm" type="button" (click)="removeSymbol(symbol)">Remove</button>
+          </td>
+        </tr>
+        <tr *ngIf="!isLoading && !errorMessage && symbols.length === 0">
+          <td colspan="2" class="empty-state">No symbols saved yet.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

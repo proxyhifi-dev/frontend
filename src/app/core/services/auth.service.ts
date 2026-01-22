@@ -21,7 +21,7 @@ export class AuthService {
     private websocketService: WebSocketService,
     private runtimeConfig: RuntimeConfigService
   ) {
-    const user = localStorage.getItem('user');
+    const user = sessionStorage.getItem('user');
     if (user) {
       this.currentUserSubject.next(JSON.parse(user));
     }
@@ -85,10 +85,10 @@ export class AuthService {
       this.http.post<void>('/auth/logout', {}).pipe(catchError(() => of(undefined))).subscribe();
     }
     this.tokenService.clear();
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
     this.currentUserSubject.next(null);
     this.websocketService.disconnect();
-    this.router.navigate(['/login']);
+    this.router.navigate(['/auth/login']);
   }
 
   isAuthenticated(): boolean {
@@ -114,7 +114,7 @@ export class AuthService {
 
   refreshAccessToken(): Observable<string> {
     const refreshToken = this.tokenService.getRefreshToken();
-    if (!refreshToken) {
+    if (!refreshToken || !this.runtimeConfig.hasEndpoint('POST', '/auth/refresh')) {
       return of('');
     }
     return this.http.post<{ accessToken?: string; token?: string }>('/auth/refresh', { refreshToken }).pipe(
@@ -168,7 +168,7 @@ export class AuthService {
   }
 
   private setUser(user: User): void {
-    localStorage.setItem('user', JSON.stringify(user));
+    sessionStorage.setItem('user', JSON.stringify(user));
     this.currentUserSubject.next(user);
   }
 }

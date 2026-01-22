@@ -43,6 +43,12 @@ export class SignalService {
   }
 
   scanNow(): Observable<void> {
+    if (!this.runtimeConfig.hasEndpoint('/strategy/scan-now')) {
+      return throwError(() => ({
+        status: 404,
+        userMessage: 'Scan endpoint not available on this backend.'
+      } as ApiError));
+    }
     return this.http.post<void>('/strategy/scan-now', {});
   }
 
@@ -68,6 +74,8 @@ export class SignalService {
     if (this.runtimeConfig.hasEndpoint('/strategy/signals/{id}/approve')) {
       return true;
     }
-    return this.runtimeConfig.endpoints.some((endpoint) => endpoint.includes('/strategy/signals') && endpoint.includes('approve'));
+    return this.runtimeConfig.endpoints.some((endpoint) =>
+      endpoint.path.includes('/strategy/signals') && endpoint.path.includes('approve')
+    );
   }
 }

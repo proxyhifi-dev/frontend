@@ -33,7 +33,7 @@ export class RegisterComponent {
       next: () => {
         this.loading = false;
         this.notificationService.success('Registration successful! Please login.');
-        this.router.navigate(['/login']);
+        this.router.navigate(['/auth/login']);
       },
       error: (err: unknown) => {
         this.loading = false;

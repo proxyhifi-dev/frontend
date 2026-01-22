@@ -47,11 +47,11 @@
     <div *ngIf="step === 4" class="step-body fade-in">
       <p class="subtitle">Select Stock Universe:</p>
       <div class="radio-list">
-        <label [class.selected]="config.universe==='nifty50'">
-          <input type="radio" name="uni" [(ngModel)]="config.universe" value="nifty50"> Nifty 50
+        <label [class.selected]="config.universe==='watchlist'">
+          <input type="radio" name="uni" [(ngModel)]="config.universe" value="watchlist"> Watchlist
         </label>
-        <label [class.selected]="config.universe==='nifty100'">
-          <input type="radio" name="uni" [(ngModel)]="config.universe" value="nifty100"> Nifty 100
+        <label [class.selected]="config.universe==='manual'">
+          <input type="radio" name="uni" [(ngModel)]="config.universe" value="manual"> Manual Symbols
         </label>
       </div>
     </div>

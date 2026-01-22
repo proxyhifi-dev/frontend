@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { OrdersService, OrderRow } from '../../core/services/orders.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
@@ -7,7 +8,7 @@ import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, CurrencyInrPipe],
+  imports: [CommonModule, RouterModule, CurrencyInrPipe],
   templateUrl: './orders.component.html',
   styleUrls: ['./orders.component.scss']
 })

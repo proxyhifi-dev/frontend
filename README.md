@@ -4,257 +4,108 @@
 ![Angular](https://img.shields.io/badge/Angular-21.0-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
 
-## 🚀 Features Completed (100%)
+Production-grade Angular UI for Apex Trading Bot. The UI is runtime-configured and derives all backend capabilities from `/api/ui/config`.
 
-### ✅ Core Features
-- [x] **Authentication System** - Login, Register, Fyers OAuth
-- [x] **Real-time Dashboard** - Live market data and bot status
-- [x] **Position Management** - Real-time position tracking
-- [x] **Trade History** - Complete trade logging and analytics
-- [x] **Analytics Dashboard** - Performance metrics and charts
-- [x] **Risk Management** - Real-time risk monitoring
-- [x] **Settings & Configuration** - Bot and strategy configuration
-- [x] **WebSocket Integration** - Live data updates
+## ✅ What this UI Covers
 
-### ✅ Technical Features
-- [x] **Global Error Handling** - HTTP interceptor with retry logic
-- [x] **Toast Notifications** - User-friendly feedback system
-- [x] **Loading States** - Global and component-level loading
-- [x] **Responsive Design** - Mobile, tablet, desktop support
-- [x] **Performance Optimized** - OnPush change detection
-- [x] **Type Safety** - Full TypeScript implementation
+- Authentication (email/password + broker OAuth)
+- Runtime UI config + feature gating
+- Strategy, signals, watchlist, scanner (manual runs)
+- Orders lifecycle (paper mode + cancel)
+- Health/status + WebSocket streaming (when exposed)
 
-## 📋 Prerequisites
+## 🚀 Getting Started
+
+### Prerequisites
 
 - Node.js 18+ and npm 10+
-- Angular CLI 21+
-- Backend API running on http://localhost:8080
+- Backend running and exposing `/api/ui/config`
 
-## 🛠️ Installation
+### Install + Run
 
 ```bash
-# Clone the repository
-git clone https://github.com/proxyhifi-dev/frontend.git
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
+npm ci
 npm start
 ```
 
-The application will be available at `http://localhost:4200`
+The app is available at `http://localhost:4200`.
 
-## 🔧 Configuration
+## 🔧 Runtime Configuration (No Hardcoding)
 
-### Environment Variables
+On boot, the UI fetches:
 
-Update `src/environments/environment.ts`:
-
-```typescript
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:8080/api',
-  wsUrl: 'ws://localhost:8080/ws',
-  fyersClientId: 'YOUR_FYERS_CLIENT_ID',
-  fyersRedirectUri: 'http://localhost:4200/auth/fyers/callback'
-};
+```
+GET /api/ui/config
 ```
 
-### Production Build
+Expected shape (example):
+
+```ts
+interface RuntimeConfig {
+  apiBaseUrl: string;
+  wsBaseUrl?: string;
+  endpoints: Array<{ method: string; path: string; description?: string }>;
+}
+```
+
+- **No API base URLs are hardcoded** in `environment.ts`.
+- UI calls are always relative (`/api/...`), then prefixed via `RuntimeConfigService` + `BaseUrlInterceptor`.
+- If `/api/ui/config` is unavailable, the UI boots into a safe mode (login only) and shows a warning banner.
+
+### Environment Injection Options
+
+- **Option A (recommended):** Backend serves `/api/ui/config` and UI uses it as source of truth.
+- **Option B:** Nginx proxies `/api` and `/ws` to the backend, keeping UI calls relative.
+
+## 🔐 Security Notes
+
+- JWTs are stored in **memory + sessionStorage** (no localStorage).
+- Protected routes use `AuthGuard` and `FeatureGuard`.
+- 401/403 responses trigger a friendly logout experience.
+- Error interceptor normalizes messages and avoids token leakage.
+
+## 🧪 Testing
+
+```bash
+npm test
+```
+
+## 🏗️ Build
 
 ```bash
 npm run build
 ```
 
-Build artifacts will be in the `dist/` directory.
+Artifacts land in `dist/frontend`.
 
-## 📁 Project Structure
-
-```
-src/
-├── app/
-│   ├── core/                    # Core services and interceptors
-│   │   ├── interceptors/       # HTTP interceptors
-│   │   └── services/           # Global services
-│   ├── features/               # Feature modules
-│   │   ├── auth/              # Authentication
-│   │   ├── dashboard/         # Dashboard
-│   │   ├── positions/         # Positions
-│   │   ├── trades/            # Trade history
-│   │   ├── analytics/         # Analytics
-│   │   ├── risk/              # Risk management
-│   │   ├── signals/           # Trading signals
-│   │   ├── logs/              # System logs
-│   │   ├── settings/          # Settings
-│   │   └── account/           # Account management
-│   ├── layout/                # Layout components
-│   │   ├── sidebar/
-│   │   ├── header/
-│   │   └── mobile-nav/
-│   └── shared/                # Shared components
-│       ├── components/
-│       └── services/
-├── environments/              # Environment configs
-└── styles/                    # Global styles
-```
-
-## 🎯 Key Features Implemented
-
-### 1. Global Error Handling
-```typescript
-// Automatic retry on network errors
-// User-friendly error messages
-// Toast notifications for all errors
-```
-
-### 2. Real-time WebSocket
-```typescript
-// Auto-reconnect on disconnect
-// Multiple topic subscriptions
-// Connection status monitoring
-```
-
-### 3. Loading Management
-```typescript
-// Global loading overlay
-// Component-level loading states
-// Smart request batching
-```
-
-### 4. Toast Notifications
-```typescript
-toastService.showSuccess('Trade executed!');
-toastService.showError('Connection failed');
-toastService.showWarning('Market closed');
-toastService.showInfo('New update available');
-```
-
-## 🧪 Testing
+## 🐳 Docker
 
 ```bash
-# Run tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-```
-
-## 📊 Performance
-
-- **First Contentful Paint**: < 1.5s
-- **Time to Interactive**: < 3.0s
-- **Bundle Size**: ~500KB gzipped
-- **Lighthouse Score**: 95+
-
-## 🚀 Deployment
-
-### Docker Deployment
-
-```bash
-# Build Docker image
+# Build container
 docker build -t apex-trading-frontend .
 
 # Run container
-docker run -p 80:80 apex-trading-frontend
+docker run -p 8080:80 apex-trading-frontend
 ```
 
-### Nginx Configuration
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    root /usr/share/nginx/html;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    location /api {
-        proxy_pass http://backend:8080;
-    }
-
-    location /ws {
-        proxy_pass http://backend:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
-
-## 🔒 Security
-
-- JWT token authentication
-- HTTPS in production
-- Secure WebSocket (WSS)
-- XSS protection
-- CORS configured
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**WebSocket connection fails:**
-```bash
-# Check backend is running
-curl http://localhost:8080/health
-
-# Check WebSocket endpoint
-wscat -c ws://localhost:8080/ws
-```
-
-**API calls fail:**
-```typescript
-// Verify environment configuration
-// Check CORS settings on backend
-// Ensure backend is running
-```
-
-**Build errors:**
-```bash
-# Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-```
-
-## 📝 Code Style
+### Docker Compose (example)
 
 ```bash
-# Format code
-npm run format
-
-# Lint code
-npm run lint
+docker compose up --build
 ```
 
-## 🤝 Contributing
+Edit `docker-compose.yml` or `nginx.conf` to match your backend host/ports.
 
-1. Create feature branch: `git checkout -b feature/amazing-feature`
-2. Commit changes: `git commit -m 'Add amazing feature'`
-3. Push to branch: `git push origin feature/amazing-feature`
-4. Open Pull Request
+## 🔧 Nginx Configuration
 
-## 📄 License
+See `nginx.conf` for a production-ready SPA config with optional `/api` and `/ws` proxies and security headers.
 
-Private - All Rights Reserved
+### CSP Guidance
 
-## 👥 Authors
+Add a Content-Security-Policy header in Nginx for your deployment. Keep it strict and allow only the script/style sources you need.
 
-- **Developer** - Apex Trading Bot Team
+## 📌 Quick Troubleshooting
 
-## 🙏 Acknowledgments
-
-- Angular team for the framework
-- ApexCharts for charting library
-- STOMP.js for WebSocket
-- Community contributors
-
----
-
-**Status**: ✅ Production Ready  
-**Version**: 1.0.0  
-**Last Updated**: January 2026
+- **Backend unreachable:** Ensure `/api/ui/config` is reachable from the UI host.
+- **401/403:** Re-authenticate or verify backend permissions.
+- **CORS issues:** Allow the UI origin in the backend CORS policy.

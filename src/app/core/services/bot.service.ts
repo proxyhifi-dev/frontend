@@ -54,6 +54,9 @@ export class BotService {
   }
 
   triggerManualScan(): Observable<BotActionResponse> {
+    if (!this.runtimeConfig.hasEndpoint('/strategy/scan-now')) {
+      return of({ success: false, message: 'Scan endpoint not available on this backend.' });
+    }
     return this.http.post<BotActionResponse>('/strategy/scan-now', {}).pipe(
       catchError((error: ApiError) => of({ success: false, message: error.userMessage }))
     );

@@ -66,7 +66,7 @@ export class LoginComponent implements OnInit {
 
           if (response?.message || response?.requiresLogin) {
             this.notificationService.success('✅ Fyers account connected! Please login to continue.');
-            this.router.navigate(['/login'], { replaceUrl: true });
+            this.router.navigate(['/auth/login'], { replaceUrl: true });
             return;
           }
 
@@ -76,7 +76,7 @@ export class LoginComponent implements OnInit {
         },
         error: () => {
           this.notificationService.error('❌ Failed to connect Fyers account');
-          this.router.navigate(['/login'], { replaceUrl: true });
+          this.router.navigate(['/auth/login'], { replaceUrl: true });
         },
       });
   }

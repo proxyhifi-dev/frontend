@@ -1,6 +1,6 @@
 .mobile-nav {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 6px;
   padding: 8px 10px;
   background: var(--bg-surface);
@@ -23,6 +23,12 @@
 .mobile-nav a:hover {
   color: var(--text-primary);
   background: var(--bg-card-hover);
+}
+
+.mobile-nav a.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .mobile-nav .icon {

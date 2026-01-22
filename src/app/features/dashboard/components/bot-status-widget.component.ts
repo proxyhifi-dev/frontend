@@ -178,13 +178,13 @@ import { takeUntil } from 'rxjs/operators';
 })
 export class BotStatusWidgetComponent implements OnInit, OnDestroy {
   botStatus: BotStatus = {
-    isActive: true,
-    status: 'Running',
-    nextScanTime: new Date(Date.now() + 30000),
-    scannedStocks: 50,
-    totalStocks: 50,
-    lastScanTime: new Date(Date.now() - 60000),
-    currentStrategy: 'MACD + RSI'
+    isActive: false,
+    status: 'Stopped',
+    nextScanTime: new Date(),
+    scannedStocks: 0,
+    totalStocks: 0,
+    lastScanTime: new Date(),
+    currentStrategy: '—'
   };
 
   countdownTime: string = '0:30';

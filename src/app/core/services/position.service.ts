@@ -130,9 +130,9 @@ export class PositionService {
       return '/positions/export/csv';
     }
     const candidate = endpoints.find((endpoint) =>
-      endpoint.includes('/positions') &&
-      (endpoint.includes('export') || endpoint.includes('report') || endpoint.includes('csv'))
+      endpoint.path.includes('/positions') &&
+      (endpoint.path.includes('export') || endpoint.path.includes('report') || endpoint.path.includes('csv'))
     );
-    return candidate ?? null;
+    return candidate?.path ?? null;
   }
 }
