@@ -17,7 +17,7 @@ export class OnboardingService {
 
   private checklist = new BehaviorSubject<ChecklistItem[]>([
     { id: '1', label: 'Complete Onboarding', description: 'Finish the welcome wizard.', isCompleted: false },
-    { id: '2', label: 'Wait for First Scan', description: 'Bot is scanning Nifty 50...', isCompleted: false },
+    { id: '2', label: 'Wait for First Scan', description: 'Bot is scanning your watchlist...', isCompleted: false },
     { id: '3', label: 'Approve First Signal', description: 'Review and execute a trade.', isCompleted: false, actionUrl: '/signals' },
     { id: '4', label: 'Close First Trade', description: 'Reach target or stop loss.', isCompleted: false, actionUrl: '/positions', locked: true },
     { id: '5', label: 'Review Analytics', description: 'Check performance after 10 trades.', isCompleted: false, actionUrl: '/analytics', locked: true }

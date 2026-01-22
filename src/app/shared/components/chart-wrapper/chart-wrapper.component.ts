@@ -9,7 +9,7 @@ declare const TradingView: { widget: new (config: Record<string, unknown>) => un
   styles: [`#tv_chart_container { height: 500px; width: 100%; }`]
 })
 export class ChartWrapperComponent implements AfterViewInit {
-  @Input() symbol: string = 'NSE:NIFTY';
+  @Input() symbol: string = '';
 
   ngAfterViewInit() {
     new TradingView.widget({

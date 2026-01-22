@@ -1,62 +1,43 @@
 # Apex Trading Bot UI Runbook
 
-## Local setup (against Render backend)
+## Local setup
 
 1. Install dependencies:
    ```bash
-   npm install
+   npm ci
    ```
 
 2. Start the UI:
    ```bash
    npm start
    ```
-   The UI will run at `http://localhost:4200` and will target the Render backend by default.
+   The UI runs at `http://localhost:4200`.
 
 3. Build the UI:
    ```bash
    npm run build
    ```
 
-## Environment defaults
+## Runtime config
 
-The UI uses runtime config when available; otherwise it falls back to the environment defaults:
-
-- `apiBaseUrl`: `https://apex-trading-bot-w74z.onrender.com/api`
-- `wsUrl`: `wss://apex-trading-bot-w74z.onrender.com/ws`
-
-## Runtime config endpoint
-
-On app startup the UI fetches:
+On app startup the UI requests:
 
 ```
-GET https://apex-trading-bot-w74z.onrender.com/api/ui/config
+GET /api/ui/config
 ```
 
-Expected fields:
+If the endpoint is unavailable, the UI boots in safe mode (login only) and shows a banner.
 
-- `apiBaseUrl` (string)
-- `wsUrl` or `wsBaseUrl` (string)
-- `endpoints` (array or object of endpoint strings)
-- `wsTopics` (optional array of `/topic/*` destinations to enable)
-- `entities` (optional entity field metadata)
+## Required backend settings
 
-If the endpoint is unavailable, the UI uses the environment defaults.
-
-## Required backend CORS settings
-
-When running the UI locally, ensure the backend includes this origin:
-
-```
-APEX_ALLOWED_ORIGINS=http://localhost:4200
-```
-
-If you see a 403 or network error in the UI, confirm the origin is configured in Render.
+- Ensure `/api/ui/config` is reachable from the UI host.
+- Allow the UI origin in backend CORS.
+- Expose supported feature endpoints in the `endpoints` list returned by `/api/ui/config`.
 
 ## WebSocket behavior
 
-- WebSocket connects **after login** only and includes the Bearer token.
-- WebSocket disconnects on logout.
+- WebSocket connects after login and includes the Bearer token.
+- Disconnects on logout.
 - Subscriptions use user queues:
   - `/user/queue/positions`
   - `/user/queue/orders`
@@ -64,10 +45,10 @@ If you see a 403 or network error in the UI, confirm the origin is configured in
   - `/user/queue/bot-status`
   - `/user/queue/signals`
   - `/user/queue/logs`
-- `/topic/*` destinations are only used when the backend runtime config exposes them via `wsTopics`.
+- `/topic/*` destinations are only used when exposed via `wsTopics` in runtime config.
 
 ## Troubleshooting
 
-- **CORS error (status 0/403):** confirm `APEX_ALLOWED_ORIGINS` includes `http://localhost:4200`.
-- **401/expired session:** log in again; refresh token is used automatically when supported.
-- **WebSocket not connecting:** verify `wss://apex-trading-bot-w74z.onrender.com/ws` is reachable and the login token is valid.
+- **CORS error (status 0/403):** confirm backend CORS allows the UI origin.
+- **401/expired session:** log in again; refresh tokens are used only if the backend exposes `/auth/refresh`.
+- **WebSocket not connecting:** confirm the backend provides `wsBaseUrl` and the login token is valid.

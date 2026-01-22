@@ -69,11 +69,11 @@ export class ModeStore {
 
   private updateMode(mode: TradingMode): void {
     this.modeSubject.next(mode);
-    localStorage.setItem(this.storageKey, mode);
+    sessionStorage.setItem(this.storageKey, mode);
   }
 
   private getInitialMode(): TradingMode {
-    const stored = localStorage.getItem(this.storageKey);
+    const stored = sessionStorage.getItem(this.storageKey);
     if (stored === 'LIVE' || stored === 'PAPER') {
       return stored;
     }

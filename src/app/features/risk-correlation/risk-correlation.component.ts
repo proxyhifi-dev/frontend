@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import {
@@ -10,6 +10,8 @@ import {
   ApexPlotOptions,
   ApexTooltip
 } from 'ng-apexcharts';
+import { RiskService } from '../../core/services/risk.service';
+import { CorrelationMatrix } from '../../core/models/domain.model';
 
 interface CorrelationRow {
   pair: string;
@@ -26,9 +28,10 @@ interface CorrelationRow {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RiskCorrelationComponent {
-  portfolioHeat = 62;
-  correlationRegime = 'Moderate';
+  portfolioHeat = 0;
+  correlationRegime = 'Unknown';
   loading = false;
+  correlations: CorrelationRow[] = [];
 
   heatGaugeOptions: {
     series: number[];
@@ -74,19 +77,14 @@ export class RiskCorrelationComponent {
     tooltip: ApexTooltip;
     colors: string[];
   } = {
-    series: [
-      {
-        name: 'Exposure %',
-        data: [28, 22, 18, 14, 10]
-      }
-    ],
+    series: [{ name: 'Correlation %', data: [] }],
     chart: {
       type: 'bar',
       height: 280,
       toolbar: { show: false }
     },
     xaxis: {
-      categories: ['IT', 'Banking', 'Energy', 'Auto', 'FMCG']
+      categories: []
     },
     dataLabels: {
       enabled: false
@@ -104,11 +102,73 @@ export class RiskCorrelationComponent {
     colors: ['#22C55E']
   };
 
-  correlations: CorrelationRow[] = [
-    { pair: 'NIFTY-IT vs BANKNIFTY', correlation: 0.42, regime: 'Moderate' },
-    { pair: 'RELIANCE vs ONGC', correlation: 0.67, regime: 'High' },
-    { pair: 'TCS vs INFY', correlation: 0.78, regime: 'High' },
-    { pair: 'HDFCBANK vs ICICIBANK', correlation: 0.71, regime: 'High' },
-    { pair: 'HINDUNILVR vs ITC', correlation: 0.38, regime: 'Low' }
-  ];
+  constructor(private riskService: RiskService) {}
+
+  ngOnInit(): void {
+    this.loading = true;
+    this.riskService.getCorrelationMatrix().subscribe({
+      next: (matrix) => {
+        this.updateFromMatrix(matrix);
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+      }
+    });
+  }
+
+  private updateFromMatrix(matrix: CorrelationMatrix): void {
+    const { symbols, matrix: values } = matrix;
+    if (!symbols?.length || !values?.length) {
+      this.portfolioHeat = 0;
+      this.correlationRegime = 'Unknown';
+      this.correlations = [];
+      return;
+    }
+
+    const pairs: CorrelationRow[] = [];
+    const symbolAverages: Record<string, number> = {};
+
+    symbols.forEach((symbol, i) => {
+      const row = values[i] ?? [];
+      const avg = row.reduce((sum, val) => sum + Math.abs(val ?? 0), 0) / Math.max(row.length, 1);
+      symbolAverages[symbol] = Math.round(avg * 100);
+      row.forEach((value, j) => {
+        if (j <= i) return;
+        const correlation = value ?? 0;
+        pairs.push({
+          pair: `${symbols[i]} vs ${symbols[j]}`,
+          correlation,
+          regime: this.getRegimeLabel(correlation)
+        });
+      });
+    });
+
+    const avgCorrelation =
+      pairs.reduce((sum, item) => sum + Math.abs(item.correlation), 0) / Math.max(pairs.length, 1);
+    this.portfolioHeat = Math.round(avgCorrelation * 100);
+    this.correlationRegime = this.getRegimeLabel(avgCorrelation);
+    this.correlations = pairs.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation)).slice(0, 5);
+
+    const topSymbols = Object.entries(symbolAverages)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    this.exposureOptions = {
+      ...this.exposureOptions,
+      series: [{ name: 'Correlation %', data: topSymbols.map(([, value]) => value) }],
+      xaxis: { categories: topSymbols.map(([symbol]) => symbol) }
+    };
+
+    this.heatGaugeOptions = {
+      ...this.heatGaugeOptions,
+      series: [this.portfolioHeat]
+    };
+  }
+
+  private getRegimeLabel(correlation: number): string {
+    const abs = Math.abs(correlation);
+    if (abs >= 0.7) return 'High';
+    if (abs >= 0.4) return 'Moderate';
+    return 'Low';
+  }
 }

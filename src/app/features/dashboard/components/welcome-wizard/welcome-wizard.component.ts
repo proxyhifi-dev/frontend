@@ -16,7 +16,7 @@ export class WelcomeWizardComponent {
     mode: 'paper',
     capital: 100000,
     riskPct: 1.0,
-    universe: 'nifty50'
+    universe: 'watchlist'
   };
 
   constructor(private onboarding: OnboardingService) {}

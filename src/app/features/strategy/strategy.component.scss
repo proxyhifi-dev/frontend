@@ -45,6 +45,23 @@
   }
 }
 
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    span {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+  }
+}
+
 .metric-row {
   display: flex;
   justify-content: space-between;

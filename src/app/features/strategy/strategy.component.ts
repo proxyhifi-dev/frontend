@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import {
   RegimeStatus,
@@ -8,11 +9,12 @@ import {
   StrategyService
 } from '../../core/services/strategy.service';
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
+import { SettingsService, TradingSettings } from '../../core/services/settings.service';
 
 @Component({
   selector: 'app-strategy',
   standalone: true,
-  imports: [CommonModule, PercentFormatPipe],
+  imports: [CommonModule, FormsModule, PercentFormatPipe],
   templateUrl: './strategy.component.html',
   styleUrls: ['./strategy.component.scss']
 })
@@ -26,13 +28,18 @@ export class StrategyComponent implements OnInit {
   configError = '';
   regimeError = '';
   scoringError = '';
+  settings?: TradingSettings;
+  settingsLoading = false;
+  settingsError = '';
+  savingSettings = false;
 
-  constructor(private strategyService: StrategyService) {}
+  constructor(private strategyService: StrategyService, private settingsService: SettingsService) {}
 
   ngOnInit(): void {
     this.loadConfig();
     this.loadRegime();
     this.loadScoring();
+    this.loadSettings();
   }
 
   loadConfig(): void {
@@ -78,5 +85,46 @@ export class StrategyComponent implements OnInit {
         this.scoringError = 'Unable to load scoring breakdown.';
       }
     });
+  }
+
+  loadSettings(): void {
+    this.settingsLoading = true;
+    this.settingsError = '';
+    this.settingsService.loadSettings().pipe(finalize(() => (this.settingsLoading = false))).subscribe({
+      next: (settings) => {
+        this.settings = settings;
+      },
+      error: () => {
+        this.settingsError = 'Unable to load strategy settings.';
+      }
+    });
+  }
+
+  saveSettings(): void {
+    if (!this.settings) return;
+    const validationError = this.validateSettings(this.settings);
+    if (validationError) {
+      this.settingsError = validationError;
+      return;
+    }
+    this.savingSettings = true;
+    this.settingsService.saveSettings(this.settings).pipe(finalize(() => (this.savingSettings = false))).subscribe({
+      next: (saved) => {
+        this.settings = saved;
+      },
+      error: () => {
+        this.settingsError = 'Unable to save settings.';
+      }
+    });
+  }
+
+  private validateSettings(settings: TradingSettings): string | null {
+    if (settings.maxPositions < 1) {
+      return 'Max positions must be at least 1.';
+    }
+    if (settings.riskLimits.maxRiskPerTradePercent <= 0 || settings.riskLimits.maxDailyLossPercent <= 0) {
+      return 'Risk limits must be greater than 0.';
+    }
+    return null;
   }
 }

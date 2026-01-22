@@ -44,6 +44,36 @@
       </div>
     </div>
     <div class="page-card">
+      <h3>Strategy Controls</h3>
+      <p class="text-muted">Adjust mode and risk parameters.</p>
+      <div class="table-state" *ngIf="settingsLoading">Loading settings...</div>
+      <div class="table-state text-red" *ngIf="!settingsLoading && settingsError">{{ settingsError }}</div>
+      <div class="settings-grid" *ngIf="!settingsLoading && settings">
+        <label>
+          <span>Mode</span>
+          <select class="dark-input" [(ngModel)]="settings.mode">
+            <option value="PAPER">Paper</option>
+            <option value="LIVE">Live</option>
+          </select>
+        </label>
+        <label>
+          <span>Max Positions</span>
+          <input class="dark-input" type="number" min="1" [(ngModel)]="settings.maxPositions" />
+        </label>
+        <label>
+          <span>Risk / Trade (%)</span>
+          <input class="dark-input" type="number" min="0.1" step="0.1" [(ngModel)]="settings.riskLimits.maxRiskPerTradePercent" />
+        </label>
+        <label>
+          <span>Daily Loss Limit (%)</span>
+          <input class="dark-input" type="number" min="0.5" step="0.1" [(ngModel)]="settings.riskLimits.maxDailyLossPercent" />
+        </label>
+        <button class="btn btn-primary btn-sm" type="button" (click)="saveSettings()" [disabled]="savingSettings">
+          Save Settings
+        </button>
+      </div>
+    </div>
+    <div class="page-card">
       <h3>Risk Gates</h3>
       <p class="text-muted">Daily loss limits, max positions, and risk controls.</p>
       <div class="metric-row">

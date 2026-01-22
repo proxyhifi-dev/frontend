@@ -57,7 +57,7 @@ export class TradingModeService {
   }
 
   private getLocalMode(): TradingMode {
-    const stored = localStorage.getItem(this.storageKey);
+    const stored = sessionStorage.getItem(this.storageKey);
     if (stored === 'LIVE' || stored === 'PAPER') {
       return stored;
     }
@@ -65,6 +65,6 @@ export class TradingModeService {
   }
 
   private setLocalMode(mode: TradingMode): void {
-    localStorage.setItem(this.storageKey, mode);
+    sessionStorage.setItem(this.storageKey, mode);
   }
 }

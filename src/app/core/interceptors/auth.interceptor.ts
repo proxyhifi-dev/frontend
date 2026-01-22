@@ -10,6 +10,7 @@ import {
 import { inject } from '@angular/core';
 import { Observable, BehaviorSubject, filter, switchMap, take, catchError, throwError, finalize } from 'rxjs';
 import { ApiConfigService } from '../config/api-config.service';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import { TokenService } from '../auth/token.service';
 import { AuthService } from '../services/auth.service';
 import { AuthResponse } from '../models/auth.model';
@@ -22,16 +23,20 @@ export const authInterceptor: HttpInterceptorFn = (
   next: HttpHandlerFn
 ): Observable<HttpEvent<unknown>> => {
   const apiConfig = inject(ApiConfigService);
+  const runtimeConfig = inject(RuntimeConfigService);
   const tokenService = inject(TokenService);
   const authService = inject(AuthService);
   const httpBackend = inject(HttpBackend);
   const http = new HttpClient(httpBackend);
 
-  const isApiRequest = apiConfig.isApiRequest(req.url) || req.url.startsWith('/api');
+  const requestPath = extractPath(req.url);
+  const normalizedPath = normalizePath(requestPath);
+  const isApiRequest = apiConfig.isApiRequest(req.url) || requestPath.startsWith('/api');
+  const isPublicEndpoint = isPublicPath(normalizedPath);
   const accessToken = tokenService.getAccessToken();
 
   let authReq = req;
-  if (accessToken && isApiRequest && !req.headers.has('Authorization')) {
+  if (accessToken && isApiRequest && !isPublicEndpoint && !req.headers.has('Authorization')) {
     authReq = req.clone({
       setHeaders: {
         Authorization: `Bearer ${accessToken}`
@@ -42,10 +47,17 @@ export const authInterceptor: HttpInterceptorFn = (
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
       const isUnauthorized = error.status === 401;
-      const isRefreshCall = req.url.includes('/auth/refresh');
+      const isRefreshCall = normalizedPath.includes('/auth/refresh');
       const alreadyRetried = req.headers.has('X-Refresh-Attempt');
+      const refreshSupported =
+        runtimeConfig.hasEndpoint('POST', '/auth/refresh') || runtimeConfig.hasEndpoint('/auth/refresh');
 
-      if (!isUnauthorized || isRefreshCall || alreadyRetried || !isApiRequest) {
+      if (!isUnauthorized || isRefreshCall || alreadyRetried || !isApiRequest || isPublicEndpoint) {
+        return throwError(() => error);
+      }
+
+      if (!refreshSupported) {
+        authService.logout();
         return throwError(() => error);
       }
 
@@ -95,4 +107,33 @@ const addAuthHeader = (req: HttpRequest<unknown>, token: string, markRetry = fal
     ...(markRetry ? { 'X-Refresh-Attempt': 'true' } : {})
   };
   return req.clone({ setHeaders: headers });
+};
+
+const isPublicPath = (path: string): boolean => {
+  const publicPaths = [
+    '/ui/config',
+    '/auth/login',
+    '/auth/register',
+    '/auth/fyers/auth-url',
+    '/auth/fyers/callback'
+  ];
+  return publicPaths.some((publicPath) => path === publicPath);
+};
+
+const extractPath = (url: string): string => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) {
+    try {
+      return new URL(url).pathname;
+    } catch {
+      return url;
+    }
+  }
+  return url;
+};
+
+const normalizePath = (path: string): string => {
+  if (!path) return '';
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return normalized.startsWith('/api/') ? normalized.replace('/api', '') : normalized;
 };

@@ -47,7 +47,7 @@ export class SettingsService {
         };
       }),
       tap((settings) => {
-        localStorage.setItem(this.cacheKey, JSON.stringify(settings));
+        sessionStorage.setItem(this.cacheKey, JSON.stringify(settings));
         this.storageModeSubject.next('remote');
       }),
       catchError((error: ApiError) => {
@@ -103,11 +103,11 @@ export class SettingsService {
   }
 
   private saveLocalSettings(settings: TradingSettings): void {
-    localStorage.setItem(this.cacheKey, JSON.stringify(settings));
+    sessionStorage.setItem(this.cacheKey, JSON.stringify(settings));
   }
 
   private getLocalSettings(): TradingSettings {
-    const stored = localStorage.getItem(this.cacheKey);
+    const stored = sessionStorage.getItem(this.cacheKey);
     if (stored) {
       try {
         return JSON.parse(stored) as TradingSettings;

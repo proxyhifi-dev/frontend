@@ -1,7 +1,9 @@
 import { HttpInterceptorFn } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import { inject } from '@angular/core';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 
 export const baseUrlInterceptor: HttpInterceptorFn = (req, next) => {
+  const runtimeConfig = inject(RuntimeConfigService);
   const url = req.url || '';
 
   // ✅ Let asset requests pass (Angular static files)
@@ -15,15 +17,16 @@ export const baseUrlInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  // ✅ Only normalize leading "/api" prefix (not any "/api" in the middle)
-  // We want final outgoing URL always like: https://host/api/<path>
+  // ✅ Only prefix API-style relative URLs
   const path = url.startsWith('/') ? url : `/${url}`;
-  const normalizedPath = path.startsWith('/api/')
-    ? path.substring('/api'.length) // remove ONLY the prefix "/api"
-    : path;
+  if (!path.startsWith('/api/')) {
+    return next(req);
+  }
 
-  // ✅ environment.apiUrl should already include "/api"
-  const base = (environment.apiUrl || environment.apiBaseUrl || '').replace(/\/+$/, '');
+  // Remove ONLY the prefix "/api" to avoid duplicating when base already includes /api
+  const normalizedPath = path.substring('/api'.length);
+
+  const base = runtimeConfig.getApiBaseUrl().replace(/\/+$/, '');
 
   const apiReq = req.clone({
     url: `${base}${normalizedPath}`

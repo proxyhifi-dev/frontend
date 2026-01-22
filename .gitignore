@@ -46,10 +46,6 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Test files (if not using tests)
-**/*.spec.ts
-*.spec.ts
-
 # Logs
 logs
 *.log

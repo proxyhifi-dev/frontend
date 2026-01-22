@@ -11,7 +11,7 @@ export const mapHttpError = (error: HttpErrorResponse): ApiError => {
     switch (error.status) {
       case 0:
         userMessage =
-          'No response from server. If running locally, ensure APEX_ALLOWED_ORIGINS includes http://localhost:4200.';
+          'No response from server. Ensure the backend is reachable and CORS allows the UI origin.';
         break;
       case 400:
         userMessage = error.error?.message || 'Invalid request';
@@ -21,7 +21,7 @@ export const mapHttpError = (error: HttpErrorResponse): ApiError => {
         break;
       case 403:
         userMessage =
-          'Access denied. If running locally, ensure APEX_ALLOWED_ORIGINS includes http://localhost:4200.';
+          'Access denied. Ensure your account is authorized and the backend CORS settings allow the UI origin.';
         break;
       case 404:
         userMessage = 'Resource not found';

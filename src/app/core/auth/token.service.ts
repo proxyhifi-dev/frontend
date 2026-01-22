@@ -4,24 +4,38 @@ import { Injectable } from '@angular/core';
 export class TokenService {
   private readonly accessTokenKey = 'token';
   private readonly refreshTokenKey = 'refreshToken';
+  private accessTokenMemory: string | null = null;
+  private refreshTokenMemory: string | null = null;
 
   getAccessToken(): string | null {
-    return localStorage.getItem(this.accessTokenKey);
+    if (this.accessTokenMemory) {
+      return this.accessTokenMemory;
+    }
+    const stored = sessionStorage.getItem(this.accessTokenKey);
+    this.accessTokenMemory = stored;
+    return stored;
   }
 
   getRefreshToken(): string | null {
-    return localStorage.getItem(this.refreshTokenKey);
+    if (this.refreshTokenMemory) {
+      return this.refreshTokenMemory;
+    }
+    const stored = sessionStorage.getItem(this.refreshTokenKey);
+    this.refreshTokenMemory = stored;
+    return stored;
   }
 
   setAccessToken(token: string): void {
     if (token) {
-      localStorage.setItem(this.accessTokenKey, token);
+      this.accessTokenMemory = token;
+      sessionStorage.setItem(this.accessTokenKey, token);
     }
   }
 
   setRefreshToken(token: string): void {
     if (token) {
-      localStorage.setItem(this.refreshTokenKey, token);
+      this.refreshTokenMemory = token;
+      sessionStorage.setItem(this.refreshTokenKey, token);
     }
   }
 
@@ -35,7 +49,9 @@ export class TokenService {
   }
 
   clear(): void {
-    localStorage.removeItem(this.accessTokenKey);
-    localStorage.removeItem(this.refreshTokenKey);
+    this.accessTokenMemory = null;
+    this.refreshTokenMemory = null;
+    sessionStorage.removeItem(this.accessTokenKey);
+    sessionStorage.removeItem(this.refreshTokenKey);
   }
 }

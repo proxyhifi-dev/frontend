@@ -1,0 +1,127 @@
+<section class="page-shell">
+  <header class="header-row">
+    <div>
+      <h2>Scanner</h2>
+      <p class="text-muted">Run on-demand scans against your watchlist or a manual universe.</p>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="runScan()" [disabled]="isLoading">
+      ▶ Run Scan
+    </button>
+  </header>
+
+  <div class="page-card">
+    <div class="card-header">
+      <h3>Scan Setup</h3>
+    </div>
+    <div class="form-grid">
+      <div class="form-card">
+        <label class="label">Universe</label>
+        <select class="dark-input" [(ngModel)]="universe">
+          <option value="WATCHLIST">Watchlist</option>
+          <option value="SYMBOLS">Manual Symbols</option>
+        </select>
+      </div>
+      <div class="form-card">
+        <label class="label">Strategy</label>
+        <select class="dark-input" [(ngModel)]="strategy" *ngIf="strategyOptions.length > 0">
+          <option value="">Auto (backend default)</option>
+          <option *ngFor="let option of strategyOptions" [value]="option">{{ option }}</option>
+        </select>
+        <input
+          *ngIf="strategyOptions.length === 0"
+          class="dark-input"
+          [(ngModel)]="strategy"
+          placeholder="Optional strategy name"
+        />
+      </div>
+    </div>
+    <div class="form-card" *ngIf="universe === 'SYMBOLS'">
+      <label class="label">Symbols ({{ manualCount }} / 100)</label>
+      <textarea
+        class="dark-input"
+        rows="3"
+        [(ngModel)]="manualSymbols"
+        placeholder="Comma or newline separated symbols"
+      ></textarea>
+    </div>
+    <p class="error-text" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </div>
+
+  <div class="page-card">
+    <div class="card-header">
+      <h3>Run Status</h3>
+      <div class="status-actions">
+        <button class="btn btn-outline btn-sm" type="button" (click)="refreshResults()" [disabled]="!runStatus">
+          Refresh
+        </button>
+        <button class="btn btn-danger btn-sm" type="button" (click)="cancelRun()" [disabled]="!isRunning">
+          Cancel Run
+        </button>
+      </div>
+    </div>
+    <div class="status-grid" *ngIf="runStatus">
+      <div>
+        <span class="label">Status</span>
+        <strong>{{ runStatus.status }}</strong>
+      </div>
+      <div>
+        <span class="label">Run ID</span>
+        <strong>{{ runStatus.runId }}</strong>
+      </div>
+      <div>
+        <span class="label">Progress</span>
+        <strong>{{ runStatus.progress?.processedSymbols ?? 0 }} / {{ runStatus.progress?.totalSymbols ?? 0 }}</strong>
+      </div>
+      <div>
+        <span class="label">Symbols Scanned</span>
+        <strong>{{ totalSymbols }}</strong>
+      </div>
+    </div>
+    <p class="text-muted" *ngIf="!runStatus">No scans started yet.</p>
+  </div>
+
+  <div class="page-card">
+    <div class="card-header">
+      <h3>Diagnostics</h3>
+    </div>
+    <div class="diagnostics" *ngIf="runStatus">
+      <div *ngFor="let entry of diagnostics | keyvalue">
+        <span class="label">{{ entry.key }}</span>
+        <strong>{{ entry.value }}</strong>
+      </div>
+      <div *ngIf="!diagnostics || (diagnostics | keyvalue).length === 0" class="text-muted">
+        No rejections reported.
+      </div>
+    </div>
+  </div>
+
+  <div class="page-card">
+    <div class="card-header">
+      <h3>Results</h3>
+      <a routerLink="/signals" class="btn btn-ghost btn-sm">View Signals</a>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Score</th>
+          <th>Grade</th>
+          <th>Reason</th>
+          <th>Scan Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="!results.length">
+          <td colspan="5" class="empty-state">No scan results yet.</td>
+        </tr>
+        <tr *ngFor="let result of results">
+          <td>{{ result.symbol }}</td>
+          <td>{{ result.score ?? '—' }}</td>
+          <td>{{ result.grade ?? '—' }}</td>
+          <td>{{ result.reason ?? '—' }}</td>
+          <td>{{ result.scanTime ? (result.scanTime | date:'short') : '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
