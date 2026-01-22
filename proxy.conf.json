@@ -1,0 +1,15 @@
+{
+  "/api": {
+    "target": "https://apex-trading-bot-w74z.onrender.com",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/ws": {
+    "target": "wss://apex-trading-bot-w74z.onrender.com",
+    "secure": true,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "debug"
+  }
+}
