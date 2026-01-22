@@ -12,14 +12,14 @@
       <h3>Backend Health</h3>
       <span class="text-muted" *ngIf="isLoading">Loading...</span>
     </div>
-    <div *ngIf="health; else healthUnavailable" class="status-grid">
+    <div *ngIf="health as healthData; else healthUnavailable" class="status-grid">
       <div>
         <span class="label">Status</span>
-        <strong>{{ health?.status }}</strong>
+        <strong>{{ healthData.status }}</strong>
       </div>
-      <div *ngIf="health?.components?.db">
+      <div *ngIf="healthData.components?.['db'] as dbComponent">
         <span class="label">Database</span>
-        <strong>{{ health?.components?.db?.status }}</strong>
+        <strong>{{ dbComponent.status }}</strong>
       </div>
       <div>
         <span class="label">Config Loaded</span>

@@ -38,13 +38,15 @@ import { RuntimeConfigService } from './core/config/runtime-config.service';
 })
 export class AppComponent implements OnInit {
   title = 'Apex Trading Bot';
-  readonly configUnavailable$ = this.runtimeConfig.configUnavailable$;
+  readonly configUnavailable$;
 
   constructor(
     private authService: AuthService,
     private modeStore: ModeStore,
     private runtimeConfig: RuntimeConfigService
-  ) {}
+  ) {
+    this.configUnavailable$ = runtimeConfig.configUnavailable$;
+  }
 
   ngOnInit(): void {
     /**
