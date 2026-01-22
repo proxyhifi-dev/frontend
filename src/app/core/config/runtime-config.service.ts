@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, map, of } from 'rxjs';
 import { ToastService } from '../services/toast.service';
 
 export interface UiEntityField {
@@ -33,9 +33,14 @@ export interface RuntimeConfig {
   entityFields?: Record<string, Array<UiEntityField | string>>;
 }
 
-export interface RuntimeConfigResponse extends Partial<RuntimeConfig> {
+export interface RuntimeConfigResponse {
+  apiBaseUrl?: string;
+  wsBaseUrl?: string;
   wsUrl?: string;
+  wsTopics?: string[];
   endpoints?: Array<string | RuntimeEndpoint> | Record<string, string | string[]>;
+  entities?: UiEntityConfig[];
+  entityFields?: Record<string, Array<UiEntityField | string>>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -51,10 +56,12 @@ export class RuntimeConfigService {
 
   load(): Observable<RuntimeConfig> {
     return this.http.get<RuntimeConfigResponse>('/api/ui/config').pipe(
-      tap((config) => {
-        this.configSubject.next(this.normalizeConfig(config));
+      map((config) => {
+        const normalized = this.normalizeConfig(config);
+        this.configSubject.next(normalized);
         this.configLoadedSubject.next(true);
         this.configUnavailableSubject.next(false);
+        return normalized;
       }),
       catchError(() => {
         const fallback = this.createFallback();

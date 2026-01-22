@@ -48,7 +48,15 @@ export class StatusComponent implements OnInit {
     }
     this.fyersOAuthService.getFyersStatus().subscribe({
       next: (status) => {
-        this.brokerStatus = status?.status ?? 'Unknown';
+        if (!status) {
+          this.brokerStatus = 'Unknown';
+          return;
+        }
+        if (status.tokenStatus) {
+          this.brokerStatus = status.tokenStatus;
+          return;
+        }
+        this.brokerStatus = status.connected ? 'Connected' : 'Disconnected';
       },
       error: () => {
         this.brokerStatus = 'Unavailable';
