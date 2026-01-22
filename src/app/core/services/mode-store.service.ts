@@ -34,12 +34,10 @@ export class ModeStore {
 
   /**
    * ✅ Only sync from backend when user is authenticated.
-   * Otherwise this will trigger 401/403 on app load (expected but noisy).
    */
   syncFromBackend(): Observable<TradingMode> {
     const token = this.tokenService.getAccessToken();
     if (!token) {
-      // keep local mode without hitting backend
       return of(this.modeSubject.value);
     }
 
@@ -54,7 +52,6 @@ export class ModeStore {
       return of(mode);
     }
 
-    // ✅ If not logged in, update locally only (or you can choose to block)
     const token = this.tokenService.getAccessToken();
     if (!token) {
       this.updateMode(mode);
@@ -67,9 +64,21 @@ export class ModeStore {
     );
   }
 
-  private updateMode(mode: TradingMode): void {
-    this.modeSubject.next(mode);
-    sessionStorage.setItem(this.storageKey, mode);
+  /**
+   * ✅ Seatbelt: never store "[object Object]" again.
+   */
+  private updateMode(mode: any): void {
+    const safe: TradingMode | null =
+      mode === 'LIVE' || mode === 'PAPER'
+        ? mode
+        : mode?.mode === 'LIVE' || mode?.mode === 'PAPER'
+          ? mode.mode
+          : null;
+
+    if (!safe) return;
+
+    this.modeSubject.next(safe);
+    sessionStorage.setItem(this.storageKey, safe);
   }
 
   private getInitialMode(): TradingMode {

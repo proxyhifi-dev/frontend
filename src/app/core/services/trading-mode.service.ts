@@ -1,10 +1,17 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of, catchError } from 'rxjs';
+import { BehaviorSubject, Observable, of, catchError, map, tap } from 'rxjs';
 import { HttpBaseService } from '../http/http-base.service';
 import { ApiError } from '../models/api-error.model';
 import { TokenService } from '../auth/token.service';
 
 export type TradingMode = 'LIVE' | 'PAPER';
+
+/**
+ * Backend shape:
+ * GET  /api/strategy/mode  -> { mode: "PAPER" }
+ * POST /api/strategy/mode?mode=PAPER|LIVE  -> { mode: "PAPER" }  (or similar)
+ */
+type TradingModeResponse = { mode: TradingMode };
 
 @Injectable({ providedIn: 'root' })
 export class TradingModeService {
@@ -19,13 +26,16 @@ export class TradingModeService {
 
   /**
    * ✅ Do not hit backend unless logged in
+   * ✅ Parse backend response object safely
    */
   getMode(): Observable<TradingMode> {
     if (!this.hasToken()) {
       return of(this.getLocalMode());
     }
 
-    return this.http.get<TradingMode>('/strategy/mode').pipe(
+    return this.http.get<TradingModeResponse>('/strategy/mode').pipe(
+      map((res) => this.normalizeMode(res)),
+      tap((mode) => this.setLocalMode(mode)),
       catchError((err: ApiError) => {
         this.modeSupportedSubject.next(false);
         return of(this.getLocalMode());
@@ -35,6 +45,7 @@ export class TradingModeService {
 
   /**
    * ✅ Safe mode switch
+   * ✅ Backend expects query param (not JSON body)
    */
   setMode(mode: TradingMode): Observable<TradingMode> {
     this.setLocalMode(mode);
@@ -43,7 +54,9 @@ export class TradingModeService {
       return of(mode);
     }
 
-    return this.http.post<TradingMode>('/strategy/mode', { mode }).pipe(
+    return this.http.post<TradingModeResponse>(`/strategy/mode?mode=${mode}`, null).pipe(
+      map((res) => this.normalizeMode(res, mode)),
+      tap((finalMode) => this.setLocalMode(finalMode)),
       catchError(() => of(this.getLocalMode()))
     );
   }
@@ -66,5 +79,16 @@ export class TradingModeService {
 
   private setLocalMode(mode: TradingMode): void {
     sessionStorage.setItem(this.storageKey, mode);
+  }
+
+  /**
+   * Normalize mode coming from backend:
+   * - Accept: { mode: "LIVE" | "PAPER" }
+   * - Fallback to current local mode (or provided fallback)
+   */
+  private normalizeMode(res: any, fallback?: TradingMode): TradingMode {
+    const m: any = res?.mode ?? res;
+    if (m === 'LIVE' || m === 'PAPER') return m;
+    return fallback ?? this.getLocalMode();
   }
 }
