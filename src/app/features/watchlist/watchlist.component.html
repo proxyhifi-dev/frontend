@@ -59,7 +59,9 @@
           </td>
         </tr>
         <tr *ngIf="!isLoading && !errorMessage && symbols.length === 0">
-          <td colspan="2" class="empty-state">No symbols saved yet.</td>
+          <td colspan="2" class="empty-state">
+            No stocks configured. Add stocks to watchlist.
+          </td>
         </tr>
       </tbody>
     </table>

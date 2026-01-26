@@ -4,7 +4,17 @@
       <h2>System Status</h2>
       <p class="text-muted">Backend health, broker connectivity, and diagnostics.</p>
     </div>
-    <button class="btn btn-outline btn-sm" type="button" (click)="loadHealth()">Refresh</button>
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" type="button" (click)="loadHealth()">Refresh Health</button>
+      <button
+        class="btn btn-outline btn-sm"
+        type="button"
+        (click)="loadDiagnostics()"
+        *ngIf="isDevMode && diagnosticsSupported"
+      >
+        Refresh Diagnostics
+      </button>
+    </div>
   </header>
 
   <div class="page-card">
@@ -33,9 +43,65 @@
 
   <div class="page-card">
     <div class="card-header">
+      <h3>System Diagnostics</h3>
+      <span class="text-muted" *ngIf="diagnosticsLoading">Loading...</span>
+    </div>
+    <ng-container *ngIf="diagnosticsSupported; else diagnosticsUnavailable">
+      <p class="error-text" *ngIf="diagnosticsError">{{ diagnosticsError }}</p>
+      <ul class="diagnostic-list" *ngIf="diagnosticsItems.length > 0">
+        <li *ngFor="let item of diagnosticsItems">
+          <span
+            class="status-icon"
+            [class.status-error]="item.severity === 'error'"
+            [class.status-warning]="item.severity === 'warning'"
+            [class.status-success]="item.severity === 'success'"
+          >
+            {{ item.severity === 'error' ? '❌' : item.severity === 'warning' ? '⚠️' : '✅' }}
+          </span>
+          <span>{{ item.label }}</span>
+        </li>
+      </ul>
+      <p class="text-muted" *ngIf="!diagnosticsLoading && !diagnosticsError && diagnosticsItems.length === 0">
+        Diagnostics are available but returned no data.
+      </p>
+      <div class="diagnostics-extra" *ngIf="isDevMode && diagnosticsExtras.length > 0">
+        <h4>Extra Diagnostics</h4>
+        <div class="extras-grid">
+          <div *ngFor="let entry of diagnosticsExtras">
+            <span class="label">{{ entry.key }}</span>
+            <strong>{{ entry.value }}</strong>
+          </div>
+        </div>
+      </div>
+      <details *ngIf="isDevMode && diagnostics">
+        <summary>Raw diagnostics JSON</summary>
+        <pre>{{ diagnostics | json }}</pre>
+      </details>
+    </ng-container>
+    <ng-template #diagnosticsUnavailable>
+      <p class="text-muted">Diagnostics endpoint is not exposed by this backend.</p>
+    </ng-template>
+  </div>
+
+  <div class="page-card">
+    <div class="card-header">
       <h3>Broker Connectivity</h3>
     </div>
     <p>Fyers Broker Status: <strong>{{ brokerStatus }}</strong></p>
+  </div>
+
+  <div class="page-card" *ngIf="logsSupported">
+    <div class="card-header">
+      <h3>Backend Logs</h3>
+      <span class="text-muted" *ngIf="logsLoading">Loading...</span>
+    </div>
+    <details>
+      <summary>View latest log lines</summary>
+      <p class="text-muted" *ngIf="isDevMode">Auto-refreshing every few seconds (dev mode).</p>
+      <p class="error-text" *ngIf="logsError">{{ logsError }}</p>
+      <p class="text-muted" *ngIf="!logsError && logLines.length === 0">No logs returned.</p>
+      <pre class="log-output" *ngIf="logLines.length > 0">{{ logLines.join('\n') }}</pre>
+    </details>
   </div>
 
   <div class="page-card">

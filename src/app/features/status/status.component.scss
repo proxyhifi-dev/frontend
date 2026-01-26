@@ -11,6 +11,13 @@
   gap: 16px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .page-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -40,4 +47,65 @@
   padding-left: 18px;
   display: grid;
   gap: 8px;
+}
+
+.diagnostic-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.diagnostic-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.status-error {
+  color: var(--danger);
+}
+
+.status-warning {
+  color: #f59e0b;
+}
+
+.status-success {
+  color: #22c55e;
+}
+
+.diagnostics-extra {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.extras-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.error-text {
+  color: var(--danger);
+  margin-bottom: 8px;
+}
+
+details {
+  margin-top: 12px;
+}
+
+.log-output {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  max-height: 280px;
+  overflow: auto;
+  white-space: pre-wrap;
 }

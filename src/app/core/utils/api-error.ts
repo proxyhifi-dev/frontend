@@ -10,24 +10,22 @@ export const mapHttpError = (error: HttpErrorResponse): ApiError => {
   } else {
     switch (error.status) {
       case 0:
-        userMessage =
-          'No response from server. Ensure the backend is reachable and CORS allows the UI origin.';
+        userMessage = 'Backend unreachable';
         break;
       case 400:
         userMessage = error.error?.message || 'Invalid request';
         break;
       case 401:
-        userMessage = 'Session expired. Please login again.';
+        userMessage = 'Authentication failed (JWT expired)';
         break;
       case 403:
-        userMessage =
-          'Access denied. Ensure your account is authorized and the backend CORS settings allow the UI origin.';
+        userMessage = 'Access denied';
         break;
       case 404:
         userMessage = 'Resource not found';
         break;
       case 500:
-        userMessage = 'Server error. Please try again later.';
+        userMessage = 'Backend error – see diagnostics panel';
         break;
       case 503:
         userMessage = 'Service temporarily unavailable';
