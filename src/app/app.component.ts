@@ -16,6 +16,9 @@ import { RuntimeConfigService } from './core/config/runtime-config.service';
     <div class="config-banner" *ngIf="configUnavailable$ | async">
       Backend config unavailable. Running in limited mode (login only) until /api/ui/config is reachable.
     </div>
+    <div class="auth-banner" *ngIf="!isAuthenticated">
+      Login required. Please authenticate to access trading data.
+    </div>
     <router-outlet />
     <app-toast-container />
     <app-global-loading />
@@ -33,6 +36,15 @@ import { RuntimeConfigService } from './core/config/runtime-config.service';
         font-size: 13px;
         text-align: center;
       }
+      .auth-banner {
+        position: relative;
+        background: rgba(59, 130, 246, 0.12);
+        border-bottom: 1px solid rgba(59, 130, 246, 0.35);
+        color: #bfdbfe;
+        padding: 10px 16px;
+        font-size: 13px;
+        text-align: center;
+      }
     `
   ]
 })
@@ -46,6 +58,10 @@ export class AppComponent implements OnInit {
     private runtimeConfig: RuntimeConfigService
   ) {
     this.configUnavailable$ = runtimeConfig.configUnavailable$;
+  }
+
+  get isAuthenticated(): boolean {
+    return this.authService.isAuthenticated();
   }
 
   ngOnInit(): void {

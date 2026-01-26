@@ -20,7 +20,7 @@ export interface ScannerRunResponse {
 
 export interface ScannerRunStatus {
   runId: string;
-  status: 'RUNNING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
   startedAt?: string;
   completedAt?: string;
   progress?: {

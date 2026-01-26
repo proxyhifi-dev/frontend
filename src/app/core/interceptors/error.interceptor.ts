@@ -26,12 +26,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       const apiError = mapHttpError(error);
       if (error.status === 401 && !isAuthEndpoint) {
-        toastService.showError('Session expired. Please log in again.');
+        toastService.showError(apiError.userMessage);
         authService.logout();
-      } else if (error.status === 403) {
-        toastService.showError('Not authorized to perform this action.');
-      } else if (error.status === 0) {
-        toastService.showError('Backend unreachable. Check connectivity or proxy configuration.');
       } else {
         toastService.showError(apiError.userMessage);
       }

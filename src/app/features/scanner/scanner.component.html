@@ -4,10 +4,19 @@
       <h2>Scanner</h2>
       <p class="text-muted">Run on-demand scans against your watchlist or a manual universe.</p>
     </div>
-    <button class="btn btn-primary" type="button" (click)="runScan()" [disabled]="isLoading">
-      ▶ Run Scan
+    <button class="btn btn-primary" type="button" (click)="runScan()" [disabled]="isLoading || scannerDisabled">
+      <span *ngIf="isRunning">⏳ Scanning...</span>
+      <span *ngIf="!isRunning">▶ Run Scan</span>
     </button>
   </header>
+
+  <div class="alert-banner alert-warning" *ngIf="scannerDisabled">
+    Scanner is disabled. Review the System Diagnostics panel for the blocking configuration.
+  </div>
+
+  <div class="alert-banner alert-warning" *ngIf="scanStuckWarning">
+    Scan appears stuck in {{ runStatus?.status || 'RUNNING' }}. Check diagnostics or backend health.
+  </div>
 
   <div class="page-card">
     <div class="card-header">
@@ -99,6 +108,17 @@
     <div class="card-header">
       <h3>Results</h3>
       <a routerLink="/signals" class="btn btn-ghost btn-sm">View Signals</a>
+    </div>
+    <div class="alert-banner alert-info" *ngIf="runStatus?.status === 'COMPLETED' && results.length === 0">
+      <p>No signals returned. Review diagnostics for the likely cause:</p>
+      <ul class="diagnostic-list" *ngIf="diagnosticsSummary.length > 0">
+        <li *ngFor="let item of diagnosticsSummary">
+          {{ item.label }}
+        </li>
+      </ul>
+      <p class="text-muted" *ngIf="diagnosticsSummary.length === 0">
+        No blocking diagnostics detected. Check strategy filters or backend logs.
+      </p>
     </div>
     <table class="data-table">
       <thead>
