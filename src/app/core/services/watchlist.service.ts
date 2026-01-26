@@ -5,7 +5,12 @@ import { RuntimeConfigService } from '../config/runtime-config.service';
 
 export interface WatchlistResponse {
   symbols?: string[];
-  items?: string[];
+  items?: WatchlistItem[] | string[];
+}
+
+export interface WatchlistItem {
+  symbol: string;
+  addedAt?: string;
 }
 
 export interface WatchlistValidationResult {
@@ -26,21 +31,20 @@ export class WatchlistService {
 
   getWatchlist(): Observable<string[]> {
     return this.http.get<string[] | WatchlistResponse>('/watchlist').pipe(
-      map((response) => {
-        if (Array.isArray(response)) {
-          return response;
-        }
-        return response.symbols ?? response.items ?? [];
-      })
+      map((response) => this.extractSymbols(response))
     );
   }
 
   addSymbols(symbols: string[]): Observable<string[]> {
-    return this.http.post<string[]>('/watchlist/items', { symbols });
+    return this.http.post<string[] | WatchlistResponse>('/watchlist/items', { symbols }).pipe(
+      map((response) => this.extractSymbols(response))
+    );
   }
 
   replaceWatchlist(symbols: string[]): Observable<string[]> {
-    return this.http.put<string[]>('/watchlist', { symbols });
+    return this.http.put<string[] | WatchlistResponse>('/watchlist', { symbols }).pipe(
+      map((response) => this.extractSymbols(response))
+    );
   }
 
   removeSymbol(symbol: string): Observable<void> {
@@ -66,5 +70,22 @@ export class WatchlistService {
     }
 
     return { symbols: unique, errors };
+  }
+
+  private extractSymbols(response: string[] | WatchlistResponse): string[] {
+    if (!response) {
+      return [];
+    }
+    if (Array.isArray(response)) {
+      return response;
+    }
+    if (Array.isArray(response.symbols)) {
+      return response.symbols;
+    }
+    const items = Array.isArray(response.items) ? response.items : [];
+    if (items.length && typeof items[0] === 'string') {
+      return items as string[];
+    }
+    return (items as WatchlistItem[]).map((item) => item.symbol).filter(Boolean);
   }
 }
