@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { Subscription, finalize, timer } from 'rxjs';
 import { WatchlistService } from '../../core/services/watchlist.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ApiClientService } from '../../core/services/api-client.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-watchlist',
@@ -12,20 +14,30 @@ import { NotificationService } from '../../core/services/notification.service';
   templateUrl: './watchlist.component.html',
   styleUrls: ['./watchlist.component.scss']
 })
-export class WatchlistComponent implements OnInit {
+export class WatchlistComponent implements OnInit, OnDestroy {
   symbols: string[] = [];
   symbolInput = '';
   bulkInput = '';
   isLoading = false;
   errorMessage = '';
+  pendingItems: string[] = [];
+  pendingStatus = '';
+  isDevMode = environment.enableDevTools;
+
+  private pendingRefreshSub?: Subscription;
 
   constructor(
     private watchlistService: WatchlistService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private apiClient: ApiClientService
   ) {}
 
   ngOnInit(): void {
     this.loadWatchlist();
+  }
+
+  ngOnDestroy(): void {
+    this.pendingRefreshSub?.unsubscribe();
   }
 
   get usedCount(): number {
@@ -39,12 +51,16 @@ export class WatchlistComponent implements OnInit {
   loadWatchlist(): void {
     this.isLoading = true;
     this.errorMessage = '';
-    this.watchlistService
+    this.apiClient
       .getWatchlist()
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
-        next: (symbols) => {
-          this.symbols = symbols ?? [];
+        next: (response) => {
+          const { symbols, pending } = this.normalizeWatchlist(response);
+          this.symbols = symbols;
+          this.pendingItems = pending;
+          this.pendingStatus = pending.length ? `Pending watchlist items: ${pending.length}` : '';
+          this.handlePendingRefresh();
         },
         error: () => {
           this.errorMessage = 'Unable to load watchlist.';
@@ -98,6 +114,77 @@ export class WatchlistComponent implements OnInit {
       error: () => {
         this.notificationService.error('Watchlist', 'Unable to add symbols.');
       }
+    });
+  }
+
+  seedWatchlist(): void {
+    this.isLoading = true;
+    this.apiClient
+      .seedWatchlist(100)
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: (response) => {
+          const { symbols, pending } = this.normalizeWatchlist(response);
+          this.symbols = symbols;
+          this.pendingItems = pending;
+          this.pendingStatus = pending.length ? `Pending watchlist items: ${pending.length}` : '';
+          this.handlePendingRefresh();
+          this.notificationService.success('Watchlist seeded (dev).');
+        },
+        error: () => {
+          this.notificationService.error('Watchlist', 'Unable to seed watchlist.');
+        }
+      });
+  }
+
+  refreshWatchlist(): void {
+    this.loadWatchlist();
+  }
+
+  private normalizeWatchlist(response: unknown): { symbols: string[]; pending: string[] } {
+    if (!response) {
+      return { symbols: [], pending: [] };
+    }
+    if (Array.isArray(response)) {
+      return { symbols: response, pending: [] };
+    }
+    const payload = response as {
+      symbols?: string[];
+      items?: Array<{ symbol?: string } | string>;
+      pending?: string[];
+      pendingItems?: Array<{ symbol?: string } | string>;
+      pendingSymbols?: string[];
+    };
+
+    const symbols =
+      payload.symbols ??
+      (Array.isArray(payload.items)
+        ? payload.items.map((item) => (typeof item === 'string' ? item : item.symbol || '')).filter(Boolean)
+        : []);
+
+    const pending =
+      payload.pendingSymbols ??
+      payload.pending ??
+      (Array.isArray(payload.pendingItems)
+        ? payload.pendingItems
+            .map((item) => (typeof item === 'string' ? item : item.symbol || ''))
+            .filter(Boolean)
+        : []);
+
+    return { symbols, pending };
+  }
+
+  private handlePendingRefresh(): void {
+    if (this.pendingItems.length === 0) {
+      this.pendingRefreshSub?.unsubscribe();
+      this.pendingRefreshSub = undefined;
+      return;
+    }
+    if (this.pendingRefreshSub) {
+      return;
+    }
+    this.pendingRefreshSub = timer(5000, 5000).subscribe(() => {
+      this.loadWatchlist();
     });
   }
 }

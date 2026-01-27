@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { HttpBaseService } from '../http/http-base.service';
 import { RuntimeConfigService } from '../config/runtime-config.service';
+import { ApiClientService } from './api-client.service';
 
 export type ScannerUniverseType = 'WATCHLIST' | 'SYMBOLS';
 
@@ -44,7 +45,11 @@ export interface ScannerResultRow {
 
 @Injectable({ providedIn: 'root' })
 export class ScannerService {
-  constructor(private http: HttpBaseService, private runtimeConfig: RuntimeConfigService) {}
+  constructor(
+    private http: HttpBaseService,
+    private runtimeConfig: RuntimeConfigService,
+    private apiClient: ApiClientService
+  ) {}
 
   isSupported(): boolean {
     return this.runtimeConfig.hasEndpoint('POST', '/scanner/run') || this.runtimeConfig.hasEndpoint('/scanner/run');
@@ -61,11 +66,11 @@ export class ScannerService {
   }
 
   runScan(request: ScannerRunRequest): Observable<ScannerRunResponse> {
-    return this.http.post<ScannerRunResponse>('/scanner/run', request);
+    return this.apiClient.runScan(request);
   }
 
   getRunStatus(runId: string): Observable<ScannerRunStatus> {
-    return this.http.get<ScannerRunStatus>(`/scanner/runs/${encodeURIComponent(runId)}`);
+    return this.apiClient.getScanRun(runId);
   }
 
   getRunResults(runId: string): Observable<ScannerResultRow[]> {

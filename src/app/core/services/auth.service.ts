@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, of, tap, map, catchError } from 'rxjs';
+import { BehaviorSubject, Observable, of, tap, map, catchError, timeout } from 'rxjs';
 import { AuthResponse, User } from '../models/auth.model';
 import { TokenService } from '../auth/token.service';
 import { HttpBaseService } from '../http/http-base.service';
@@ -128,7 +128,7 @@ export class AuthService {
   }
 
   getFyersAuthUrl(): Observable<{ authUrl: string }> {
-    return this.http.get<{ authUrl: string }>('/auth/fyers/auth-url');
+    return this.http.get<{ authUrl: string }>('/auth/fyers/auth-url').pipe(timeout(6000));
   }
 
   loginWithFyers(): Observable<void> {
@@ -140,6 +140,12 @@ export class AuthService {
         window.location.href = response.authUrl;
       }),
       map(() => undefined)
+    );
+  }
+
+  devLogin(username: string, password?: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/dev/login', { username, password }).pipe(
+      tap((response) => this.persistAuth(response))
     );
   }
 

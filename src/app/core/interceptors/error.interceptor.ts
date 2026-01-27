@@ -25,11 +25,13 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     }),
     catchError((error: HttpErrorResponse) => {
       const apiError = mapHttpError(error);
-      if (error.status === 401 && !isAuthEndpoint) {
-        toastService.showError(apiError.userMessage);
-        authService.logout();
+      if (error.status === 401 || error.status === 403) {
+        toastService.showError('Session expired / unauthorized');
       } else {
         toastService.showError(apiError.userMessage);
+      }
+      if (error.status === 401 && !isAuthEndpoint) {
+        authService.logout();
       }
       return throwError(() => error);
     })

@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, map, of } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, catchError, map, of, retry, timer } from 'rxjs';
 import { ToastService } from '../services/toast.service';
+import { environment } from '../../../environments/environment';
 
 export interface UiEntityField {
   name: string;
@@ -48,27 +49,41 @@ export class RuntimeConfigService {
   private configSubject = new BehaviorSubject<RuntimeConfig>(this.createFallback());
   private configLoadedSubject = new BehaviorSubject<boolean>(false);
   private configUnavailableSubject = new BehaviorSubject<boolean>(false);
+  private configErrorMessageSubject = new BehaviorSubject<string>('');
   readonly config$ = this.configSubject.asObservable();
   readonly configLoaded$ = this.configLoadedSubject.asObservable();
   readonly configUnavailable$ = this.configUnavailableSubject.asObservable();
+  readonly configErrorMessage$ = this.configErrorMessageSubject.asObservable();
 
   constructor(private http: HttpClient, private toastService: ToastService) {}
 
   load(): Observable<RuntimeConfig> {
     return this.http.get<RuntimeConfigResponse>('/api/ui/config').pipe(
+      retry({
+        count: 2,
+        delay: (error, retryCount) => {
+          if (error instanceof HttpErrorResponse && error.status === 403) {
+            throw error;
+          }
+          return timer(400 * retryCount);
+        }
+      }),
       map((config) => {
         const normalized = this.normalizeConfig(config);
         this.configSubject.next(normalized);
         this.configLoadedSubject.next(true);
         this.configUnavailableSubject.next(false);
+        this.configErrorMessageSubject.next('');
         return normalized;
       }),
-      catchError(() => {
+      catchError((error: HttpErrorResponse) => {
         const fallback = this.createFallback();
         this.configSubject.next(fallback);
         this.configLoadedSubject.next(true);
         this.configUnavailableSubject.next(true);
-        this.toastService.showWarning('Backend config unavailable. Running in limited mode.');
+        const message = this.formatError(error);
+        this.configErrorMessageSubject.next(message);
+        this.toastService.showWarning(`Backend config unavailable. ${message}`);
         return of(fallback);
       })
     );
@@ -138,7 +153,7 @@ export class RuntimeConfigService {
   // ------------------------
 
   private normalizeConfig(config: RuntimeConfigResponse): RuntimeConfig {
-    const wsBaseUrl = config.wsBaseUrl || config.wsUrl || '/ws';
+    const wsBaseUrl = config.wsBaseUrl || config.wsUrl || environment.wsBaseUrl || '/ws';
 
     // ✅ Convert backend entityFields map -> entities[] (if entities[] not provided)
     const entitiesFromMap: UiEntityConfig[] =
@@ -155,7 +170,7 @@ export class RuntimeConfigService {
       (config.entities && config.entities.length ? config.entities : entitiesFromMap) ?? [];
 
     return {
-      apiBaseUrl: config.apiBaseUrl || '/api',
+      apiBaseUrl: config.apiBaseUrl || environment.apiBaseUrl || '/api',
       wsBaseUrl,
       wsTopics: config.wsTopics ?? [],
       endpoints: this.normalizeEndpoints(config.endpoints),
@@ -166,8 +181,8 @@ export class RuntimeConfigService {
 
   private createFallback(): RuntimeConfig {
     return {
-      apiBaseUrl: '/api',
-      wsBaseUrl: '/ws',
+      apiBaseUrl: environment.apiBaseUrl || '/api',
+      wsBaseUrl: environment.wsBaseUrl || '/ws',
       wsTopics: [],
       endpoints: [],
       entities: []
@@ -238,5 +253,18 @@ export class RuntimeConfigService {
   private normalizeBaseUrl(baseUrl: string): string {
     if (!baseUrl) return '';
     return baseUrl.replace(/\/+$/, '');
+  }
+
+  private formatError(error: HttpErrorResponse): string {
+    if (!error) {
+      return 'Unknown error loading /api/ui/config.';
+    }
+    const status = error.status ? `HTTP ${error.status}` : 'Network error';
+    const detail =
+      (typeof error.error?.message === 'string' && error.error.message) ||
+      error.statusText ||
+      error.message ||
+      'Request failed';
+    return `${status}: ${detail}`;
   }
 }

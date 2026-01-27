@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subject, finalize, takeUntil, timer } from 'rxjs';
+import { Subject, Subscription, finalize, takeUntil, timer } from 'rxjs';
 import {
   ScannerResultRow,
   ScannerRunStatus,
@@ -29,6 +29,8 @@ export class ScannerComponent implements OnInit, OnDestroy {
   runStatus?: ScannerRunStatus;
   results: ScannerResultRow[] = [];
   diagnostics: Record<string, number> = {};
+  diagnosticCounters: Array<{ label: string; value: number }> = [];
+  topRejectReasons: Array<{ label: string; count: number }> = [];
   totalSymbols = 0;
   isRunning = false;
   isLoading = false;
@@ -40,6 +42,7 @@ export class ScannerComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private scanStartTime?: number;
   private readonly scanStuckThresholdMs = 20000;
+  private pollSub?: Subscription;
 
   constructor(
     private scannerService: ScannerService,
@@ -57,6 +60,7 @@ export class ScannerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.pollSub?.unsubscribe();
   }
 
   get manualCount(): number {
@@ -88,6 +92,10 @@ export class ScannerComponent implements OnInit, OnDestroy {
         next: (response) => {
           this.notificationService.success('Scanner', 'Scan started.');
           this.scanStartTime = Date.now();
+          this.runStatus = {
+            runId: response.runId,
+            status: (response.status as ScannerRunStatus['status']) ?? 'PENDING'
+          };
           this.fetchStatus(response.runId);
           this.pollStatus(response.runId);
         },
@@ -134,12 +142,14 @@ export class ScannerComponent implements OnInit, OnDestroy {
         this.isRunning = status.status === 'RUNNING' || status.status === 'PENDING';
         this.totalSymbols = status.diagnostics?.totalSymbols ?? status.progress?.totalSymbols ?? 0;
         this.diagnostics = status.diagnostics?.rejected ?? {};
+        this.updateDiagnostics(status);
         if (status.startedAt && !this.scanStartTime) {
           this.scanStartTime = new Date(status.startedAt).getTime();
         }
         this.updateStuckWarning();
         if (status.status === 'COMPLETED' || status.status === 'FAILED' || status.status === 'CANCELLED') {
           this.fetchResults(runId);
+          this.pollSub?.unsubscribe();
         }
       },
       error: () => {
@@ -160,11 +170,14 @@ export class ScannerComponent implements OnInit, OnDestroy {
   }
 
   private pollStatus(runId: string): void {
-    timer(0, 3000)
+    this.pollSub?.unsubscribe();
+    this.pollSub = timer(0, 2000)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         if (!this.runStatus || this.runStatus.status === 'RUNNING' || this.runStatus.status === 'PENDING') {
           this.fetchStatus(runId);
+        } else {
+          this.pollSub?.unsubscribe();
         }
       });
   }
@@ -191,5 +204,36 @@ export class ScannerComponent implements OnInit, OnDestroy {
     const startTime = this.scanStartTime ?? Date.now();
     const elapsedMs = Date.now() - startTime;
     this.scanStuckWarning = elapsedMs > this.scanStuckThresholdMs || status === 'PENDING';
+  }
+
+  private updateDiagnostics(status: ScannerRunStatus): void {
+    const diagnostics = status.diagnostics ?? {};
+    const counters: Record<string, number> = {};
+    Object.entries(diagnostics).forEach(([key, value]) => {
+      if (key === 'rejected' || value === null || value === undefined) {
+        return;
+      }
+      if (typeof value === 'number') {
+        counters[key] = value;
+      }
+    });
+
+    const progress = status.progress ?? {};
+    Object.entries(progress).forEach(([key, value]) => {
+      if (typeof value === 'number') {
+        counters[key] = value;
+      }
+    });
+
+    this.diagnosticCounters = Object.entries(counters).map(([key, value]) => ({
+      label: key.replace(/_/g, ' '),
+      value
+    }));
+
+    const rejected = diagnostics.rejected ?? {};
+    this.topRejectReasons = Object.entries(rejected)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
   }
 }
