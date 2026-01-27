@@ -11,6 +11,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { AuthResponse } from '../../core/models/auth.model';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -21,7 +22,11 @@ import { AuthResponse } from '../../core/models/auth.model';
 })
 export class LoginComponent implements OnInit {
   form = { email: '', password: '' };
+  devForm = { username: '', password: '' };
   loading = false;
+  fyersLoading = false;
+  fyersStatus = '';
+  isDevMode = environment.enableDevTools;
 
   constructor(
     private readonly authService: AuthService,
@@ -39,6 +44,7 @@ export class LoginComponent implements OnInit {
     if (!authCode) return;
 
     this.loading = true;
+    this.fyersStatus = 'Completing FYERS authentication...';
     this.loadingService.show();
 
     this.authService
@@ -47,6 +53,7 @@ export class LoginComponent implements OnInit {
         finalize(() => {
           setTimeout(() => {
             this.loading = false;
+            this.fyersLoading = false;
             this.loadingService.hide();
           });
         })
@@ -58,24 +65,28 @@ export class LoginComponent implements OnInit {
           this.authService.updateAuthState(response?.user ?? null, token ?? '', response?.refreshToken);
 
           if (token) {
-            this.modeStore.syncFromBackend().subscribe();
-            this.notificationService.success('✅ Fyers account connected successfully!');
-            this.router.navigate(['/dashboard'], { replaceUrl: true });
-            return;
-          }
+          this.modeStore.syncFromBackend().subscribe();
+          this.notificationService.success('✅ Fyers account connected successfully!');
+          this.fyersStatus = 'FYERS connected. Redirecting...';
+          this.router.navigate(['/dashboard'], { replaceUrl: true });
+          return;
+        }
 
           if (response?.message || response?.requiresLogin) {
             this.notificationService.success('✅ Fyers account connected! Please login to continue.');
+            this.fyersStatus = 'FYERS connected. Please login to continue.';
             this.router.navigate(['/auth/login'], { replaceUrl: true });
             return;
           }
 
           this.notificationService.success('✅ Fyers authentication completed');
+          this.fyersStatus = 'FYERS authentication completed.';
           this.modeStore.syncFromBackend().subscribe();
           this.router.navigate(['/dashboard'], { replaceUrl: true });
         },
         error: () => {
           this.notificationService.error('❌ Failed to connect Fyers account');
+          this.fyersStatus = 'FYERS authentication failed.';
           this.router.navigate(['/auth/login'], { replaceUrl: true });
         },
       });
@@ -110,10 +121,43 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithFyers(): void {
-    this.authService.loginWithFyers().subscribe({
-      error: () => {
-        this.notificationService.error('Failed to initiate Fyers login');
-      }
-    });
+    this.fyersLoading = true;
+    this.fyersStatus = 'Requesting FYERS login URL...';
+    this.authService.loginWithFyers()
+      .pipe(finalize(() => {
+        this.fyersLoading = false;
+      }))
+      .subscribe({
+        next: () => {
+          this.fyersStatus = 'Redirecting to FYERS...';
+        },
+        error: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          if (status === 401 || status === 403) {
+            this.fyersStatus = 'FYERS login unauthorized. Please check your session.';
+            this.notificationService.error('Session expired / unauthorized');
+            return;
+          }
+          this.fyersStatus = 'Failed to initiate FYERS login.';
+          this.notificationService.error('Failed to initiate Fyers login');
+        }
+      });
+  }
+
+  devLogin(): void {
+    this.loading = true;
+    this.authService
+      .devLogin(this.devForm.username, this.devForm.password)
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: () => {
+          this.notificationService.success('Dev login successful.');
+          this.modeStore.syncFromBackend().subscribe();
+          this.router.navigate(['/dashboard']);
+        },
+        error: () => {
+          this.notificationService.error('Dev login failed.');
+        }
+      });
   }
 }

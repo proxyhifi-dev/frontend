@@ -48,8 +48,28 @@
   color: var(--danger);
 }
 
-.status-grid,
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
 .diagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.diagnostics-section {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.diagnostics-section:last-child {
+  border-bottom: none;
+}
+
+.diagnostics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;

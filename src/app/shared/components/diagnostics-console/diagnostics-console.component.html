@@ -1,0 +1,47 @@
+<section class="diagnostics-console">
+  <details open>
+    <summary>Diagnostics Console</summary>
+    <div class="console-grid">
+      <div class="console-card">
+        <h4>WebSocket</h4>
+        <p class="status-pill" [class.online]="(wsStatus$ | async) === 'connected'">
+          {{ (wsStatus$ | async) || 'disconnected' }}
+        </p>
+      </div>
+      <div class="console-card">
+        <h4>Last Backend Error</h4>
+        <p class="muted" *ngIf="!(lastBackendError$ | async)">No recent backend errors.</p>
+        <p class="error-text" *ngIf="lastBackendError$ | async as lastError">{{ lastError }}</p>
+      </div>
+    </div>
+
+    <div class="console-card">
+      <div class="header-row">
+        <h4>HTTP Calls (latest 200)</h4>
+      </div>
+      <div class="table">
+        <div class="table-row header">
+          <span>Time</span>
+          <span>Method</span>
+          <span>URL</span>
+          <span>Status</span>
+          <span>Latency</span>
+          <span>Request ID</span>
+        </div>
+        <div class="table-row" *ngFor="let call of (httpCalls$ | async)">
+          <span>{{ call.timestamp | date:'shortTime' }}</span>
+          <span>{{ call.method }}</span>
+          <span class="truncate" [title]="call.url">{{ call.url }}</span>
+          <span [class.text-red]="call.status >= 400 || call.status === 0">
+            {{ call.status || 'ERR' }}
+          </span>
+          <span>{{ call.latencyMs }}ms</span>
+          <span class="truncate">{{ call.requestId || call.correlationId || '—' }}</span>
+        </div>
+        <div class="table-row empty" *ngIf="(httpCalls$ | async)?.length === 0">
+          <span>No requests captured yet.</span>
+        </div>
+      </div>
+    </div>
+  </details>
+</section>
