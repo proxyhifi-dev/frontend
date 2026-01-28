@@ -11,7 +11,7 @@ export class TokenService {
     if (this.accessTokenMemory) {
       return this.accessTokenMemory;
     }
-    const stored = sessionStorage.getItem(this.accessTokenKey);
+    const stored = localStorage.getItem(this.accessTokenKey) ?? sessionStorage.getItem(this.accessTokenKey);
     this.accessTokenMemory = stored;
     return stored;
   }
@@ -20,7 +20,7 @@ export class TokenService {
     if (this.refreshTokenMemory) {
       return this.refreshTokenMemory;
     }
-    const stored = sessionStorage.getItem(this.refreshTokenKey);
+    const stored = localStorage.getItem(this.refreshTokenKey) ?? sessionStorage.getItem(this.refreshTokenKey);
     this.refreshTokenMemory = stored;
     return stored;
   }
@@ -28,6 +28,7 @@ export class TokenService {
   setAccessToken(token: string): void {
     if (token) {
       this.accessTokenMemory = token;
+      localStorage.setItem(this.accessTokenKey, token);
       sessionStorage.setItem(this.accessTokenKey, token);
     }
   }
@@ -35,6 +36,7 @@ export class TokenService {
   setRefreshToken(token: string): void {
     if (token) {
       this.refreshTokenMemory = token;
+      localStorage.setItem(this.refreshTokenKey, token);
       sessionStorage.setItem(this.refreshTokenKey, token);
     }
   }
@@ -51,6 +53,8 @@ export class TokenService {
   clear(): void {
     this.accessTokenMemory = null;
     this.refreshTokenMemory = null;
+    localStorage.removeItem(this.accessTokenKey);
+    localStorage.removeItem(this.refreshTokenKey);
     sessionStorage.removeItem(this.accessTokenKey);
     sessionStorage.removeItem(this.refreshTokenKey);
   }
