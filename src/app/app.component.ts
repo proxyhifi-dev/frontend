@@ -22,7 +22,10 @@ import { DiagnosticsStoreService } from './core/services/diagnostics-store.servi
   ],
   template: `
     <div class="config-banner" *ngIf="configUnavailable$ | async">
-      Backend config unavailable. {{ configErrorMessage$ | async }} Falling back to environment defaults.
+      Backend config unavailable. {{ configErrorMessage$ | async }}
+      <ng-container *ngIf="runtimeConfig$ | async as runtimeConfig">
+        Falling back to API {{ runtimeConfig.apiBaseUrl }} and WS {{ runtimeConfig.wsBaseUrl || '—' }}.
+      </ng-container>
     </div>
     <div class="network-banner" *ngIf="networkError$ | async as networkError">
       <div>
@@ -82,6 +85,7 @@ export class AppComponent implements OnInit {
   readonly configUnavailable$;
   readonly configErrorMessage$;
   readonly networkError$;
+  readonly runtimeConfig$;
 
   constructor(
     private authService: AuthService,
@@ -92,6 +96,7 @@ export class AppComponent implements OnInit {
     this.configUnavailable$ = runtimeConfig.configUnavailable$;
     this.configErrorMessage$ = runtimeConfig.configErrorMessage$;
     this.networkError$ = diagnosticsStore.networkError$;
+    this.runtimeConfig$ = runtimeConfig.config$;
   }
 
   get isAuthenticated(): boolean {

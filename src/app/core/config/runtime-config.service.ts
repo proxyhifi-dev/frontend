@@ -264,7 +264,7 @@ export class RuntimeConfigService {
       return 'Request timed out after 5s.';
     }
     if (error instanceof HttpErrorResponse) {
-      const status = error.status ? `HTTP ${error.status}` : 'Network error';
+      const status = error.status ? `HTTP ${error.status}` : 'Network error (status 0)';
       const detail =
         (typeof error.error?.message === 'string' && error.error.message) ||
         error.statusText ||
