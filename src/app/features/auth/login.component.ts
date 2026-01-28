@@ -12,6 +12,8 @@ import { LoadingService } from '../../core/services/loading.service';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { AuthResponse } from '../../core/models/auth.model';
 import { environment } from '../../../environments/environment';
+import { mapHttpError } from '../../core/utils/api-error';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
@@ -65,12 +67,12 @@ export class LoginComponent implements OnInit {
           this.authService.updateAuthState(response?.user ?? null, token ?? '', response?.refreshToken);
 
           if (token) {
-          this.modeStore.syncFromBackend().subscribe();
-          this.notificationService.success('✅ Fyers account connected successfully!');
-          this.fyersStatus = 'FYERS connected. Redirecting...';
-          this.router.navigate(['/dashboard'], { replaceUrl: true });
-          return;
-        }
+            this.modeStore.syncFromBackend().subscribe();
+            this.notificationService.success('✅ Fyers account connected successfully!');
+            this.fyersStatus = 'FYERS connected. Redirecting...';
+            this.router.navigate(['/dashboard'], { replaceUrl: true });
+            return;
+          }
 
           if (response?.message || response?.requiresLogin) {
             this.notificationService.success('✅ Fyers account connected! Please login to continue.');
@@ -84,9 +86,13 @@ export class LoginComponent implements OnInit {
           this.modeStore.syncFromBackend().subscribe();
           this.router.navigate(['/dashboard'], { replaceUrl: true });
         },
-        error: () => {
+        error: (err: unknown) => {
+          const apiError =
+            err instanceof HttpErrorResponse ? mapHttpError(err) : { userMessage: 'FYERS authentication failed.' };
+          const statusLabel =
+            (err as { status?: number })?.status ? ` (HTTP ${(err as { status?: number })?.status})` : '';
           this.notificationService.error('❌ Failed to connect Fyers account');
-          this.fyersStatus = 'FYERS authentication failed.';
+          this.fyersStatus = `${apiError.userMessage}${statusLabel}`;
           this.router.navigate(['/auth/login'], { replaceUrl: true });
         },
       });
@@ -132,10 +138,15 @@ export class LoginComponent implements OnInit {
           this.fyersStatus = 'Redirecting to FYERS...';
         },
         error: (err: unknown) => {
-          const status = (err as { status?: number })?.status;
-          if (status === 401 || status === 403) {
-            this.fyersStatus = 'FYERS login unauthorized. Please check your session.';
-            this.notificationService.error('Session expired / unauthorized');
+          if (err instanceof HttpErrorResponse) {
+            const apiError = mapHttpError(err);
+            if (err.status === 401 || err.status === 403) {
+              this.fyersStatus = `${apiError.userMessage} (HTTP ${err.status})`;
+              this.notificationService.error('Session expired / unauthorized');
+              return;
+            }
+            this.fyersStatus = `${apiError.userMessage} (HTTP ${err.status || 'network'})`;
+            this.notificationService.error(apiError.userMessage);
             return;
           }
           this.fyersStatus = 'Failed to initiate FYERS login.';

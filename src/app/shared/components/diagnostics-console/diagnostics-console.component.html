@@ -8,6 +8,15 @@
           {{ (wsStatus$ | async) || 'disconnected' }}
         </p>
       </div>
+      <div class="console-card" *ngIf="runtimeConfig$ | async as runtimeConfig">
+        <h4>Runtime Config</h4>
+        <div class="config-lines">
+          <p><strong>API Base:</strong> {{ runtimeConfig.apiBaseUrl || '—' }}</p>
+          <p><strong>WS Base:</strong> {{ runtimeConfig.wsBaseUrl || '—' }}</p>
+          <p><strong>Endpoints:</strong> {{ runtimeConfig.endpoints?.length ?? 0 }}</p>
+          <p><strong>Entities:</strong> {{ runtimeConfig.entities?.length ?? 0 }}</p>
+        </div>
+      </div>
       <div class="console-card">
         <h4>Last Backend Error</h4>
         <p class="muted" *ngIf="!(lastBackendError$ | async)">No recent backend errors.</p>

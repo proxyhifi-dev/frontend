@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, map, of, retry, timer } from 'rxjs';
+import { BehaviorSubject, Observable, TimeoutError, catchError, map, of, retry, timer, timeout } from 'rxjs';
 import { ToastService } from '../services/toast.service';
 import { environment } from '../../../environments/environment';
 
@@ -59,6 +59,7 @@ export class RuntimeConfigService {
 
   load(): Observable<RuntimeConfig> {
     return this.http.get<RuntimeConfigResponse>('/api/ui/config').pipe(
+      timeout(5000),
       retry({
         count: 2,
         delay: (error, retryCount) => {
@@ -76,7 +77,7 @@ export class RuntimeConfigService {
         this.configErrorMessageSubject.next('');
         return normalized;
       }),
-      catchError((error: HttpErrorResponse) => {
+      catchError((error: unknown) => {
         const fallback = this.createFallback();
         this.configSubject.next(fallback);
         this.configLoadedSubject.next(true);
@@ -255,16 +256,23 @@ export class RuntimeConfigService {
     return baseUrl.replace(/\/+$/, '');
   }
 
-  private formatError(error: HttpErrorResponse): string {
+  private formatError(error: unknown): string {
     if (!error) {
       return 'Unknown error loading /api/ui/config.';
     }
-    const status = error.status ? `HTTP ${error.status}` : 'Network error';
-    const detail =
-      (typeof error.error?.message === 'string' && error.error.message) ||
-      error.statusText ||
-      error.message ||
-      'Request failed';
-    return `${status}: ${detail}`;
+    if (error instanceof TimeoutError) {
+      return 'Request timed out after 5s.';
+    }
+    if (error instanceof HttpErrorResponse) {
+      const status = error.status ? `HTTP ${error.status}` : 'Network error';
+      const detail =
+        (typeof error.error?.message === 'string' && error.error.message) ||
+        error.statusText ||
+        error.message ||
+        'Request failed';
+      return `${status}: ${detail}`;
+    }
+    const fallbackMessage = (error as { message?: string })?.message || 'Request failed';
+    return `Network error: ${fallbackMessage}`;
   }
 }

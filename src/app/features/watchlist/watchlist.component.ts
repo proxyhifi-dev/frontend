@@ -89,7 +89,7 @@ export class WatchlistComponent implements OnInit, OnDestroy {
   }
 
   removeSymbol(symbol: string): void {
-    this.watchlistService.removeSymbol(symbol).subscribe({
+    this.apiClient.removeSymbol(symbol).subscribe({
       next: () => {
         this.symbols = this.symbols.filter((item) => item !== symbol);
       },
@@ -106,9 +106,13 @@ export class WatchlistComponent implements OnInit, OnDestroy {
       this.errorMessage = `Watchlist supports up to ${this.maxCount} symbols.`;
       return;
     }
-    this.watchlistService.addSymbols(incomingSymbols).subscribe({
+    this.apiClient.addSymbol(incomingSymbols).subscribe({
       next: (response) => {
-        this.symbols = response?.length ? response : merged;
+        if (Array.isArray(response)) {
+          this.symbols = response.length ? response : merged;
+        } else {
+          this.symbols = response?.symbols?.length ? response.symbols : merged;
+        }
         this.notificationService.success('Watchlist', 'Symbols added.');
       },
       error: () => {

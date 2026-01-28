@@ -54,6 +54,17 @@ details > summary {
   font-size: 13px;
 }
 
+.config-lines {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.config-lines strong {
+  color: var(--text-primary);
+}
+
 .table {
   display: grid;
   gap: 8px;
