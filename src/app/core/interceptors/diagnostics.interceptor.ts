@@ -5,6 +5,7 @@ import { DiagnosticsStoreService } from '../services/diagnostics-store.service';
 import { mapHttpError } from '../utils/api-error';
 
 const headerKeys = ['x-request-id', 'x-correlation-id', 'x-correlationid', 'x-requestid', 'request-id'];
+const bodyKeys = ['requestId', 'correlationId', 'traceId'];
 
 const readHeader = (response: HttpResponse<unknown> | HttpErrorResponse, key: string): string | undefined => {
   const value = response.headers?.get(key);
@@ -15,6 +16,19 @@ const pickHeader = (response: HttpResponse<unknown> | HttpErrorResponse): string
   for (const key of headerKeys) {
     const value = readHeader(response, key);
     if (value) {
+      return value;
+    }
+  }
+  return undefined;
+};
+
+const pickBodyId = (body: unknown): string | undefined => {
+  if (!body || typeof body !== 'object') {
+    return undefined;
+  }
+  for (const key of bodyKeys) {
+    const value = (body as Record<string, unknown>)[key];
+    if (typeof value === 'string' && value.length > 0) {
       return value;
     }
   }
@@ -33,8 +47,8 @@ export const diagnosticsInterceptor: HttpInterceptorFn = (req, next: HttpHandler
           return;
         }
         const latencyMs = Math.round(performance.now() - startedAt);
-        const requestId = pickHeader(event);
-        const correlationId = readHeader(event, 'x-correlation-id') ?? undefined;
+        const requestId = pickHeader(event) ?? pickBodyId(event.body);
+        const correlationId = readHeader(event, 'x-correlation-id') ?? pickBodyId(event.body);
         store.logHttpCall({
           id: Date.now(),
           method: req.method,
@@ -48,8 +62,8 @@ export const diagnosticsInterceptor: HttpInterceptorFn = (req, next: HttpHandler
       },
       error: (error: HttpErrorResponse) => {
         const latencyMs = Math.round(performance.now() - startedAt);
-        const requestId = pickHeader(error);
-        const correlationId = readHeader(error, 'x-correlation-id') ?? undefined;
+        const requestId = pickHeader(error) ?? pickBodyId(error.error);
+        const correlationId = readHeader(error, 'x-correlation-id') ?? pickBodyId(error.error);
         const apiError = mapHttpError(error);
         store.logHttpCall({
           id: Date.now(),

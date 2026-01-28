@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DiagnosticsStoreService } from '../../../core/services/diagnostics-store.service';
 import { WebSocketService } from '../../../core/websocket/websocket.service';
@@ -12,19 +12,12 @@ import { RuntimeConfigService } from '../../../core/config/runtime-config.servic
   styleUrls: ['./diagnostics-console.component.scss']
 })
 export class DiagnosticsConsoleComponent {
-  readonly httpCalls$;
-  readonly lastBackendError$;
-  readonly wsStatus$;
-  readonly runtimeConfig$;
+  private readonly diagnosticsStore = inject(DiagnosticsStoreService);
+  private readonly webSocketService = inject(WebSocketService);
+  private readonly runtimeConfig = inject(RuntimeConfigService);
 
-  constructor(
-    private diagnosticsStore: DiagnosticsStoreService,
-    private webSocketService: WebSocketService,
-    private runtimeConfig: RuntimeConfigService
-  ) {
-    this.httpCalls$ = diagnosticsStore.httpCalls$;
-    this.lastBackendError$ = diagnosticsStore.lastBackendError$;
-    this.wsStatus$ = webSocketService.connectionStatus$;
-    this.runtimeConfig$ = runtimeConfig.config$;
-  }
+  readonly httpCalls$ = this.diagnosticsStore.httpCalls$;
+  readonly lastBackendError$ = this.diagnosticsStore.lastBackendError$;
+  readonly wsStatus$ = this.webSocketService.connectionStatus$;
+  readonly runtimeConfig$ = this.runtimeConfig.config$;
 }
