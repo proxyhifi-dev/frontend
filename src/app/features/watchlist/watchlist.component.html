@@ -36,7 +36,13 @@
   <div class="page-card">
     <div class="card-header">
       <h3>Current Watchlist</h3>
-      <span class="text-muted" *ngIf="isLoading">Loading...</span>
+      <div class="status-actions">
+        <button class="btn btn-outline btn-sm" type="button" (click)="refreshWatchlist()">Refresh</button>
+        <span class="text-muted" *ngIf="isLoading">Loading...</span>
+      </div>
+    </div>
+    <div class="alert-banner alert-warning" *ngIf="pendingItems.length">
+      {{ pendingStatus }}. Auto-refreshing every 5s until resolved.
     </div>
     <table class="data-table">
       <thead>
@@ -61,6 +67,14 @@
         <tr *ngIf="!isLoading && !errorMessage && symbols.length === 0">
           <td colspan="2" class="empty-state">
             No stocks configured. Add stocks to watchlist.
+            <button
+              class="btn btn-ghost btn-sm"
+              type="button"
+              *ngIf="isDevMode"
+              (click)="seedWatchlist()"
+            >
+              Seed Watchlist (dev)
+            </button>
           </td>
         </tr>
       </tbody>

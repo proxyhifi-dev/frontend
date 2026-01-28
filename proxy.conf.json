@@ -1,13 +1,13 @@
 {
   "/api": {
-    "target": "https://apex-trading-bot-w74z.onrender.com",
-    "secure": true,
+    "target": "http://localhost:8080",
+    "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/ws": {
-    "target": "wss://apex-trading-bot-w74z.onrender.com",
-    "secure": true,
+    "target": "ws://localhost:8080",
+    "secure": false,
     "changeOrigin": true,
     "ws": true,
     "logLevel": "debug"

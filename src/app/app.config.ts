@@ -9,7 +9,7 @@ import { routes } from './app.routes';
 
 
 import { baseUrlInterceptor } from './core/interceptors/base-url.interceptor';
-
+import { diagnosticsInterceptor } from './core/interceptors/diagnostics.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { RuntimeConfigService } from './core/config/runtime-config.service';
@@ -45,6 +45,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([
         baseUrlInterceptor,
         authInterceptor,
+        diagnosticsInterceptor,
         errorInterceptor
       ])
     ),
