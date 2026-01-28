@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DiagnosticsStoreService } from '../../../core/services/diagnostics-store.service';
 import { WebSocketService } from '../../../core/websocket/websocket.service';
@@ -11,10 +11,12 @@ import { WebSocketService } from '../../../core/websocket/websocket.service';
   styleUrls: ['./diagnostics-console.component.scss']
 })
 export class DiagnosticsConsoleComponent {
-  private diagnosticsStore = inject(DiagnosticsStoreService);
-  private webSocketService = inject(WebSocketService);
-
   readonly httpCalls$ = this.diagnosticsStore.httpCalls$;
   readonly lastBackendError$ = this.diagnosticsStore.lastBackendError$;
   readonly wsStatus$ = this.webSocketService.connectionStatus$;
+
+  constructor(
+    private diagnosticsStore: DiagnosticsStoreService,
+    private webSocketService: WebSocketService
+  ) {}
 }
