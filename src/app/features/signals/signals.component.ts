@@ -10,6 +10,7 @@ import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { RiskService } from '../../core/services/risk.service';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { EntityDetailsComponent } from '../../shared/components/entity-details/entity-details.component';
+import { ScanStoreService } from '../../core/services/scan-store.service';
 
 @Component({
   selector: 'app-signals',
@@ -33,6 +34,11 @@ export class SignalsComponent implements OnInit, OnDestroy {
   detailLoading = false;
   detailError = '';
   executionSupported = false;
+  isScanRunning = false;
+  cooldownUntil = 0;
+  retryAfterSeconds = 0;
+  cooldownSecondsLeft = 0;
+  private cooldownInterval?: ReturnType<typeof setInterval>;
   private lastMode?: string;
   private destroy$ = new Subject<void>();
 
@@ -41,7 +47,8 @@ export class SignalsComponent implements OnInit, OnDestroy {
     private notify: NotificationService,
     private store: StoreService,
     private modeStore: ModeStore,
-    private riskService: RiskService
+    private riskService: RiskService,
+    private scanStore: ScanStoreService
   ) {}
 
   ngOnInit() {
@@ -68,11 +75,33 @@ export class SignalsComponent implements OnInit, OnDestroy {
       .subscribe((supported) => {
         this.executionSupported = supported;
       });
+
+    this.scanStore.isScanRunning$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((isRunning) => {
+        this.isScanRunning = isRunning;
+      });
+
+    this.scanStore.cooldownUntil$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((cooldownUntil) => {
+        this.cooldownUntil = cooldownUntil;
+        this.updateCooldownTimer();
+      });
+
+    this.scanStore.retryAfterSeconds$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((seconds) => {
+        this.retryAfterSeconds = seconds;
+      });
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.cooldownInterval) {
+      clearInterval(this.cooldownInterval);
+    }
   }
 
   loadSignals() {
@@ -109,14 +138,24 @@ export class SignalsComponent implements OnInit, OnDestroy {
       this.notify.warning('Safe Mode', this.safeModeReason || 'Risk circuit breaker triggered.');
       return;
     }
-    this.signalSvc.scanNow().subscribe({
+    if (this.isScanRunning || this.isCooldownActive()) {
+      return;
+    }
+    this.scanStore.startScan();
+    this.signalSvc.scanNow().pipe(
+      finalize(() => this.scanStore.finishScan())
+    ).subscribe({
       next: () => {
         this.notify.success('Scan Started', 'Manual scan triggered.');
+        this.scanStore.setCooldown(30);
         this.loadSignals();
       },
       error: (err: unknown) => {
-        const message = (err as { userMessage?: string })?.userMessage ?? 'Unable to start scan.';
-        this.notify.error('Scan Failed', message);
+        const error = err as { status?: number; userMessage?: string };
+        if (error?.status !== 429) {
+          const message = error?.userMessage ?? 'Unable to start scan.';
+          this.notify.error('Scan Failed', message);
+        }
       }
     });
   }
@@ -194,6 +233,35 @@ export class SignalsComponent implements OnInit, OnDestroy {
   closeDrawer(): void {
     this.isDrawerOpen = false;
     this.selectedSignal = undefined;
+  }
+
+  isCooldownActive(): boolean {
+    return this.cooldownUntil > Date.now();
+  }
+
+  private updateCooldownTimer(): void {
+    if (this.cooldownInterval) {
+      clearInterval(this.cooldownInterval);
+    }
+
+    const updateSeconds = () => {
+      const remainingMs = this.cooldownUntil - Date.now();
+      if (remainingMs <= 0) {
+        this.cooldownSecondsLeft = 0;
+        this.scanStore.clearCooldown();
+        if (this.cooldownInterval) {
+          clearInterval(this.cooldownInterval);
+          this.cooldownInterval = undefined;
+        }
+        return;
+      }
+      this.cooldownSecondsLeft = Math.ceil(remainingMs / 1000);
+    };
+
+    updateSeconds();
+    if (this.cooldownUntil > Date.now()) {
+      this.cooldownInterval = setInterval(updateSeconds, 1000);
+    }
   }
 
   private loadCircuitBreaker(): void {
