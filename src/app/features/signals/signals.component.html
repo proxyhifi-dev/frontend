@@ -26,7 +26,20 @@
         <button class="btn-outline" [class.active]="activeFilter === 'all'" (click)="updateFilter('all')">All</button>
         <button class="btn-outline" [class.active]="activeFilter === 'pending'" (click)="updateFilter('pending')">Entry Ready</button>
       </div>
-      <button class="btn-primary" (click)="scanNow()" [disabled]="safeMode">▶ Scan Now</button>
+      <div class="scan-controls">
+        <button
+          class="btn-primary"
+          type="button"
+          (click)="scanNow()"
+          [disabled]="safeMode || isScanRunning || isCooldownActive()"
+        >
+          ▶ Scan Now
+        </button>
+        <div class="scan-status" *ngIf="isScanRunning">Scan running…</div>
+        <div class="scan-status cooldown" *ngIf="!isScanRunning && isCooldownActive()">
+          Cooldown: {{ cooldownSecondsLeft }}s
+        </div>
+      </div>
     </div>
   </div>
 
