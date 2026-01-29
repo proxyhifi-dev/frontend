@@ -51,7 +51,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         const message = `Rate limited. Try again in ${retryAfterSeconds}s`;
         toastService.showWarning(message);
         diagnosticsStore.setLastBackendError(`Rate limited. Retry after ${retryAfterSeconds}s.`);
-        if (req.method === 'POST' && req.url.includes('/strategy/scan-now')) {
+        if (req.method === 'POST' && (req.url.includes('/strategy/scan-now') || req.url.includes('/scanner/run'))) {
           scanStore.setCooldown(retryAfterSeconds);
         }
       } else if (error.status === 401 || error.status === 403) {
@@ -59,7 +59,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       } else {
         toastService.showError(apiError.userMessage);
       }
-      if (error.status === 401 && !isAuthEndpoint) {
+      if ((error.status === 401 || error.status === 403) && !isAuthEndpoint) {
         authService.logout();
       }
       return throwError(() => error);

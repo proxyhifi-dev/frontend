@@ -1,6 +1,6 @@
 // src/app/features/auth/login.component.ts
 
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -22,13 +22,15 @@ import { HttpErrorResponse } from '@angular/common/http';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, AfterViewInit {
   form = { email: '', password: '' };
   devForm = { username: '', password: '' };
   loading = false;
   fyersLoading = false;
   fyersStatus = '';
   isDevMode = environment.enableDevTools;
+  private authCode?: string | null;
+  private authState?: string;
 
   constructor(
     private readonly authService: AuthService,
@@ -41,72 +43,76 @@ export class LoginComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const authCode = this.route.snapshot.queryParamMap.get('auth_code');
-    const state = this.route.snapshot.queryParamMap.get('state') ?? undefined;
+    this.authCode = this.route.snapshot.queryParamMap.get('auth_code');
+    this.authState = this.route.snapshot.queryParamMap.get('state') ?? undefined;
+  }
 
-    if (!authCode) return;
+  ngAfterViewInit(): void {
+    if (!this.authCode) {
+      return;
+    }
+    this.startFyersCallback(this.authCode, this.authState);
+  }
 
-    setTimeout(() => {
-      this.loading = true;
-      this.fyersStatus = 'Completing FYERS authentication...';
-      this.loadingService.show();
-      this.cdr.markForCheck();
+  private startFyersCallback(authCode: string, state?: string): void {
+    this.loading = true;
+    this.fyersLoading = true;
+    this.fyersStatus = 'Completing FYERS authentication...';
+    this.loadingService.show();
+    this.cdr.detectChanges();
 
-      this.authService
-        .handleFyersCallback(authCode, state)
-        .pipe(
-          timeout(5000),
-          finalize(() => {
-            setTimeout(() => {
-              this.loading = false;
-              this.fyersLoading = false;
-              this.loadingService.hide();
-              this.cdr.markForCheck();
-            });
-          })
-        )
-        .subscribe({
-          next: (response: AuthResponse) => {
-            const token = response?.accessToken || response?.token;
+    this.authService
+      .handleFyersCallback(authCode, state)
+      .pipe(
+        timeout(5000),
+        finalize(() => {
+          this.loading = false;
+          this.fyersLoading = false;
+          this.loadingService.hide();
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: (response: AuthResponse) => {
+          const token = response?.accessToken || response?.token;
 
-            this.authService.updateAuthState(response?.user ?? null, token ?? '', response?.refreshToken);
+          this.authService.updateAuthState(response?.user ?? null, token ?? '', response?.refreshToken);
 
-            if (token) {
-              this.modeStore.syncFromBackend().subscribe();
-              this.notificationService.success('✅ Fyers account connected successfully!');
-              this.fyersStatus = 'FYERS connected. Redirecting...';
-              this.router.navigate(['/dashboard'], { replaceUrl: true });
-              return;
-            }
-
-            if (response?.message || response?.requiresLogin) {
-              this.notificationService.success('✅ Fyers account connected! Please login to continue.');
-              this.fyersStatus = 'FYERS connected. Please login to continue.';
-              this.router.navigate(['/auth/login'], { replaceUrl: true });
-              return;
-            }
-
-            this.notificationService.success('✅ Fyers authentication completed');
-            this.fyersStatus = 'FYERS authentication completed.';
+          if (token) {
             this.modeStore.syncFromBackend().subscribe();
+            this.notificationService.success('✅ Fyers account connected successfully!');
+            this.fyersStatus = 'FYERS connected. Redirecting...';
             this.router.navigate(['/dashboard'], { replaceUrl: true });
-          },
-          error: (err: unknown) => {
-            if (err instanceof TimeoutError) {
-              this.notificationService.error('FYERS authentication timed out.');
-              this.fyersStatus = 'FYERS authentication timed out. Please try again.';
-              return;
-            }
-            const apiError =
-              err instanceof HttpErrorResponse ? mapHttpError(err) : { userMessage: 'FYERS authentication failed.' };
-            const statusLabel =
-              (err as { status?: number })?.status ? ` (HTTP ${(err as { status?: number })?.status})` : '';
-            this.notificationService.error('❌ Failed to connect Fyers account');
-            this.fyersStatus = `${apiError.userMessage}${statusLabel}`;
+            return;
+          }
+
+          if (response?.message || response?.requiresLogin) {
+            this.notificationService.success('✅ Fyers account connected! Please login to continue.');
+            this.fyersStatus = 'FYERS connected. Please login to continue.';
             this.router.navigate(['/auth/login'], { replaceUrl: true });
-          },
-        });
-    });
+            return;
+          }
+
+          this.notificationService.success('✅ Fyers authentication completed');
+          this.fyersStatus = 'FYERS authentication completed.';
+          this.modeStore.syncFromBackend().subscribe();
+          this.router.navigate(['/dashboard'], { replaceUrl: true });
+        },
+        error: (err: unknown) => {
+          if (err instanceof TimeoutError) {
+            this.notificationService.error('FYERS authentication timed out.');
+            this.fyersStatus = 'FYERS authentication timed out. Please try again.';
+            return;
+          }
+          const apiError =
+            err instanceof HttpErrorResponse ? mapHttpError(err) : { userMessage: 'FYERS authentication failed.' };
+          const statusLabel =
+            (err as { status?: number })?.status ? ` (HTTP ${(err as { status?: number })?.status})` : '';
+          this.notificationService.error('❌ Failed to connect Fyers account');
+          this.fyersStatus = `${apiError.userMessage}${statusLabel}`;
+          this.router.navigate(['/auth/login'], { replaceUrl: true });
+        },
+      });
   }
 
   onSubmit(): void {
@@ -121,10 +127,8 @@ export class LoginComponent implements OnInit {
       .pipe(
         timeout(5000),
         finalize(() => {
-          setTimeout(() => {
-            this.loading = false;
-            this.cdr.markForCheck();
-          });
+          this.loading = false;
+          this.cdr.detectChanges();
         })
       )
       .subscribe({
@@ -152,10 +156,8 @@ export class LoginComponent implements OnInit {
       .pipe(
         timeout(5000),
         finalize(() => {
-          setTimeout(() => {
-            this.fyersLoading = false;
-            this.cdr.markForCheck();
-          });
+          this.fyersLoading = false;
+          this.cdr.detectChanges();
         })
       )
       .subscribe({

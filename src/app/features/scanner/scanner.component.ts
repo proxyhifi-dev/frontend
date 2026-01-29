@@ -11,8 +11,11 @@ import {
 } from '../../core/services/scanner.service';
 import { WatchlistService } from '../../core/services/watchlist.service';
 import { StrategyService } from '../../core/services/strategy.service';
-import { NotificationService } from '../../core/services/notification.service';
 import { DiagnosticsService, DiagnosticsStatusItem } from '../../core/services/diagnostics.service';
+import { ToastService } from '../../core/services/toast.service';
+import { ScanStoreService } from '../../core/services/scan-store.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { mapHttpError } from '../../core/utils/api-error';
 
 @Component({
   selector: 'app-scanner',
@@ -38,29 +41,35 @@ export class ScannerComponent implements OnInit, OnDestroy {
   scannerDisabled = false;
   scanStuckWarning = false;
   diagnosticsSummary: DiagnosticsStatusItem[] = [];
+  cooldownRemaining = 0;
+  isCooldownActive = false;
 
   private destroy$ = new Subject<void>();
   private scanStartTime?: number;
   private readonly scanStuckThresholdMs = 20000;
   private pollSub?: Subscription;
+  private cooldownSub?: Subscription;
 
   constructor(
     private scannerService: ScannerService,
     private watchlistService: WatchlistService,
     private strategyService: StrategyService,
-    private notificationService: NotificationService,
-    private diagnosticsService: DiagnosticsService
+    private diagnosticsService: DiagnosticsService,
+    private toastService: ToastService,
+    private scanStore: ScanStoreService
   ) {}
 
   ngOnInit(): void {
     this.loadStrategies();
     this.loadDiagnostics();
+    this.watchCooldown();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
     this.pollSub?.unsubscribe();
+    this.cooldownSub?.unsubscribe();
   }
 
   get manualCount(): number {
@@ -84,13 +93,24 @@ export class ScannerComponent implements OnInit, OnDestroy {
     }
 
     const request = this.scannerService.buildRunRequest(this.universe, symbols, this.strategy || undefined);
+    if (this.isCooldownActive) {
+      this.errorMessage = `Rate limited. Try again in ${this.cooldownRemaining}s.`;
+      return;
+    }
+
     this.isLoading = true;
+    this.isRunning = true;
+    this.scanStore.startScan();
     this.scannerService
       .runScan(request)
-      .pipe(finalize(() => (this.isLoading = false)))
+      .pipe(
+        finalize(() => {
+          this.isLoading = false;
+        })
+      )
       .subscribe({
         next: (response) => {
-          this.notificationService.success('Scanner', 'Scan started.');
+          this.toastService.showSuccess('Scanner: Scan started.');
           this.scanStartTime = Date.now();
           this.runStatus = {
             runId: response.runId,
@@ -99,7 +119,20 @@ export class ScannerComponent implements OnInit, OnDestroy {
           this.fetchStatus(response.runId);
           this.pollStatus(response.runId);
         },
-        error: () => {
+        error: (err: unknown) => {
+          this.isRunning = false;
+          this.scanStore.finishScan();
+          if (err instanceof HttpErrorResponse) {
+            if (err.status === 429) {
+              const retryAfter = this.scanStore.retryAfterSeconds || this.cooldownRemaining || 60;
+              this.errorMessage = `Rate limited. Retry after ${retryAfter}s.`;
+              this.isCooldownActive = true;
+              return;
+            }
+            const apiError = mapHttpError(err);
+            this.errorMessage = apiError.userMessage;
+            return;
+          }
           this.errorMessage = 'Unable to start scan.';
         }
       });
@@ -111,11 +144,11 @@ export class ScannerComponent implements OnInit, OnDestroy {
     }
     this.scannerService.cancelRun(this.runStatus.runId).subscribe({
       next: () => {
-        this.notificationService.info('Scanner', 'Cancel request sent.');
+        this.toastService.showInfo('Scanner: Cancel request sent.');
         this.fetchStatus(this.runStatus!.runId);
       },
       error: () => {
-        this.notificationService.error('Scanner', 'Unable to cancel run.');
+        this.toastService.showError('Scanner: Unable to cancel run.');
       }
     });
   }
@@ -140,6 +173,9 @@ export class ScannerComponent implements OnInit, OnDestroy {
       next: (status) => {
         this.runStatus = status;
         this.isRunning = status.status === 'RUNNING' || status.status === 'PENDING';
+        if (!this.isRunning) {
+          this.scanStore.finishScan();
+        }
         this.totalSymbols = status.diagnostics?.totalSymbols ?? status.progress?.totalSymbols ?? 0;
         this.diagnostics = status.diagnostics?.rejected ?? {};
         this.updateDiagnostics(status);
@@ -193,6 +229,26 @@ export class ScannerComponent implements OnInit, OnDestroy {
         this.scannerDisabled = false;
       }
     });
+  }
+
+  private watchCooldown(): void {
+    this.cooldownSub?.unsubscribe();
+    this.cooldownSub = timer(0, 1000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        const until = this.scanStore.cooldownUntil;
+        if (!until) {
+          this.cooldownRemaining = 0;
+          this.isCooldownActive = false;
+          return;
+        }
+        const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+        this.cooldownRemaining = remaining;
+        this.isCooldownActive = remaining > 0;
+        if (!this.isCooldownActive) {
+          this.scanStore.clearCooldown();
+        }
+      });
   }
 
   private updateStuckWarning(): void {

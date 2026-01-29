@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { firstValueFrom, of } from 'rxjs';
-import { catchError, timeout } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 
 import { routes } from './app.routes';
 
@@ -20,16 +20,14 @@ import { RuntimeConfigService } from './core/config/runtime-config.service';
  * - On Render free tier the backend can be "cold" and the call can hang,
  *   resulting in a blank screen.
  *
- * Fix: add timeout + catchError so the app boots even if backend is slow/down.
+ * Fix: rely on RuntimeConfigService timeout/retry + catchError so the app boots even if backend is slow/down.
  */
 const runtimeConfigInitializer =
   (runtimeConfig: RuntimeConfigService) =>
     () =>
       firstValueFrom(
         runtimeConfig.load().pipe(
-          timeout(4000), // ✅ don't block UI forever
           catchError((err) => {
-            console.warn('[RuntimeConfig] load failed, continuing boot:', err);
             return of(null); // ✅ allow Angular to bootstrap
           })
         )
