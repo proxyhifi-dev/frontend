@@ -22,10 +22,13 @@ import { DiagnosticsStoreService } from './core/services/diagnostics-store.servi
   ],
   template: `
     <div class="config-banner" *ngIf="configUnavailable$ | async">
-      Backend config unavailable. {{ configErrorMessage$ | async }}
-      <ng-container *ngIf="runtimeConfig$ | async as runtimeConfig">
-        Falling back to API {{ runtimeConfig.apiBaseUrl }} and WS {{ runtimeConfig.wsBaseUrl || '—' }}.
-      </ng-container>
+      <div>
+        <strong>Backend config unavailable.</strong> {{ configErrorMessage$ | async }}
+        <ng-container *ngIf="runtimeConfig$ | async as runtimeConfig">
+          Falling back to API {{ runtimeConfig.apiBaseUrl }} and WS {{ runtimeConfig.wsBaseUrl || '—' }}.
+        </ng-container>
+      </div>
+      <button class="btn btn-ghost btn-sm" type="button" (click)="retryConfig()">Retry</button>
     </div>
     <div class="network-banner" *ngIf="networkError$ | async as networkError">
       <div>
@@ -53,6 +56,10 @@ import { DiagnosticsStoreService } from './core/services/diagnostics-store.servi
         padding: 10px 16px;
         font-size: 13px;
         text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
       }
       .auth-banner {
         position: relative;
@@ -136,5 +143,9 @@ export class AppComponent implements OnInit {
   retryNetwork(): void {
     this.diagnosticsStore.clearNetworkError();
     window.location.reload();
+  }
+
+  retryConfig(): void {
+    this.runtimeConfig.load().subscribe();
   }
 }

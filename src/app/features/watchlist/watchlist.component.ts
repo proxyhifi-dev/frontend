@@ -3,9 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, finalize, timer } from 'rxjs';
 import { WatchlistService } from '../../core/services/watchlist.service';
-import { NotificationService } from '../../core/services/notification.service';
+import { ToastService } from '../../core/services/toast.service';
 import { ApiClientService } from '../../core/services/api-client.service';
 import { environment } from '../../../environments/environment';
+import { HttpErrorResponse } from '@angular/common/http';
+import { mapHttpError } from '../../core/utils/api-error';
 
 @Component({
   selector: 'app-watchlist',
@@ -28,7 +30,7 @@ export class WatchlistComponent implements OnInit, OnDestroy {
 
   constructor(
     private watchlistService: WatchlistService,
-    private notificationService: NotificationService,
+    private toastService: ToastService,
     private apiClient: ApiClientService
   ) {}
 
@@ -64,6 +66,7 @@ export class WatchlistComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.errorMessage = 'Unable to load watchlist.';
+          this.toastService.showError(this.errorMessage);
         }
       });
   }
@@ -93,8 +96,10 @@ export class WatchlistComponent implements OnInit, OnDestroy {
       next: () => {
         this.symbols = this.symbols.filter((item) => item !== symbol);
       },
-      error: () => {
-        this.notificationService.error('Watchlist', 'Unable to remove symbol.');
+      error: (err: unknown) => {
+        const message = this.buildErrorMessage(err, 'Unable to remove symbol.');
+        this.errorMessage = message;
+        this.toastService.showError(message);
       }
     });
   }
@@ -113,10 +118,12 @@ export class WatchlistComponent implements OnInit, OnDestroy {
         } else {
           this.symbols = response?.symbols?.length ? response.symbols : merged;
         }
-        this.notificationService.success('Watchlist', 'Symbols added.');
+        this.toastService.showSuccess('Watchlist: Symbols added.');
       },
-      error: () => {
-        this.notificationService.error('Watchlist', 'Unable to add symbols.');
+      error: (err: unknown) => {
+        const message = this.buildErrorMessage(err, 'Unable to add symbols.');
+        this.errorMessage = message;
+        this.toastService.showError(message);
       }
     });
   }
@@ -133,10 +140,12 @@ export class WatchlistComponent implements OnInit, OnDestroy {
           this.pendingItems = pending;
           this.pendingStatus = pending.length ? `Pending watchlist items: ${pending.length}` : '';
           this.handlePendingRefresh();
-          this.notificationService.success('Watchlist seeded (dev).');
+          this.toastService.showSuccess('Watchlist: Seeded (dev).');
         },
-        error: () => {
-          this.notificationService.error('Watchlist', 'Unable to seed watchlist.');
+        error: (err: unknown) => {
+          const message = this.buildErrorMessage(err, 'Unable to seed watchlist.');
+          this.errorMessage = message;
+          this.toastService.showError(message);
         }
       });
   }
@@ -190,5 +199,14 @@ export class WatchlistComponent implements OnInit, OnDestroy {
     this.pendingRefreshSub = timer(5000, 5000).subscribe(() => {
       this.loadWatchlist();
     });
+  }
+
+  private buildErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof HttpErrorResponse) {
+      const apiError = mapHttpError(error);
+      const status = error.status ? ` (HTTP ${error.status})` : '';
+      return `${apiError.userMessage}${status}`;
+    }
+    return fallback;
   }
 }

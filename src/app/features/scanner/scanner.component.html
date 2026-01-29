@@ -4,7 +4,12 @@
       <h2>Scanner</h2>
       <p class="text-muted">Run on-demand scans against your watchlist or a manual universe.</p>
     </div>
-    <button class="btn btn-primary" type="button" (click)="runScan()" [disabled]="isLoading || scannerDisabled">
+    <button
+      class="btn btn-primary"
+      type="button"
+      (click)="runScan()"
+      [disabled]="isLoading || isRunning || scannerDisabled || isCooldownActive"
+    >
       <span *ngIf="isRunning">⏳ Scanning...</span>
       <span *ngIf="!isRunning">▶ Run Scan</span>
     </button>
@@ -16,6 +21,10 @@
 
   <div class="alert-banner alert-warning" *ngIf="scanStuckWarning">
     Scan appears stuck in {{ runStatus?.status || 'RUNNING' }}. Check diagnostics or backend health.
+  </div>
+
+  <div class="alert-banner alert-warning" *ngIf="isCooldownActive">
+    Rate limited. Retry available in {{ cooldownRemaining }}s.
   </div>
 
   <div class="page-card">

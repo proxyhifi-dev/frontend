@@ -16,8 +16,15 @@ export class DiagnosticsConsoleComponent {
   private readonly webSocketService = inject(WebSocketService);
   private readonly runtimeConfig = inject(RuntimeConfigService);
 
-  readonly httpCalls$ = this.diagnosticsStore.httpCalls$;
-  readonly lastBackendError$ = this.diagnosticsStore.lastBackendError$;
-  readonly wsStatus$ = this.webSocketService.connectionStatus$;
-  readonly runtimeConfig$ = this.runtimeConfig.config$;
+  readonly httpCalls$;
+  readonly lastBackendError$;
+  readonly wsStatus$;
+  readonly runtimeConfig$;
+
+  constructor() {
+    this.httpCalls$ = this.diagnosticsStore.httpCalls$;
+    this.lastBackendError$ = this.diagnosticsStore.lastBackendError$;
+    this.wsStatus$ = this.webSocketService.connectionStatus$;
+    this.runtimeConfig$ = this.runtimeConfig.config$;
+  }
 }
