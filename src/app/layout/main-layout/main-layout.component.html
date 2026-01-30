@@ -144,7 +144,7 @@
         <p class="alert-subtext">Awaiting backend emergency status updates.</p>
       </ng-template>
     </section>
-    <section class="status-banner" *ngIf="tradingStore.accountOverview$ | async as accountOverview">
+    <section class="status-banner">
       <div class="status-item">
         <span class="label">System Mode</span>
         <span class="value"
@@ -155,8 +155,8 @@
       <div class="status-item">
         <span class="label">Daily P&amp;L</span>
         <span class="value"
-              [class.negative]="(accountOverview.dailyPnl ?? 0) < 0">
-          {{ accountOverview.dailyPnl | currencyInr }}
+              [class.negative]="(tradingStore.accountOverview$ | async)?.dailyPnl < 0">
+          {{ (tradingStore.accountOverview$ | async)?.dailyPnl | currencyInr }}
         </span>
       </div>
       <div class="status-item">
