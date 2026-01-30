@@ -37,6 +37,20 @@
   border: 1px solid rgba(245, 158, 11, 0.4);
 }
 
+.mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  margin: 16px auto 0;
+  width: min(1260px, 94%);
+  border-radius: 12px;
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--danger);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  font-weight: 600;
+}
+
 .warning-banner .banner-content {
   display: flex;
   flex-direction: column;

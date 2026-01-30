@@ -3,8 +3,8 @@ import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { ModeStore } from './mode-store.service';
 import { SignalService } from './signal.service';
-import { RiskService } from './risk.service';
 import { NotificationService } from './notification.service';
+import { SafetyStatusService } from './safety-status.service';
 
 export interface Command {
   id: string;
@@ -34,8 +34,8 @@ export class CommandService {
     private router: Router,
     private modeStore: ModeStore,
     private signalService: SignalService,
-    private riskService: RiskService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private safetyStatus: SafetyStatusService
   ) {}
 
   toggle() {
@@ -66,7 +66,11 @@ export class CommandService {
   }
 
   private triggerEmergencyStop(): void {
-    this.riskService.triggerEmergencyStop().subscribe({
+    const confirmStop = prompt('Type "PANIC" to confirm the global kill switch:');
+    if (confirmStop !== 'PANIC') {
+      return;
+    }
+    this.safetyStatus.triggerGlobalPanic().subscribe({
       next: () => this.notificationService.warning('Emergency Stop', 'Risk kill switch activated.'),
       error: (err: unknown) => {
         const message = (err as { userMessage?: string })?.userMessage ?? 'Unable to trigger emergency stop.';
