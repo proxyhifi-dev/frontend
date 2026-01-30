@@ -72,6 +72,10 @@ export interface PositionView {
   exitTime?: string;
   isPaperTrade?: boolean;
   rMultiple?: number;
+  exitStatus?: string;
+  exitRetryCount?: number;
+  lastExitError?: string;
+  exitConfirmed?: boolean;
 }
 
 export interface Signal {

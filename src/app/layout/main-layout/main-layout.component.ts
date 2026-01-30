@@ -9,11 +9,14 @@ import { MobileNavComponent } from '../mobile-nav/mobile-nav.component';
 import { CommandPaletteComponent } from '../../shared/components/command-palette/command-palette.component';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
 import { ModeStore } from '../../core/services/mode-store.service';
+import { TradingStoreService } from '../../core/services/trading-store.service';
+import { SafetyStatusService } from '../../core/services/safety-status.service';
+import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, SidebarComponent, MobileNavComponent, CommandPaletteComponent],
+  imports: [CommonModule, RouterModule, FormsModule, SidebarComponent, MobileNavComponent, CommandPaletteComponent, CurrencyInrPipe],
   templateUrl: './main-layout.component.html',
   styleUrls: ['./main-layout.component.scss']
 })
@@ -26,6 +29,10 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   isConnected = false;
   lastUpdated?: Date;
   modeSupported = true;
+  panicConfirmOpen = false;
+  panicInput = '';
+  panicError = '';
+  panicSubmitting = false;
   private lastMode?: string;
   private destroy$ = new Subject<void>();
   private readonly routeTitles: Record<string, string> = {
@@ -51,7 +58,9 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
     public store: StoreService,
     private router: Router,
     private fyersOAuthService: FyersOAuthService,
-    public modeStore: ModeStore
+    public modeStore: ModeStore,
+    public tradingStore: TradingStoreService,
+    public safetyStatus: SafetyStatusService
   ) {}
 
   ngOnInit(): void {
@@ -117,6 +126,45 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
     }
     const nextMode = this.modeStore.snapshot === 'LIVE' ? 'PAPER' : 'LIVE';
     this.modeStore.setMode(nextMode).subscribe();
+  }
+
+  openPanicConfirm(): void {
+    this.panicConfirmOpen = true;
+    this.panicInput = '';
+    this.panicError = '';
+  }
+
+  closePanicConfirm(): void {
+    if (this.panicSubmitting) {
+      return;
+    }
+    this.panicConfirmOpen = false;
+    this.panicInput = '';
+    this.panicError = '';
+  }
+
+  confirmPanic(): void {
+    if (this.panicSubmitting) {
+      return;
+    }
+    if (this.panicInput.trim().toUpperCase() !== 'PANIC') {
+      this.panicError = 'You must type PANIC to confirm the global kill switch.';
+      return;
+    }
+    this.panicError = '';
+    this.panicSubmitting = true;
+    this.safetyStatus.triggerGlobalPanic().subscribe({
+      next: () => {
+        this.panicSubmitting = false;
+        this.panicConfirmOpen = false;
+        this.panicInput = '';
+      },
+      error: (err: unknown) => {
+        const message = (err as { userMessage?: string })?.userMessage ?? 'Unable to trigger global panic.';
+        this.panicError = message;
+        this.panicSubmitting = false;
+      }
+    });
   }
 
   private updatePageMeta(url: string): void {

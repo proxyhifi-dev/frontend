@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { Subject, finalize, takeUntil } from 'rxjs';
 import {
   RegimeStatus,
   ScoringSummary,
@@ -10,6 +10,7 @@ import {
 } from '../../core/services/strategy.service';
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
 import { SettingsService, TradingSettings } from '../../core/services/settings.service';
+import { SafetyStatusService, SystemMode } from '../../core/services/safety-status.service';
 
 @Component({
   selector: 'app-strategy',
@@ -18,7 +19,7 @@ import { SettingsService, TradingSettings } from '../../core/services/settings.s
   templateUrl: './strategy.component.html',
   styleUrls: ['./strategy.component.scss']
 })
-export class StrategyComponent implements OnInit {
+export class StrategyComponent implements OnInit, OnDestroy {
   config?: StrategyConfig;
   regime?: RegimeStatus;
   scoring: ScoringSummary[] = [];
@@ -32,14 +33,34 @@ export class StrategyComponent implements OnInit {
   settingsLoading = false;
   settingsError = '';
   savingSettings = false;
+  tradingLocked = false;
+  lockReason = '';
+  lockMode: SystemMode = 'NORMAL';
+  private destroy$ = new Subject<void>();
 
-  constructor(private strategyService: StrategyService, private settingsService: SettingsService) {}
+  constructor(
+    private strategyService: StrategyService,
+    private settingsService: SettingsService,
+    private safetyStatus: SafetyStatusService
+  ) {}
 
   ngOnInit(): void {
+    this.safetyStatus.lockState$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((state) => {
+        this.tradingLocked = state.locked;
+        this.lockReason = state.reason;
+        this.lockMode = state.mode;
+      });
     this.loadConfig();
     this.loadRegime();
     this.loadScoring();
     this.loadSettings();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadConfig(): void {
@@ -101,6 +122,10 @@ export class StrategyComponent implements OnInit {
   }
 
   saveSettings(): void {
+    if (this.tradingLocked) {
+      this.settingsError = this.lockReason || 'Trading controls are locked.';
+      return;
+    }
     if (!this.settings) return;
     const validationError = this.validateSettings(this.settings);
     if (validationError) {

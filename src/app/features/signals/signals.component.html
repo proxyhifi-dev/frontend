@@ -1,6 +1,6 @@
 <div class="signals-container fade-in">
-  <div class="mode-banner danger" *ngIf="safeMode">
-    <span>⛔ Safe mode enabled. {{ safeModeReason || 'Risk circuit breaker triggered.' }}</span>
+  <div class="mode-banner danger" *ngIf="tradingLocked">
+    <span>⛔ {{ lockMode }} — {{ lockReason || 'Trading controls are locked.' }}</span>
   </div>
   <div class="header-row">
     <div class="title-group">
@@ -31,7 +31,7 @@
           class="btn-primary"
           type="button"
           (click)="scanNow()"
-          [disabled]="safeMode || isScanRunning || isCooldownActive()"
+          [disabled]="tradingLocked || isScanRunning || isCooldownActive()"
         >
           ▶ Scan Now
         </button>
@@ -112,7 +112,7 @@
             <button
               class="btn-execute-big"
               (click)="executeSignal(s)"
-              [disabled]="!s.hasEntrySignal || safeMode || !executionSupported"
+              [disabled]="!s.hasEntrySignal || tradingLocked || !executionSupported"
               [attr.title]="executionSupported ? '' : 'Strategy execution is not supported by the current backend.'"
             >
               EXECUTE TRADE

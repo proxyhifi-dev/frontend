@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RiskService } from '../../core/services/risk.service';
+import { SafetyStatusService } from '../../core/services/safety-status.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { CorrelationMatrix, RiskStatus } from '../../core/models/domain.model';
@@ -33,7 +34,8 @@ export class RiskComponent implements OnInit {
     private notify: NotificationService,
     private botService: BotService,
     private positionService: PositionService,
-    private modeStore: ModeStore
+    private modeStore: ModeStore,
+    private safetyStatus: SafetyStatusService
   ) {}
 
   ngOnInit() {
@@ -59,9 +61,9 @@ export class RiskComponent implements OnInit {
   }
 
   emergencyStop() {
-    const confirmStop = prompt('Type "STOP" to confirm emergency liquidation of all positions:');
-    if (confirmStop === 'STOP') {
-      this.riskSvc.triggerEmergencyStop().subscribe({
+    const confirmStop = prompt('Type "PANIC" to confirm global kill switch activation:');
+    if (confirmStop === 'PANIC') {
+      this.safetyStatus.triggerGlobalPanic().subscribe({
         next: () => {
           this.notify.error('Emergency Stop', 'All positions closed. Bot stopped.');
           forkJoin({
