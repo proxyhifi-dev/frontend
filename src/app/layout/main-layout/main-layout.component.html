@@ -155,7 +155,7 @@
       <div class="status-item">
         <span class="label">Daily P&amp;L</span>
         <span class="value"
-              [class.negative]="(tradingStore.accountOverview$ | async)?.dailyPnl < 0">
+              [class.negative]="((tradingStore.accountOverview$ | async)?.dailyPnl ?? 0) < 0">
           {{ (tradingStore.accountOverview$ | async)?.dailyPnl | currencyInr }}
         </span>
       </div>
