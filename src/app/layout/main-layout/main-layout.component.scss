@@ -105,6 +105,26 @@
   gap: 12px;
 }
 
+.panic-button {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  color: #fff;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+}
+
+.panic-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 /* MODE TOGGLE */
 .mode-toggle {
   cursor: pointer;
@@ -201,9 +221,94 @@
   overflow-y: auto;
 }
 
+.safety-alert,
+.reconciliation-alert,
+.emergency-status {
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.safety-alert.active {
+  border-color: rgba(234, 179, 8, 0.6);
+  background: rgba(234, 179, 8, 0.12);
+}
+
+.safety-alert.emergency {
+  border-color: rgba(239, 68, 68, 0.7);
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.reconciliation-alert.blocking {
+  border-color: rgba(239, 68, 68, 0.7);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.alert-title {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+
+.alert-body {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.alert-body p {
+  margin: 4px 0;
+}
+
+.alert-strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.alert-subtext {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.emergency-status .status-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 8px;
+}
+
+.emergency-status .status-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.emergency-status .status-pill.complete {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.emergency-status .status-pill .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+}
+
+.emergency-status .status-pill .value {
+  font-weight: 600;
+  font-size: 12px;
+}
+
 .status-banner {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 16px;
   padding: 16px 18px;
   margin-bottom: 24px;
@@ -230,6 +335,14 @@
   font-weight: 600;
 }
 
+.status-item .value.alert {
+  color: var(--danger);
+}
+
+.status-item .value.negative {
+  color: var(--danger);
+}
+
 /* RESPONSIVE */
 .sidebar-area.collapsed { width: 64px; }
 @media (max-width: 1200px) {
@@ -238,7 +351,7 @@
 
 @media (max-width: 1024px) {
   .status-banner {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -269,4 +382,56 @@
   }
 
   .content-area { padding: 16px; padding-bottom: 80px; }
+}
+
+.panic-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panic-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 7, 14, 0.75);
+}
+
+.panic-panel {
+  position: relative;
+  z-index: 2;
+  width: min(480px, 90vw);
+  background: var(--bg-card);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panic-panel h3 {
+  margin: 0;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.panic-panel .error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.panic-panel .actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.app-container.emergency-mode .top-bar {
+  border-bottom-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
 }

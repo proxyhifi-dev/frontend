@@ -1,4 +1,6 @@
-<div class="app-container" [class.live-mode]="(modeStore.isLive$ | async)">
+<div class="app-container"
+     [class.live-mode]="(modeStore.isLive$ | async)"
+     [class.emergency-mode]="(safetyStatus.emergencyMode$ | async)">
 
   <app-command-palette></app-command-palette>
 
@@ -8,6 +10,15 @@
         <div class="page-title">{{ pageTitle }}</div>
         <div class="breadcrumb">{{ breadcrumb }}</div>
       </div>
+      <button
+        type="button"
+        class="panic-button mobile-only"
+        (click)="openPanicConfirm()"
+        [disabled]="!safetyStatus.isPanicSupported()"
+        [attr.title]="safetyStatus.isPanicSupported() ? 'Trigger global kill switch' : 'Kill switch not available on this backend'"
+      >
+        PANIC
+      </button>
     </div>
 
     <div class="center-section">
@@ -30,6 +41,15 @@
     </div>
 
     <div class="right-section desktop-only">
+      <button
+        type="button"
+        class="panic-button"
+        (click)="openPanicConfirm()"
+        [disabled]="!safetyStatus.isPanicSupported()"
+        [attr.title]="safetyStatus.isPanicSupported() ? 'Trigger global kill switch' : 'Kill switch not available on this backend'"
+      >
+        GLOBAL PANIC
+      </button>
       <button
         type="button"
         class="mode-toggle"
@@ -68,7 +88,89 @@
   </app-sidebar>
 
   <main class="content-area">
+    <section class="safety-alert"
+             *ngIf="(safetyStatus.lockState$ | async) as lockState"
+             [class.active]="lockState.locked"
+             [class.emergency]="lockState.mode === 'EMERGENCY'"
+             [class.safe]="lockState.mode === 'SAFE MODE'">
+      <div class="alert-title">{{ lockState.mode }}</div>
+      <div class="alert-body" *ngIf="lockState.locked">
+        <p>{{ lockState.reason }}</p>
+        <p class="alert-subtext">Trading controls are disabled until the system returns to NORMAL.</p>
+      </div>
+      <div class="alert-body" *ngIf="!lockState.locked">
+        <p>System operating within guardrails.</p>
+      </div>
+    </section>
+
+    <section class="reconciliation-alert"
+             *ngIf="(safetyStatus.reconciliation$ | async) as reconciliation"
+             [class.blocking]="reconciliation?.mismatch">
+      <div class="alert-title">Reconciliation Status</div>
+      <div class="alert-body" *ngIf="reconciliation?.mismatch; else reconciliationOk">
+        <p class="alert-strong">Blocking mismatch detected. New trades are locked.</p>
+        <p>{{ reconciliation?.reason || 'Positions or balances do not reconcile with broker.' }}</p>
+        <p *ngIf="reconciliation?.affectedSymbols?.length">
+          Affected symbols: {{ reconciliation?.affectedSymbols?.join(', ') }}.
+        </p>
+      </div>
+      <ng-template #reconciliationOk>
+        <p>No mismatches reported.</p>
+      </ng-template>
+    </section>
+
+    <section class="emergency-status"
+             *ngIf="(safetyStatus.emergencyMode$ | async)"
+             [class.active]="(safetyStatus.emergencyMode$ | async)">
+      <div class="alert-title">Emergency Status</div>
+      <div class="alert-body" *ngIf="(safetyStatus.emergencyStatus$ | async) as emergencyStatus; else emergencyFallback">
+        <div class="status-grid">
+          <div class="status-pill" [class.complete]="emergencyStatus?.cancellingOrders">
+            <span class="label">Cancelling orders</span>
+            <span class="value">{{ emergencyStatus?.cancellingOrders ? 'IN PROGRESS / DONE' : 'PENDING' }}</span>
+          </div>
+          <div class="status-pill" [class.complete]="emergencyStatus?.flatteningPositions">
+            <span class="label">Flattening positions</span>
+            <span class="value">{{ emergencyStatus?.flatteningPositions ? 'IN PROGRESS / DONE' : 'PENDING' }}</span>
+          </div>
+          <div class="status-pill" [class.complete]="emergencyStatus?.tokensRevoked">
+            <span class="label">Tokens revoked</span>
+            <span class="value">{{ emergencyStatus?.tokensRevoked ? 'IN PROGRESS / DONE' : 'PENDING' }}</span>
+          </div>
+        </div>
+        <p class="alert-subtext" *ngIf="emergencyStatus?.message">{{ emergencyStatus?.message }}</p>
+      </div>
+      <ng-template #emergencyFallback>
+        <p class="alert-subtext">Awaiting backend emergency status updates.</p>
+      </ng-template>
+    </section>
     <section class="status-banner">
+      <div class="status-item">
+        <span class="label">System Mode</span>
+        <span class="value"
+              [class.alert]="(safetyStatus.systemMode$ | async) !== 'NORMAL'">
+          {{ safetyStatus.systemMode$ | async }}
+        </span>
+      </div>
+      <div class="status-item">
+        <span class="label">Daily P&amp;L</span>
+        <span class="value"
+              [class.negative]="(tradingStore.accountOverview$ | async)?.dailyPnl < 0">
+          {{ (tradingStore.accountOverview$ | async)?.dailyPnl | currencyInr }}
+        </span>
+      </div>
+      <div class="status-item">
+        <span class="label">Remaining Loss Buffer</span>
+        <span class="value">
+          {{ (tradingStore.riskSummary$ | async)?.bufferRemaining | currencyInr }}
+        </span>
+      </div>
+      <div class="status-item">
+        <span class="label">Exposure / Heat</span>
+        <span class="value">
+          {{ (tradingStore.riskSummary$ | async)?.portfolioHeat ?? 0 }}%
+        </span>
+      </div>
       <div class="status-item">
         <span class="label">Mode</span>
         <span class="value">{{ (modeStore.mode$ | async) || 'PAPER' }}</span>
@@ -76,10 +178,6 @@
       <div class="status-item">
         <span class="label">Data Source</span>
         <span class="value">{{ dataSource }}</span>
-      </div>
-      <div class="status-item">
-        <span class="label">Last Updated</span>
-        <span class="value">{{ lastUpdated ? (lastUpdated | date:'short') : '—' }}</span>
       </div>
       <div class="status-item">
         <span class="label">Connection</span>
@@ -99,4 +197,31 @@
 
   <app-mobile-nav class="mobile-nav-area mobile-only"></app-mobile-nav>
 
+</div>
+
+<div class="panic-modal" *ngIf="panicConfirmOpen">
+  <div class="panic-backdrop" (click)="closePanicConfirm()"></div>
+  <div class="panic-panel">
+    <h3>GLOBAL PANIC CONFIRMATION</h3>
+    <p>
+      This will cancel all orders, flatten all positions, and revoke trading tokens. Trading will remain locked in
+      EMERGENCY MODE until operations clear the incident.
+    </p>
+    <label for="panic-input">Type <strong>PANIC</strong> to confirm:</label>
+    <input
+      id="panic-input"
+      type="text"
+      class="dark-input"
+      [(ngModel)]="panicInput"
+      [disabled]="panicSubmitting"
+      autocomplete="off"
+    >
+    <div class="error" *ngIf="panicError">{{ panicError }}</div>
+    <div class="actions">
+      <button type="button" class="btn-outline" (click)="closePanicConfirm()" [disabled]="panicSubmitting">Cancel</button>
+      <button type="button" class="btn-danger" (click)="confirmPanic()" [disabled]="panicSubmitting">
+        {{ panicSubmitting ? 'Triggering…' : 'Confirm PANIC' }}
+      </button>
+    </div>
+  </div>
 </div>

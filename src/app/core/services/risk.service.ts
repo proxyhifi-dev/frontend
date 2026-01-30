@@ -41,6 +41,30 @@ export class RiskService {
     return of({ triggered: false });
   }
 
+  getEmergencyStatus(): Observable<EmergencyStatus | null> {
+    const endpoint = this.resolveEndpoint([
+      { method: 'GET', path: '/risk/emergency-status' },
+      { method: 'GET', path: '/risk/kill-switch/status' },
+      { method: 'GET', path: '/guard/kill-switch/status' }
+    ]);
+    if (!endpoint) {
+      return of(null);
+    }
+    return this.http.get<EmergencyStatus>(endpoint);
+  }
+
+  getReconciliationStatus(): Observable<ReconciliationStatus | null> {
+    const endpoint = this.resolveEndpoint([
+      { method: 'GET', path: '/reconciliation/status' },
+      { method: 'GET', path: '/risk/reconciliation/status' },
+      { method: 'GET', path: '/risk/reconciliation' }
+    ]);
+    if (!endpoint) {
+      return of(null);
+    }
+    return this.http.get<ReconciliationStatus>(endpoint);
+  }
+
   clearGuard(): Observable<void> {
     if (!this.runtimeConfig.hasEndpoint('/guard/clear')) {
       return throwError(() => ({
@@ -51,8 +75,32 @@ export class RiskService {
     return this.http.post<void>('/guard/clear', {});
   }
 
+  isEmergencyStopSupported(): boolean {
+    return !!this.resolveEndpoint([
+      { method: 'POST', path: '/risk/emergency-stop' },
+      { method: 'POST', path: '/risk/kill-switch' },
+      { method: 'POST', path: '/guard/kill-switch' }
+    ]);
+  }
+
   triggerEmergencyStop(): Observable<void> {
-    return this.http.post<void>('/risk/emergency-stop', {});
+    const endpoint = this.resolveEndpoint([
+      { method: 'POST', path: '/risk/emergency-stop' },
+      { method: 'POST', path: '/risk/kill-switch' },
+      { method: 'POST', path: '/guard/kill-switch' }
+    ]);
+    if (!endpoint) {
+      return throwError(() => ({
+        status: 404,
+        userMessage: 'Emergency kill switch endpoint not available on this backend.'
+      } as ApiError));
+    }
+    return this.http.post<void>(endpoint, {});
+  }
+
+  private resolveEndpoint(entries: Array<{ method: string; path: string }>): string | null {
+    const match = entries.find((entry) => this.runtimeConfig.hasEndpoint(entry.method, entry.path));
+    return match?.path ?? null;
   }
 }
 
@@ -63,4 +111,19 @@ export interface CircuitBreakerStatus {
   dailyLossLimit?: number;
   portfolioHeat?: number;
   lastTriggeredAt?: string;
+}
+
+export interface EmergencyStatus {
+  cancellingOrders?: boolean;
+  flatteningPositions?: boolean;
+  tokensRevoked?: boolean;
+  message?: string;
+  updatedAt?: string;
+}
+
+export interface ReconciliationStatus {
+  mismatch: boolean;
+  reason?: string;
+  affectedSymbols?: string[];
+  updatedAt?: string;
 }

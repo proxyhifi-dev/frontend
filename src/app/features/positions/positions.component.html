@@ -1,12 +1,12 @@
 <div class="positions-page fade-in">
-  <div class="mode-banner danger" *ngIf="safeMode">
-    ⛔ Safe mode enabled. {{ safeModeReason || 'Risk circuit breaker triggered.' }}
+  <div class="mode-banner danger" *ngIf="tradingLocked">
+    ⛔ {{ lockMode }} — {{ lockReason || 'Trading controls are locked.' }}
   </div>
   <div class="header-row">
     <h2>POSITIONS</h2>
     <div class="tabs">
       <button class="tab-btn" [class.active]="activeTab === 'open'" (click)="activeTab = 'open'">
-        🔴 OPEN ({{ openPositions.length }})
+        🔴 OPEN ({{ openPositions.length + exitRetryingPositions.length }})
       </button>
       <button class="tab-btn" [class.active]="activeTab === 'closed'" (click)="activeTab = 'closed'">
         🟢 CLOSED ({{ closedPositions.length }})
@@ -35,15 +35,48 @@
         <th>Entry</th>
         <th>LTP</th>
         <th>P&L</th>
+        <th>Status</th>
         <th>Actions</th>
       </tr>
       </thead>
       <tbody>
       <tr *ngIf="isLoading">
-        <td colspan="5" class="empty-state">Loading open positions...</td>
+        <td colspan="6" class="empty-state">Loading open positions...</td>
       </tr>
       <tr *ngIf="!isLoading && openError">
-        <td colspan="5" class="empty-state text-red">{{ openError }}</td>
+        <td colspan="6" class="empty-state text-red">{{ openError }}</td>
+      </tr>
+      <tr *ngFor="let pos of exitRetryingPositions" class="exit-retrying">
+        <td>
+          <div class="symbol-col">
+            <span class="symbol-text">{{ pos.symbol }}</span>
+            <span class="badge warning">EXIT RETRYING</span>
+          </div>
+        </td>
+        <td>{{ pos.entryPrice | currencyInr }}</td>
+        <td class="live-val">{{ pos.currentPrice | currencyInr }}</td>
+        <td [class.positive]="pos.pnl >= 0" [class.negative]="pos.pnl < 0">
+          {{ pos.pnl | currencyInr }}
+        </td>
+        <td>
+          <div class="exit-status">
+            EXIT RETRYING
+            <div class="exit-details">
+              Retries: {{ pos.exitRetryCount ?? 0 }}<span *ngIf="pos.lastExitError"> · {{ pos.lastExitError }}</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <button
+            class="btn btn-danger btn-sm"
+            type="button"
+            (click)="closePosition(pos)"
+            [disabled]="!supportsClose || tradingLocked"
+            [attr.title]="tradingLocked ? 'Trading locked' : (supportsClose ? 'Close position' : 'Not supported yet')"
+          >
+            Close
+          </button>
+        </td>
       </tr>
       <tr *ngFor="let pos of openPositions">
         <td>
@@ -58,19 +91,27 @@
           {{ pos.pnl | currencyInr }}
         </td>
         <td>
+          <div class="exit-status" [class.retrying]="isExitRetrying(pos)">
+            {{ getExitStatusLabel(pos) }}
+            <div class="exit-details" *ngIf="isExitRetrying(pos)">
+              Retries: {{ pos.exitRetryCount ?? 0 }}<span *ngIf="pos.lastExitError"> · {{ pos.lastExitError }}</span>
+            </div>
+          </div>
+        </td>
+        <td>
           <button
             class="btn btn-danger btn-sm"
             type="button"
             (click)="closePosition(pos)"
-            [disabled]="!supportsClose || safeMode"
-            [attr.title]="safeMode ? 'Safe mode enabled' : (supportsClose ? 'Close position' : 'Not supported yet')"
+            [disabled]="!supportsClose || tradingLocked"
+            [attr.title]="tradingLocked ? 'Trading locked' : (supportsClose ? 'Close position' : 'Not supported yet')"
           >
             Close
           </button>
         </td>
       </tr>
-      <tr *ngIf="!isLoading && !openError && openPositions.length === 0">
-        <td colspan="5" class="empty-state">No open positions</td>
+      <tr *ngIf="!isLoading && !openError && openPositions.length === 0 && exitRetryingPositions.length === 0">
+        <td colspan="6" class="empty-state">No open positions</td>
       </tr>
       </tbody>
     </table>
