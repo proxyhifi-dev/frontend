@@ -24,7 +24,7 @@ import { StrategyHealth } from '../../../core/services/trading-store.service';
         <button
           type="button"
           class="btn-outline"
-          [disabled]="!health.canManage || health.isPaused"
+          [disabled]="controlsLocked || !health.canManage || health.isPaused"
           (click)="pause.emit()"
         >
           Pause Trading
@@ -32,7 +32,7 @@ import { StrategyHealth } from '../../../core/services/trading-store.service';
         <button
           type="button"
           class="btn-primary"
-          [disabled]="!health.canManage || !health.isPaused"
+          [disabled]="controlsLocked || !health.canManage || !health.isPaused"
           (click)="resume.emit()"
         >
           Resume Trading
@@ -133,6 +133,7 @@ import { StrategyHealth } from '../../../core/services/trading-store.service';
 })
 export class StrategyHealthWidgetComponent {
   @Input() health: StrategyHealth | null = null;
+  @Input() controlsLocked = false;
   @Output() pause = new EventEmitter<void>();
   @Output() resume = new EventEmitter<void>();
 }

@@ -13,6 +13,7 @@ import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
 import { PositionView } from '../../core/models/domain.model';
 import { StrategyHealthWidgetComponent } from './components/strategy-health-widget.component';
 import { ModeStore } from '../../core/services/mode-store.service';
+import { SafetyStatusService, SafetyLockState } from '../../core/services/safety-status.service';
 
 interface SortState {
   key: 'symbol' | 'pnl' | 'rMultiple' | 'stopDistance' | 'timeHeld';
@@ -46,6 +47,7 @@ export class DashboardComponent {
   private store = inject(StoreService);
   private modeStore = inject(ModeStore);
   private tradingStore = inject(TradingStoreService);
+  private safetyStatus = inject(SafetyStatusService);
 
   private readonly refreshTrigger$ = new Subject<void>();
   private readonly sortState$ = new BehaviorSubject<SortState>({ key: 'pnl', direction: 'desc' });
@@ -130,6 +132,7 @@ export class DashboardComponent {
     mode: this.modeStore.mode$,
     modeSupported: this.modeStore.modeSupported$,
     botControlSupported: this.botControlSupported$,
+    lockState: this.safetyStatus.lockState$,
     // allow template to safely optional-chain user fields during initial load
     user: this.store.state$.pipe(map((state) => state.user ?? null))
   }).pipe(
@@ -165,15 +168,23 @@ export class DashboardComponent {
     this.sortState$.next({ key, direction });
   }
 
-  toggleMode(isLiveMode: boolean, modeSupported: boolean): void {
-    if (!modeSupported) {
+  toggleMode(isLiveMode: boolean, modeSupported: boolean, lockState: SafetyLockState): void {
+    if (!modeSupported || lockState.locked) {
       return;
     }
     const nextMode = isLiveMode ? 'PAPER' : 'LIVE';
     this.modeStore.setMode(nextMode).subscribe();
   }
 
-  toggleKillSwitch(isPaused: boolean, botControlSupported: boolean): void {
+  toggleKillSwitch(isPaused: boolean, botControlSupported: boolean, lockState: SafetyLockState): void {
+    if (lockState.locked) {
+      this.tradingStore.addAlert({
+        type: 'warning',
+        message: lockState.reason || 'Trading controls are locked.',
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
     if (!botControlSupported) {
       this.tradingStore.addAlert({
         type: 'warning',

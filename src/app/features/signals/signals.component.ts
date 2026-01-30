@@ -7,10 +7,10 @@ import { NotificationService } from '../../core/services/notification.service';
 import { Signal, SignalDetail } from '../../core/models/domain.model';
 import { StoreService } from '../../core/services/store.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
-import { RiskService } from '../../core/services/risk.service';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { EntityDetailsComponent } from '../../shared/components/entity-details/entity-details.component';
 import { ScanStoreService } from '../../core/services/scan-store.service';
+import { SafetyStatusService, SystemMode } from '../../core/services/safety-status.service';
 
 @Component({
   selector: 'app-signals',
@@ -27,8 +27,9 @@ export class SignalsComponent implements OnInit, OnDestroy {
   searchTerm = '';
   isLoading = false;
   errorMessage = '';
-  safeMode = false;
-  safeModeReason = '';
+  tradingLocked = false;
+  lockReason = '';
+  lockMode: SystemMode = 'NORMAL';
   selectedSignal?: SignalDetail;
   isDrawerOpen = false;
   detailLoading = false;
@@ -47,13 +48,19 @@ export class SignalsComponent implements OnInit, OnDestroy {
     private notify: NotificationService,
     private store: StoreService,
     private modeStore: ModeStore,
-    private riskService: RiskService,
-    private scanStore: ScanStoreService
+    private scanStore: ScanStoreService,
+    private safetyStatus: SafetyStatusService
   ) {}
 
   ngOnInit() {
     this.loadSignals();
-    this.loadCircuitBreaker();
+    this.safetyStatus.lockState$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((state) => {
+        this.tradingLocked = state.locked;
+        this.lockReason = state.reason;
+        this.lockMode = state.mode;
+      });
     this.store.state$
       .pipe(takeUntil(this.destroy$))
       .subscribe((state) => {
@@ -134,8 +141,8 @@ export class SignalsComponent implements OnInit, OnDestroy {
   }
 
   scanNow() {
-    if (this.safeMode) {
-      this.notify.warning('Safe Mode', this.safeModeReason || 'Risk circuit breaker triggered.');
+    if (this.tradingLocked) {
+      this.notify.warning(this.lockMode, this.lockReason || 'Trading controls are locked.');
       return;
     }
     if (this.isScanRunning || this.isCooldownActive()) {
@@ -193,8 +200,8 @@ export class SignalsComponent implements OnInit, OnDestroy {
   }
 
   executeSignal(signal: Signal): void {
-    if (this.safeMode) {
-      this.notify.warning('Safe Mode', this.safeModeReason || 'Risk circuit breaker triggered.');
+    if (this.tradingLocked) {
+      this.notify.warning(this.lockMode, this.lockReason || 'Trading controls are locked.');
       return;
     }
     if (!signal.hasEntrySignal) {
@@ -264,16 +271,4 @@ export class SignalsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadCircuitBreaker(): void {
-    this.riskService.getCircuitBreakerStatus().pipe(takeUntil(this.destroy$)).subscribe({
-      next: (status) => {
-        this.safeMode = !!status?.triggered;
-        this.safeModeReason = status?.reason ?? '';
-      },
-      error: () => {
-        this.safeMode = false;
-        this.safeModeReason = '';
-      }
-    });
-  }
 }

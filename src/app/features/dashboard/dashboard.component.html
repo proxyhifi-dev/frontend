@@ -19,6 +19,10 @@
     <a class="btn-retry" routerLink="/settings">Open Settings</a>
   </div>
 
+  <div class="mode-banner danger" *ngIf="vm.lockState.locked">
+    ⛔ {{ vm.lockState.mode }} — {{ vm.lockState.reason || 'Trading controls are locked.' }}
+  </div>
+
   <section class="dashboard-shell">
     <header class="terminal-header">
       <div class="header-left">
@@ -43,8 +47,8 @@
         <button
           class="mode-toggle"
           type="button"
-          (click)="toggleMode(vm.isLiveMode, vm.modeSupported)"
-          [disabled]="!vm.modeSupported"
+          (click)="toggleMode(vm.isLiveMode, vm.modeSupported, vm.lockState)"
+          [disabled]="!vm.modeSupported || vm.lockState.locked"
           [attr.title]="vm.modeSupported ? '' : 'Mode switching is not supported by the current backend.'"
           [attr.aria-label]="vm.isLiveMode ? 'Switch to paper mode' : 'Switch to live mode'"
         >
@@ -54,8 +58,8 @@
           class="kill-switch"
           type="button"
           [class.active]="vm.strategyHealth.isPaused"
-          (click)="toggleKillSwitch(vm.strategyHealth.isPaused, vm.botControlSupported)"
-          [disabled]="!vm.strategyHealth.canManage || !vm.botControlSupported"
+          (click)="toggleKillSwitch(vm.strategyHealth.isPaused, vm.botControlSupported, vm.lockState)"
+          [disabled]="!vm.strategyHealth.canManage || !vm.botControlSupported || vm.lockState.locked"
           [attr.title]="vm.botControlSupported ? '' : 'Bot control is not supported by the current backend.'"
           [attr.aria-label]="vm.strategyHealth.isPaused ? 'Resume trading' : 'Pause trading'"
         >
@@ -107,8 +111,9 @@
         <app-strategy-health-widget
           class="strategy-widget"
           [health]="vm.strategyHealth"
-          (pause)="toggleKillSwitch(false, vm.botControlSupported)"
-          (resume)="toggleKillSwitch(true, vm.botControlSupported)"
+          [controlsLocked]="vm.lockState.locked"
+          (pause)="toggleKillSwitch(false, vm.botControlSupported, vm.lockState)"
+          (resume)="toggleKillSwitch(true, vm.botControlSupported, vm.lockState)"
         ></app-strategy-health-widget>
       </div>
       <ng-template #accountSkeleton>

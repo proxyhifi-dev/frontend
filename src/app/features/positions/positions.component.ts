@@ -7,7 +7,7 @@ import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PositionView } from '../../core/models/domain.model';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
-import { RiskService } from '../../core/services/risk.service';
+import { SafetyStatusService, SystemMode } from '../../core/services/safety-status.service';
 
 @Component({
   selector: 'app-positions',
@@ -25,8 +25,10 @@ export class PositionsComponent implements OnInit, OnDestroy {
   closedError = '';
   supportsClose = false;
   exportSupported = false;
-  safeMode = false;
-  safeModeReason = '';
+  tradingLocked = false;
+  lockReason = '';
+  lockMode: SystemMode = 'NORMAL';
+  exitRetryingPositions: PositionView[] = [];
   private lastMode?: string;
   private destroy$ = new Subject<void>();
 
@@ -34,12 +36,18 @@ export class PositionsComponent implements OnInit, OnDestroy {
     private positionSvc: PositionService,
     private notify: NotificationService,
     private modeStore: ModeStore,
-    private riskService: RiskService
+    private safetyStatus: SafetyStatusService
   ) {}
 
   ngOnInit() {
     this.refresh();
-    this.loadCircuitBreaker();
+    this.safetyStatus.lockState$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((state) => {
+        this.tradingLocked = state.locked;
+        this.lockReason = state.reason;
+        this.lockMode = state.mode;
+      });
     this.positionSvc.closeSupported$
       .pipe(takeUntil(this.destroy$))
       .subscribe((supported) => {
@@ -82,17 +90,20 @@ export class PositionsComponent implements OnInit, OnDestroy {
       finalize(() => (this.isLoading = false))
     ).subscribe({
       next: (data) => {
-        this.closedPositions = data;
+        const list = data ?? [];
+        this.exitRetryingPositions = list.filter((pos) => this.isExitRetrying(pos) || pos.exitConfirmed === false);
+        this.closedPositions = list.filter((pos) => !this.isExitRetrying(pos) && pos.exitConfirmed !== false);
       },
       error: () => {
         this.closedError = 'Failed to load closed positions.';
+        this.exitRetryingPositions = [];
       }
     });
   }
 
   closePosition(pos: PositionView) {
-    if (this.safeMode) {
-      this.notify.warning('Safe Mode', this.safeModeReason || 'Risk circuit breaker triggered.');
+    if (this.tradingLocked) {
+      this.notify.warning(this.lockMode, this.lockReason || 'Trading controls are locked.');
       return;
     }
     if (!this.supportsClose) {
@@ -128,16 +139,12 @@ export class PositionsComponent implements OnInit, OnDestroy {
     window.open(exportUrl, '_blank');
   }
 
-  private loadCircuitBreaker(): void {
-    this.riskService.getCircuitBreakerStatus().pipe(takeUntil(this.destroy$)).subscribe({
-      next: (status) => {
-        this.safeMode = !!status?.triggered;
-        this.safeModeReason = status?.reason ?? '';
-      },
-      error: () => {
-        this.safeMode = false;
-        this.safeModeReason = '';
-      }
-    });
+  isExitRetrying(pos: PositionView): boolean {
+    const status = pos.exitStatus?.toUpperCase();
+    return status === 'RETRYING' || status === 'EXIT_RETRYING';
+  }
+
+  getExitStatusLabel(pos: PositionView): string {
+    return this.isExitRetrying(pos) ? 'EXIT RETRYING' : 'OPEN';
   }
 }
