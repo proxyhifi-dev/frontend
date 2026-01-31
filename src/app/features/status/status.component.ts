@@ -11,6 +11,7 @@ import {
 } from '../../core/services/diagnostics.service';
 import { BackendLogsService } from '../../core/services/backend-logs.service';
 import { environment } from '../../../environments/environment';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-status',
@@ -34,6 +35,7 @@ export class StatusComponent implements OnInit, OnDestroy {
   logsError = '';
   logLines: string[] = [];
   isDevMode = !environment.production;
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   private destroy$ = new Subject<void>();
 

@@ -41,10 +41,13 @@
       </thead>
       <tbody>
       <tr *ngIf="isLoading">
-        <td colspan="6" class="empty-state">Loading open positions...</td>
+        <td colspan="6" class="empty-state">{{ emptyStates.positions.loadingOpen }}</td>
       </tr>
       <tr *ngIf="!isLoading && openError">
-        <td colspan="6" class="empty-state text-red">{{ openError }}</td>
+        <td colspan="6" class="empty-state text-red">
+          {{ openError }}
+          <button class="btn btn-ghost btn-sm" type="button" (click)="refresh()">Retry</button>
+        </td>
       </tr>
       <tr *ngFor="let pos of exitRetryingPositions" class="exit-retrying">
         <td>
@@ -111,7 +114,7 @@
         </td>
       </tr>
       <tr *ngIf="!isLoading && !openError && openPositions.length === 0 && exitRetryingPositions.length === 0">
-        <td colspan="6" class="empty-state">No open positions</td>
+        <td colspan="6" class="empty-state">{{ emptyStates.positions.emptyOpen }}</td>
       </tr>
       </tbody>
     </table>
@@ -131,10 +134,13 @@
       </thead>
       <tbody>
       <tr *ngIf="isLoading">
-        <td colspan="6" class="empty-state">Loading closed positions...</td>
+        <td colspan="6" class="empty-state">{{ emptyStates.positions.loadingClosed }}</td>
       </tr>
       <tr *ngIf="!isLoading && closedError">
-        <td colspan="6" class="empty-state text-red">{{ closedError }}</td>
+        <td colspan="6" class="empty-state text-red">
+          {{ closedError }}
+          <button class="btn btn-ghost btn-sm" type="button" (click)="refresh()">Retry</button>
+        </td>
       </tr>
       <tr *ngFor="let pos of closedPositions">
         <td><span class="symbol-text">{{ pos.symbol }}</span></td>
@@ -151,7 +157,7 @@
         </td>
       </tr>
       <tr *ngIf="!isLoading && !closedError && closedPositions.length === 0">
-        <td colspan="6" class="empty-state">No closed positions</td>
+        <td colspan="6" class="empty-state">{{ emptyStates.positions.emptyClosed }}</td>
       </tr>
       </tbody>
     </table>

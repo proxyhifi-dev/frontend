@@ -72,7 +72,7 @@ export class FyersCallbackComponent implements OnInit {
               
               // Navigate to dashboard
               setTimeout(() => {
-                this.router.navigate(['/dashboard']);
+                this.router.navigate(['/signals']);
               }, 1000);
             } 
             // Legacy flow: message-only response (requires login)
@@ -88,7 +88,7 @@ export class FyersCallbackComponent implements OnInit {
               this.notificationService.success('✅ Fyers authentication completed');
               
               setTimeout(() => {
-                this.router.navigate(['/dashboard']);
+                this.router.navigate(['/signals']);
               }, 1000);
             }
           },

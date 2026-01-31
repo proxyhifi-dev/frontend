@@ -11,6 +11,7 @@ import {
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
 import { SettingsService, TradingSettings } from '../../core/services/settings.service';
 import { SafetyStatusService, SystemMode } from '../../core/services/safety-status.service';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-strategy',
@@ -36,6 +37,7 @@ export class StrategyComponent implements OnInit, OnDestroy {
   tradingLocked = false;
   lockReason = '';
   lockMode: SystemMode = 'NORMAL';
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
   private destroy$ = new Subject<void>();
 
   constructor(

@@ -12,6 +12,7 @@ import {
 } from 'ng-apexcharts';
 import { RiskService } from '../../core/services/risk.service';
 import { CorrelationMatrix } from '../../core/models/domain.model';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 interface CorrelationRow {
   pair: string;
@@ -32,6 +33,7 @@ export class RiskCorrelationComponent {
   correlationRegime = 'Unknown';
   loading = false;
   correlations: CorrelationRow[] = [];
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   heatGaugeOptions: {
     series: number[];

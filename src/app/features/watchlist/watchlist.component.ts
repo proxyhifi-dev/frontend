@@ -5,9 +5,9 @@ import { Subscription, finalize, timer } from 'rxjs';
 import { WatchlistService } from '../../core/services/watchlist.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ApiClientService } from '../../core/services/api-client.service';
-import { environment } from '../../../environments/environment';
 import { HttpErrorResponse } from '@angular/common/http';
 import { mapHttpError } from '../../core/utils/api-error';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-watchlist',
@@ -24,7 +24,7 @@ export class WatchlistComponent implements OnInit, OnDestroy {
   errorMessage = '';
   pendingItems: string[] = [];
   pendingStatus = '';
-  isDevMode = environment.enableDevTools;
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   private pendingRefreshSub?: Subscription;
 
@@ -126,28 +126,6 @@ export class WatchlistComponent implements OnInit, OnDestroy {
         this.toastService.showError(message);
       }
     });
-  }
-
-  seedWatchlist(): void {
-    this.isLoading = true;
-    this.apiClient
-      .seedWatchlist(100)
-      .pipe(finalize(() => (this.isLoading = false)))
-      .subscribe({
-        next: (response) => {
-          const { symbols, pending } = this.normalizeWatchlist(response);
-          this.symbols = symbols;
-          this.pendingItems = pending;
-          this.pendingStatus = pending.length ? `Pending watchlist items: ${pending.length}` : '';
-          this.handlePendingRefresh();
-          this.toastService.showSuccess('Watchlist: Seeded (dev).');
-        },
-        error: (err: unknown) => {
-          const message = this.buildErrorMessage(err, 'Unable to seed watchlist.');
-          this.errorMessage = message;
-          this.toastService.showError(message);
-        }
-      });
   }
 
   refreshWatchlist(): void {

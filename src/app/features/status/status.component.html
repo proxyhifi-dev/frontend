@@ -20,7 +20,7 @@
   <div class="page-card">
     <div class="card-header">
       <h3>Backend Health</h3>
-      <span class="text-muted" *ngIf="isLoading">Loading...</span>
+      <span class="text-muted" *ngIf="isLoading">{{ emptyStates.genericLoading }}</span>
     </div>
     <div *ngIf="health as healthData; else healthUnavailable" class="status-grid">
       <div>
@@ -44,10 +44,13 @@
   <div class="page-card">
     <div class="card-header">
       <h3>System Diagnostics</h3>
-      <span class="text-muted" *ngIf="diagnosticsLoading">Loading...</span>
+      <span class="text-muted" *ngIf="diagnosticsLoading">{{ emptyStates.status.diagnosticsLoading }}</span>
     </div>
     <ng-container *ngIf="diagnosticsSupported; else diagnosticsUnavailable">
-      <p class="error-text" *ngIf="diagnosticsError">{{ diagnosticsError }}</p>
+      <p class="error-text" *ngIf="diagnosticsError">
+        {{ diagnosticsError }}
+        <button class="btn btn-ghost btn-sm" type="button" (click)="loadDiagnostics()">Retry</button>
+      </p>
       <ul class="diagnostic-list" *ngIf="diagnosticsItems.length > 0">
         <li *ngFor="let item of diagnosticsItems">
           <span
@@ -93,12 +96,15 @@
   <div class="page-card" *ngIf="logsSupported">
     <div class="card-header">
       <h3>Backend Logs</h3>
-      <span class="text-muted" *ngIf="logsLoading">Loading...</span>
+      <span class="text-muted" *ngIf="logsLoading">{{ emptyStates.status.logsLoading }}</span>
     </div>
     <details>
       <summary>View latest log lines</summary>
       <p class="text-muted" *ngIf="isDevMode">Auto-refreshing every few seconds (dev mode).</p>
-      <p class="error-text" *ngIf="logsError">{{ logsError }}</p>
+      <p class="error-text" *ngIf="logsError">
+        {{ logsError }}
+        <button class="btn btn-ghost btn-sm" type="button" (click)="loadLogs()">Retry</button>
+      </p>
       <p class="text-muted" *ngIf="!logsError && logLines.length === 0">No logs returned.</p>
       <pre class="log-output" *ngIf="logLines.length > 0">{{ logLines.join('\n') }}</pre>
     </details>

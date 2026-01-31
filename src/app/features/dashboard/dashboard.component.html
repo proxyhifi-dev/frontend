@@ -172,7 +172,7 @@
               </tbody>
             </table>
             <ng-template #emptyPositions>
-              <div class="empty-state">No active positions. Monitoring for opportunities.</div>
+              <div class="empty-state">{{ emptyStates.dashboard.positionsEmpty }}</div>
             </ng-template>
           </div>
         </div>
@@ -206,7 +206,7 @@
               </div>
             </div>
             <ng-template #emptyTrades>
-              <div class="empty-state">No trades yet. Waiting for confirmations.</div>
+              <div class="empty-state">{{ emptyStates.dashboard.tradesEmpty }}</div>
             </ng-template>
           </div>
 
@@ -221,7 +221,7 @@
               </div>
             </div>
             <ng-template #emptyAlerts>
-              <div class="empty-state">No alerts. Systems nominal.</div>
+              <div class="empty-state">{{ emptyStates.dashboard.alertsEmpty }}</div>
             </ng-template>
           </div>
         </div>

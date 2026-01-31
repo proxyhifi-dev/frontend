@@ -6,7 +6,7 @@
 
   <div class="positions-grid">
     <div *ngIf="positions.length === 0" class="empty-state">
-      <p>No active trades</p>
+      <p>{{ emptyStates.dashboard.positionsEmpty }}</p>
     </div>
 
     <div class="pos-card" *ngFor="let pos of positions">

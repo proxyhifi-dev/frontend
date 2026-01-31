@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { CurrencyInrPipe } from '../../../../shared/pipes/currency-inr-pipe';
 import { PercentFormatPipe } from '../../../../shared/pipes/percent-format.pipe';
 import { PositionView } from '../../../../core/models/domain.model';
+import { EMPTY_STATE_MESSAGES } from '../../../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-positions-widget',
@@ -15,6 +16,7 @@ export class PositionsWidgetComponent {
   @Input() positions: PositionView[] = [];
   @Input() supportsClose = false;
   @Output() closeRequested = new EventEmitter<PositionView>();
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   calculatePnL(pos: PositionView): number {
     if (!pos.currentPrice || !pos.entryPrice) return 0;

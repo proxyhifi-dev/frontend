@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { OrdersService, OrderRow } from '../../core/services/orders.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-orders',
@@ -18,6 +19,7 @@ export class OrdersComponent implements OnInit {
   historyOrders: OrderRow[] = [];
   isLoading = false;
   errorMessage = '';
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   constructor(private ordersService: OrdersService) {}
 

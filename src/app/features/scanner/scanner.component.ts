@@ -16,6 +16,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { ScanStoreService } from '../../core/services/scan-store.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { mapHttpError } from '../../core/utils/api-error';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-scanner',
@@ -43,6 +44,7 @@ export class ScannerComponent implements OnInit, OnDestroy {
   diagnosticsSummary: DiagnosticsStatusItem[] = [];
   cooldownRemaining = 0;
   isCooldownActive = false;
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   private destroy$ = new Subject<void>();
   private scanStartTime?: number;

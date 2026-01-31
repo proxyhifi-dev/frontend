@@ -54,8 +54,13 @@
     </div>
 
     <div class="table-state" *ngIf="isLoading">Loading signals...</div>
-    <div class="table-state error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</div>
-    <div class="table-state" *ngIf="!isLoading && !errorMessage && signals.length === 0">No signals found.</div>
+    <div class="table-state error" *ngIf="!isLoading && errorMessage">
+      {{ errorMessage }}
+      <button class="btn btn-ghost btn-sm" type="button" (click)="loadSignals()">Retry</button>
+    </div>
+    <div class="table-state" *ngIf="!isLoading && !errorMessage && signals.length === 0">
+      {{ emptyStates.signals.emptyList }}
+    </div>
 
     <div class="signal-row-wrapper" *ngFor="let s of signals">
       <div class="signal-main-row" (click)="s.expanded = !s.expanded">
@@ -141,7 +146,9 @@
             <span>{{ component.name }}</span>
             <span>{{ component.score | number:'1.0-2' }}</span>
           </div>
-          <div class="drawer-empty" *ngIf="!selectedSignal.scoreComponents?.length">No score breakdown available.</div>
+          <div class="drawer-empty" *ngIf="!selectedSignal.scoreComponents?.length">
+            {{ emptyStates.signals.emptyScoreBreakdown }}
+          </div>
         </div>
 
         <div class="drawer-section">
@@ -149,7 +156,9 @@
           <ul class="drawer-list">
             <li *ngFor="let confirmation of selectedSignal.confirmations || []">{{ confirmation }}</li>
           </ul>
-          <div class="drawer-empty" *ngIf="!selectedSignal.confirmations?.length">No confirmations returned.</div>
+          <div class="drawer-empty" *ngIf="!selectedSignal.confirmations?.length">
+            {{ emptyStates.signals.emptyConfirmations }}
+          </div>
         </div>
 
         <div class="drawer-section">
