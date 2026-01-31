@@ -8,6 +8,7 @@ import { PositionView } from '../../core/models/domain.model';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
 import { SafetyStatusService, SystemMode } from '../../core/services/safety-status.service';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-positions',
@@ -29,6 +30,7 @@ export class PositionsComponent implements OnInit, OnDestroy {
   lockReason = '';
   lockMode: SystemMode = 'NORMAL';
   exitRetryingPositions: PositionView[] = [];
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
   private lastMode?: string;
   private destroy$ = new Subject<void>();
 

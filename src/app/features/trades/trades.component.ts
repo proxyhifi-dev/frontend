@@ -7,6 +7,7 @@ import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
 import { PositionView } from '../../core/models/domain.model';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-trades',
@@ -20,6 +21,7 @@ export class TradesComponent implements OnInit, OnDestroy {
   filteredTrades: PositionView[] = [];
   isLoading = false;
   errorMessage = '';
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
   filters = {
     symbol: '',
     grade: 'All',

@@ -6,6 +6,7 @@ import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { HoldingDTO } from '../../core/models/holding.dto';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-holdings',
@@ -26,6 +27,7 @@ export class HoldingsComponent implements OnInit, OnDestroy {
   isLoading = false;
   errorMessage = '';
   isLiveMode = false;
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
   private destroy$ = new Subject<void>();
 
   constructor(

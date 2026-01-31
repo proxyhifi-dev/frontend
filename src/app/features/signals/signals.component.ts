@@ -11,6 +11,7 @@ import { ModeStore } from '../../core/services/mode-store.service';
 import { EntityDetailsComponent } from '../../shared/components/entity-details/entity-details.component';
 import { ScanStoreService } from '../../core/services/scan-store.service';
 import { SafetyStatusService, SystemMode } from '../../core/services/safety-status.service';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-signals',
@@ -39,6 +40,7 @@ export class SignalsComponent implements OnInit, OnDestroy {
   cooldownUntil = 0;
   retryAfterSeconds = 0;
   cooldownSecondsLeft = 0;
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
   private cooldownInterval?: ReturnType<typeof setInterval>;
   private lastMode?: string;
   private destroy$ = new Subject<void>();

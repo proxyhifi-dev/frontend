@@ -53,10 +53,13 @@
       </thead>
       <tbody>
         <tr *ngIf="isLoading">
-          <td colspan="2" class="empty-state">Loading watchlist...</td>
+          <td colspan="2" class="empty-state">{{ emptyStates.watchlist.loading }}</td>
         </tr>
         <tr *ngIf="!isLoading && errorMessage">
-          <td colspan="2" class="empty-state text-red">{{ errorMessage }}</td>
+          <td colspan="2" class="empty-state text-red">
+            {{ errorMessage }}
+            <button class="btn btn-ghost btn-sm" type="button" (click)="loadWatchlist()">Retry</button>
+          </td>
         </tr>
         <tr *ngFor="let symbol of symbols">
           <td>{{ symbol }}</td>
@@ -66,15 +69,7 @@
         </tr>
         <tr *ngIf="!isLoading && !errorMessage && symbols.length === 0">
           <td colspan="2" class="empty-state">
-            No stocks configured. Add stocks to watchlist.
-            <button
-              class="btn btn-ghost btn-sm"
-              type="button"
-              *ngIf="isDevMode"
-              (click)="seedWatchlist()"
-            >
-              Seed Watchlist (dev)
-            </button>
+            {{ emptyStates.watchlist.empty }}
           </td>
         </tr>
       </tbody>

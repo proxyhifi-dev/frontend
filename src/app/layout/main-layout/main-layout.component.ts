@@ -43,14 +43,12 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
     orders: 'Orders',
     trades: 'Trades',
     backtesting: 'Backtesting',
-    'backtest-validation': 'Backtest & Validation',
     signals: 'Signals',
     strategy: 'Strategy / Bot',
     risk: 'Risk',
     'risk-correlation': 'Risk & Correlation',
     logs: 'Logs',
     settings: 'Settings',
-    help: 'Help',
     analytics: 'Analytics'
   };
 

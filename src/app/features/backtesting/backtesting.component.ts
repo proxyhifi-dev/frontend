@@ -13,6 +13,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
 import { RMultiplePipe } from '../../shared/pipes/r-multiple.pipe';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-backtesting',
@@ -31,6 +32,7 @@ export class BacktestingComponent implements OnInit {
   detailLoading = false;
   detailError = '';
   runSubmitting = false;
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   form = {
     strategy: '',

@@ -10,6 +10,7 @@ import { AccountOverviewDTO, PaperAccountDTO } from '../../core/models/account.d
 import { HoldingDTO } from '../../core/models/holding.dto';
 import { TradingMode } from '../../core/services/trading-mode.service';
 import { PaperService } from '../../core/paper/paper.service';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 interface HoldingRow {
   symbol: string;
@@ -38,6 +39,7 @@ export class AccountComponent implements OnInit, OnDestroy {
   modeLoading = false;
   holdingsError = '';
   modeSupported = true;
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   private sub = new Subscription();
 

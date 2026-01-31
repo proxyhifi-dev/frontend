@@ -143,12 +143,6 @@ export class AuthService {
     );
   }
 
-  devLogin(username: string, password?: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>('/dev/login', { username, password }).pipe(
-      tap((response) => this.persistAuth(response))
-    );
-  }
-
   handleFyersCallback(authCode: string, state?: string): Observable<AuthResponse> {
     const payload: { auth_code: string; state?: string } = { auth_code: authCode };
     if (state) {

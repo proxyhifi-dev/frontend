@@ -113,12 +113,6 @@ export const routes: Routes = [
           .then(m => m.BacktestingComponent)
       },
       {
-        path: 'backtest-validation',
-        canActivate: [AuthGuard],
-        loadComponent: () => import('./features/backtest-validation/backtest-validation.component')
-          .then(m => m.BacktestValidationComponent)
-      },
-      {
         path: 'strategy',
         canActivate: [AuthGuard, FeatureGuard],
         data: { feature: { method: 'GET', path: '/strategy/health', label: 'Strategy' } },
@@ -142,12 +136,6 @@ export const routes: Routes = [
         canActivate: [AuthGuard],
         loadComponent: () => import('./features/settings/settings.component')
           .then(m => m.SettingsComponent)
-      },
-      {
-        path: 'help',
-        canActivate: [AuthGuard],
-        loadComponent: () => import('./features/help/help.component')
-          .then(m => m.HelpComponent)
       },
       {
         path: 'status',

@@ -106,9 +106,9 @@
           </div>
         </div>
         <ng-template #emptyHoldings>
-          <p class="helper-text" *ngIf="loading">Loading holdings...</p>
+          <p class="helper-text" *ngIf="loading">{{ emptyStates.account.holdingsLoading }}</p>
           <p class="helper-text text-red" *ngIf="!loading && holdingsError">{{ holdingsError }}</p>
-          <p class="helper-text" *ngIf="!loading && !holdingsError">No holdings returned for this account.</p>
+          <p class="helper-text" *ngIf="!loading && !holdingsError">{{ emptyStates.account.holdingsEmpty }}</p>
         </ng-template>
       </div>
     </div>

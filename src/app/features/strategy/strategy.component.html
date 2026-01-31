@@ -17,7 +17,10 @@
     <div class="page-card">
       <h3>Bot Status</h3>
       <p class="text-muted" *ngIf="regimeLoading">Loading regime status...</p>
-      <p class="text-muted text-red" *ngIf="!regimeLoading && regimeError">{{ regimeError }}</p>
+      <p class="text-muted text-red" *ngIf="!regimeLoading && regimeError">
+        {{ regimeError }}
+        <button class="btn btn-ghost btn-sm" type="button" (click)="loadRegime()">Retry</button>
+      </p>
       <div class="metric-row" *ngIf="!regimeLoading && !regimeError">
         <span>Regime</span>
         <strong>{{ regime?.regime || '—' }}</strong>
@@ -35,7 +38,10 @@
     <div class="page-card">
       <h3>Strategy Config</h3>
       <div class="table-state" *ngIf="configLoading">Loading configuration...</div>
-      <div class="table-state text-red" *ngIf="!configLoading && configError">{{ configError }}</div>
+      <div class="table-state text-red" *ngIf="!configLoading && configError">
+        {{ configError }}
+        <button class="btn btn-ghost btn-sm" type="button" (click)="loadConfig()">Retry</button>
+      </div>
       <div class="config-grid" *ngIf="!configLoading && !configError">
         <div><span>Name</span><strong>{{ config?.name || '—' }}</strong></div>
         <div><span>Mode</span><strong>{{ config?.mode || '—' }}</strong></div>
@@ -50,7 +56,10 @@
       <h3>Strategy Controls</h3>
       <p class="text-muted">Adjust mode and risk parameters.</p>
       <div class="table-state" *ngIf="settingsLoading">Loading settings...</div>
-      <div class="table-state text-red" *ngIf="!settingsLoading && settingsError">{{ settingsError }}</div>
+      <div class="table-state text-red" *ngIf="!settingsLoading && settingsError">
+        {{ settingsError }}
+        <button class="btn btn-ghost btn-sm" type="button" (click)="loadSettings()">Retry</button>
+      </div>
       <div class="settings-grid" *ngIf="!settingsLoading && settings">
         <label>
           <span>Mode</span>
@@ -114,10 +123,13 @@
       </thead>
       <tbody>
       <tr *ngIf="scoringLoading">
-        <td colspan="4" class="empty-state">Loading scoring breakdown...</td>
+        <td colspan="4" class="empty-state">{{ emptyStates.strategy.scoringLoading }}</td>
       </tr>
       <tr *ngIf="!scoringLoading && scoringError">
-        <td colspan="4" class="empty-state text-red">{{ scoringError }}</td>
+        <td colspan="4" class="empty-state text-red">
+          {{ scoringError }}
+          <button class="btn btn-ghost btn-sm" type="button" (click)="loadScoring()">Retry</button>
+        </td>
       </tr>
       <tr *ngFor="let item of scoring">
         <td>{{ item.symbol || item.signalId || '—' }}</td>
@@ -126,7 +138,7 @@
         <td>{{ item.reason || '—' }}</td>
       </tr>
       <tr *ngIf="!scoringLoading && !scoringError && scoring.length === 0">
-        <td colspan="4" class="empty-state">No scoring breakdown available.</td>
+        <td colspan="4" class="empty-state">{{ emptyStates.strategy.scoringEmpty }}</td>
       </tr>
       </tbody>
     </table>

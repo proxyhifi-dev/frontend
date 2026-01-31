@@ -83,10 +83,10 @@
           </thead>
           <tbody>
           <tr *ngIf="brokerLogsLoading">
-            <td colspan="3" class="empty-state">Loading broker logs...</td>
+            <td colspan="3" class="empty-state">{{ emptyStates.settings.brokerLogsLoading }}</td>
           </tr>
           <tr *ngIf="!brokerLogsLoading && brokerErrors.length === 0">
-            <td colspan="3" class="empty-state">No broker errors reported.</td>
+            <td colspan="3" class="empty-state">{{ emptyStates.settings.brokerLogsEmpty }}</td>
           </tr>
           <tr *ngFor="let log of brokerErrors">
             <td>{{ log.time ? (log.time | date:'short') : '—' }}</td>

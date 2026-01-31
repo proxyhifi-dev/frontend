@@ -26,7 +26,6 @@ export class SidebarComponent {
     { path: '/signals', label: 'Signals', icon: '⚡', feature: { method: 'GET', path: '/strategy/signals' } },
     { path: '/orders', label: 'Orders', icon: '🧾', feature: { method: 'GET', path: '/orders' } },
     { path: '/account', label: 'Paper Account', icon: '💼' },
-    { path: '/backtest-validation', label: 'Backtest & Validation', icon: '🧪' },
     { path: '/risk-correlation', label: 'Risk & Correlation', icon: '🛡️' },
     { path: '/strategy', label: 'Strategy', icon: '🧠', feature: { method: 'GET', path: '/strategy/health' } },
     { path: '/settings', label: 'Settings', icon: '⚙️' },

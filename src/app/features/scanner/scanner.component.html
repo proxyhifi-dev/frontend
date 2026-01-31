@@ -62,7 +62,17 @@
         placeholder="Comma or newline separated symbols"
       ></textarea>
     </div>
-    <p class="error-text" *ngIf="errorMessage">{{ errorMessage }}</p>
+    <p class="error-text" *ngIf="errorMessage">
+      {{ errorMessage }}
+      <button
+        class="btn btn-ghost btn-sm"
+        type="button"
+        (click)="runScan()"
+        [disabled]="isLoading || isCooldownActive || scannerDisabled"
+      >
+        Retry
+      </button>
+    </p>
   </div>
 
   <div class="page-card">
@@ -158,7 +168,7 @@
       </thead>
       <tbody>
         <tr *ngIf="!results.length">
-          <td colspan="5" class="empty-state">No scan results yet.</td>
+          <td colspan="5" class="empty-state">{{ emptyStates.scanner.noResults }}</td>
         </tr>
         <tr *ngFor="let result of results">
           <td>{{ result.symbol }}</td>

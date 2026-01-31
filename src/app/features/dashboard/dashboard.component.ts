@@ -14,6 +14,7 @@ import { PositionView } from '../../core/models/domain.model';
 import { StrategyHealthWidgetComponent } from './components/strategy-health-widget.component';
 import { ModeStore } from '../../core/services/mode-store.service';
 import { SafetyStatusService, SafetyLockState } from '../../core/services/safety-status.service';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 interface SortState {
   key: 'symbol' | 'pnl' | 'rMultiple' | 'stopDistance' | 'timeHeld';
@@ -157,6 +158,7 @@ export class DashboardComponent {
     }),
     shareReplay({ bufferSize: 1, refCount: true })
   );
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   reloadDashboard(): void {
     this.refreshTrigger$.next();

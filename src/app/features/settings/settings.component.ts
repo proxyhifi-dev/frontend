@@ -6,6 +6,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService, TradingSettings } from '../../core/services/settings.service';
 import { FyersOAuthService } from '../../core/services/fyers-oauth.service';
 import { BrokerConnectionStatus, BrokerErrorLog } from '../../core/models/broker.dto';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-settings',
@@ -26,6 +27,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   storageMode: 'remote' | 'local' = 'remote';
   disconnectSupported = true;
   errorLogsSupported = true;
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
   private destroy$ = new Subject<void>();
 
   // Settings Config Model

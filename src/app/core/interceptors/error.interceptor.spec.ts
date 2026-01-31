@@ -40,4 +40,34 @@ describe('errorInterceptor', () => {
     expect(diagnosticsStore.setLastBackendError).toHaveBeenCalledWith('Rate limited. Retry after 42s.');
     expect(scanStore.setCooldown).toHaveBeenCalledWith(42);
   });
+
+  it('logs out on 401 responses for non-auth endpoints', () => {
+    const toastService = { showWarning: jasmine.createSpy(), showError: jasmine.createSpy() } as Partial<ToastService>;
+    const authService = { logout: jasmine.createSpy() } as Partial<AuthService>;
+    const diagnosticsStore = { setLastBackendError: jasmine.createSpy() } as Partial<DiagnosticsStoreService>;
+    const scanStore = { setCooldown: jasmine.createSpy() } as Partial<ScanStoreService>;
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ToastService, useValue: toastService },
+        { provide: AuthService, useValue: authService },
+        { provide: DiagnosticsStoreService, useValue: diagnosticsStore },
+        { provide: ScanStoreService, useValue: scanStore }
+      ]
+    });
+
+    const req = new HttpRequest('GET', '/orders');
+    const next: HttpHandlerFn = () => throwError(() => new HttpErrorResponse({ status: 401 }));
+
+    TestBed.runInInjectionContext(() => {
+      errorInterceptor(req, next).subscribe({
+        error: () => {
+          // expected
+        }
+      });
+    });
+
+    expect(toastService.showError).toHaveBeenCalledWith('Session expired / unauthorized');
+    expect(authService.logout).toHaveBeenCalled();
+  });
 });

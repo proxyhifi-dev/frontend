@@ -23,40 +23,6 @@
       {{ fyersLoading ? 'Connecting to FYERS...' : 'Login with Fyers' }}
     </button>
     <p class="status-text" *ngIf="fyersStatus">{{ fyersStatus }}</p>
-
-    <div class="dev-login" *ngIf="isDevMode">
-      <div class="auth-divider">
-        <span>dev login</span>
-      </div>
-      <form #devFormRef="ngForm" (ngSubmit)="devLogin()">
-        <div class="form-group">
-          <label for="dev-username">Username</label>
-          <input
-            id="dev-username"
-            type="text"
-            [(ngModel)]="devForm.username"
-            name="devUsername"
-            class="dark-input"
-            placeholder="dev-user"
-            required
-          >
-        </div>
-        <div class="form-group">
-          <label for="dev-password">Password (optional)</label>
-          <input
-            id="dev-password"
-            type="password"
-            [(ngModel)]="devForm.password"
-            name="devPassword"
-            class="dark-input"
-            placeholder="optional"
-          >
-        </div>
-        <button type="submit" [disabled]="devFormRef.invalid || loading" class="btn btn-secondary btn-block">
-          Dev Login
-        </button>
-      </form>
-    </div>
     <p class="text-center mt-3">Don't have an account? <a routerLink="/auth/register">Register here</a></p>
   </div>
 </div>

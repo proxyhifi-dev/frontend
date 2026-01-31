@@ -15,6 +15,7 @@ import { Subscription } from 'rxjs';
 import { PerformanceMetrics } from '../../core/models/domain.model';
 import { CurrencyInrPipe } from '../../shared/pipes/currency-inr-pipe';
 import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
+import { EMPTY_STATE_MESSAGES } from '../../shared/constants/empty-states';
 
 @Component({
   selector: 'app-analytics',
@@ -24,19 +25,11 @@ import { PercentFormatPipe } from '../../shared/pipes/percent-format.pipe';
   styleUrls: ['./analytics.component.scss']
 })
 export class AnalyticsComponent implements OnInit, OnDestroy {
-  stats: PerformanceMetrics = {
-    totalTrades: 0,
-    winningTrades: 0,
-    losingTrades: 0,
-    winRate: 0,
-    netProfit: 0,
-    averageWin: 0,
-    averageLoss: 0,
-    profitFactor: 0,
-    maxDrawdown: 0
-  };
+  stats: PerformanceMetrics | null = null;
   isLoading = true;
   activeRange: '30d' | '90d' | 'all' = '30d';
+  errorMessage = '';
+  readonly emptyStates = EMPTY_STATE_MESSAGES;
 
   // Strongly-typed chart configs so Angular template type-checking doesn't
   // complain about possibly-undefined ApexOptions fields.
@@ -48,7 +41,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     plotOptions: ApexPlotOptions;
     legend: ApexLegend;
   } = {
-    series: [0, 0],
+    series: [],
     chart: { type: 'donut', height: 300 },
     labels: ['Wins', 'Losses'],
     colors: ['#00C853', '#FF1744'],
@@ -78,14 +71,26 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
   loadMetrics() {
     this.isLoading = true;
+    this.errorMessage = '';
     this.sub.add(
       this.analyticsSvc.getMetrics(this.activeRange).subscribe({
         next: (data) => {
-          this.stats = data || this.stats;
-          this.pieOptions.series = [this.stats.winningTrades || 0, this.stats.losingTrades || 0];
+          this.stats = data ?? null;
+          if (this.stats) {
+            this.pieOptions.series = [this.stats.winningTrades || 0, this.stats.losingTrades || 0];
+          } else {
+            this.pieOptions.series = [];
+            this.histOptions.series = [{ name: 'Trades', data: [] }];
+            this.histOptions.xaxis = { categories: [] };
+          }
           this.isLoading = false;
         },
         error: () => {
+          this.stats = null;
+          this.pieOptions.series = [];
+          this.histOptions.series = [{ name: 'Trades', data: [] }];
+          this.histOptions.xaxis = { categories: [] };
+          this.errorMessage = 'Unable to load analytics.';
           this.isLoading = false;
         }
       })

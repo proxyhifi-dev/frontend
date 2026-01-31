@@ -63,10 +63,13 @@
         </thead>
         <tbody>
         <tr *ngIf="runsLoading">
-          <td colspan="5" class="empty-state">Loading runs...</td>
+          <td colspan="5" class="empty-state">{{ emptyStates.backtesting.runsLoading }}</td>
         </tr>
         <tr *ngIf="!runsLoading && runsError">
-          <td colspan="5" class="empty-state text-red">{{ runsError }}</td>
+          <td colspan="5" class="empty-state text-red">
+            {{ runsError }}
+            <button class="btn btn-ghost btn-sm" type="button" (click)="loadRuns()">Retry</button>
+          </td>
         </tr>
         <tr *ngFor="let run of runs" (click)="selectRun(run)" [class.active]="selectedRun?.id === run.id">
           <td>#{{ run.id }}</td>
@@ -76,7 +79,7 @@
           <td>{{ run.completedAt ? (run.completedAt | date:'short') : '—' }}</td>
         </tr>
         <tr *ngIf="!runsLoading && !runsError && runs.length === 0">
-          <td colspan="5" class="empty-state">No backtest runs yet. Start your first run to see results here.</td>
+          <td colspan="5" class="empty-state">{{ emptyStates.backtesting.runsEmpty }}</td>
         </tr>
         </tbody>
       </table>
@@ -98,13 +101,22 @@
         </thead>
         <tbody>
         <tr *ngIf="detailLoading">
-          <td colspan="2" class="empty-state">Loading metrics...</td>
+          <td colspan="2" class="empty-state">{{ emptyStates.backtesting.metricsLoading }}</td>
         </tr>
         <tr *ngIf="!detailLoading && detailError">
-          <td colspan="2" class="empty-state text-red">{{ detailError }}</td>
+          <td colspan="2" class="empty-state text-red">
+            {{ detailError }}
+            <button
+              class="btn btn-ghost btn-sm"
+              type="button"
+              (click)="selectedRun ? selectRun(selectedRun) : loadRuns()"
+            >
+              Retry
+            </button>
+          </td>
         </tr>
         <tr *ngIf="!detailLoading && !detailError && !metrics">
-          <td colspan="2" class="empty-state">No metrics available.</td>
+          <td colspan="2" class="empty-state">{{ emptyStates.backtesting.metricsEmpty }}</td>
         </tr>
         <tr *ngIf="metrics">
           <td>Net Profit</td>
@@ -160,13 +172,22 @@
         </thead>
         <tbody>
         <tr *ngIf="detailLoading">
-          <td colspan="6" class="empty-state">Loading breakdown...</td>
+          <td colspan="6" class="empty-state">{{ emptyStates.backtesting.breakdownLoading }}</td>
         </tr>
         <tr *ngIf="!detailLoading && detailError">
-          <td colspan="6" class="empty-state text-red">{{ detailError }}</td>
+          <td colspan="6" class="empty-state text-red">
+            {{ detailError }}
+            <button
+              class="btn btn-ghost btn-sm"
+              type="button"
+              (click)="selectedRun ? selectRun(selectedRun) : loadRuns()"
+            >
+              Retry
+            </button>
+          </td>
         </tr>
         <tr *ngIf="!detailLoading && !detailError && monthly.length === 0">
-          <td colspan="6" class="empty-state">No monthly breakdown available.</td>
+          <td colspan="6" class="empty-state">{{ emptyStates.backtesting.breakdownEmpty }}</td>
         </tr>
         <tr *ngFor="let month of monthly">
           <td>{{ month.month }}</td>
